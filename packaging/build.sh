@@ -38,5 +38,14 @@ install -m 644 LICENSE NOTICE "$APP/Resources/"
 printf 'APPL????' > "$APP/PkgInfo"
 (cd "$DIST" && rm -f "werkz-$VER-macos.zip" && zip -qry "werkz-$VER-macos.zip" werkz.app)
 
-echo "✓ done:"
-ls -lh "$DIST"/*.tar.gz "$DIST"/*.zip | awk '{print "   " $5 "  " $9}'
+echo "→ release assets"
+REL="$DIST/release"
+mkdir -p "$REL"
+cp "$DIST/werkz-$VER-linux.tar.gz" "$DIST/werkz-$VER-macos.zip" "$REL/"
+for f in "$DIST"/bin/werkz-*; do
+  install -m 755 "$f" "$REL/werkz-$VER-${f##*/werkz-}"
+done
+(cd "$REL" && sha256sum werkz-* > SHA256SUMS)
+
+echo "✓ done: $REL"
+ls -lh "$REL" | awk 'NR>1 {print "   " $5 "  " $9}'
