@@ -159,6 +159,7 @@ func (o *Client) do(ctx context.Context, body map[string]any, h llm.Handlers) (*
 
 	turn := &llm.Turn{}
 	calls := map[int]*llm.ToolCall{}
+	lastIdx, done := -1, false
 	sc := bufio.NewScanner(resp.Body)
 	sc.Buffer(make([]byte, 1024*1024), 16*1024*1024)
 	for sc.Scan() {
@@ -168,6 +169,7 @@ func (o *Client) do(ctx context.Context, body map[string]any, h llm.Handlers) (*
 		}
 		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
 		if data == "[DONE]" {
+			done = true
 			break
 		}
 		var chunk struct {
@@ -207,11 +209,19 @@ func (o *Client) do(ctx context.Context, body map[string]any, h llm.Handlers) (*
 			if t := d.Reasoning + d.ReasoningContent; t != "" {
 				h.OnThinking(t)
 			}
-			for i, tc := range d.ToolCalls {
-				idx := i
-				if tc.Index != nil {
+			for _, tc := range d.ToolCalls {
+				// Providers that omit "index" stream one call after another: a new id starts a
+				// new call, chunks without an id continue the current one.
+				idx := lastIdx
+				switch {
+				case tc.Index != nil:
 					idx = *tc.Index
+				case tc.ID != "" && (idx < 0 || calls[idx].ID != "" && calls[idx].ID != tc.ID):
+					idx = len(calls)
+				case idx < 0:
+					idx = 0
 				}
+				lastIdx = idx
 				c, ok := calls[idx]
 				if !ok {
 					c = &llm.ToolCall{}
@@ -235,6 +245,9 @@ func (o *Client) do(ctx context.Context, body map[string]any, h llm.Handlers) (*
 	}
 	if err := sc.Err(); err != nil {
 		return nil, err
+	}
+	if !done && turn.StopReason == "" {
+		return nil, &llm.HTTPError{Status: 502, Body: "the response stream from " + o.ID + " ended early (connection dropped?)"}
 	}
 	keys := make([]int, 0, len(calls))
 	for k := range calls {

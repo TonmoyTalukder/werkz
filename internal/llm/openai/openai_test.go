@@ -91,3 +91,33 @@ func TestOpenRouterReportedCost(t *testing.T) {
 		t.Fatalf("request should ask OpenRouter for usage/cost: %v", body["usage"])
 	}
 }
+
+// M13: tool calls streamed without "index" stay separate, and a stream cut off before it
+// finished is an error, not a complete answer.
+func TestStreamParsingEdgeCases(t *testing.T) {
+	serve := func(body string) *httptest.Server {
+		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = io.WriteString(w, body) }))
+	}
+	h := llm.Handlers{OnText: func(string) {}, OnThinking: func(string) {}, OnToolStart: func(string) {}}
+	req := llm.Request{Model: "m", History: []llm.Msg{{Role: llm.RoleUser, Text: "hi"}}}
+
+	noIndex := serve("" +
+		"data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"id\":\"a\",\"type\":\"function\",\"function\":{\"name\":\"LS\",\"arguments\":\"{\\\"path\\\":\\\"x\\\"}\"}}]}}]}\n\n" +
+		"data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"id\":\"b\",\"type\":\"function\",\"function\":{\"name\":\"Read\",\"arguments\":\"{\\\"path\\\":\"}}]}}]}\n\n" +
+		"data: {\"choices\":[{\"delta\":{\"tool_calls\":[{\"function\":{\"arguments\":\"\\\"y\\\"}\"}}]}}]}\n\n" +
+		"data: {\"choices\":[{\"delta\":{},\"finish_reason\":\"tool_calls\"}]}\n\ndata: [DONE]\n\n")
+	defer noIndex.Close()
+	turn, err := (&Client{ID: "ollama", BaseURL: noIndex.URL}).Stream(context.Background(), req, h)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(turn.ToolCalls) != 2 || turn.ToolCalls[0].Args != `{"path":"x"}` || turn.ToolCalls[1].Name != "Read" || turn.ToolCalls[1].Args != `{"path":"y"}` {
+		t.Fatalf("tool calls merged or split wrongly: %+v", turn.ToolCalls)
+	}
+
+	cut := serve("data: {\"choices\":[{\"delta\":{\"content\":\"half an ans\"}}]}\n\n")
+	defer cut.Close()
+	if _, err := (&Client{ID: "ollama", BaseURL: cut.URL}).Stream(context.Background(), req, h); err == nil || !strings.Contains(err.Error(), "ended early") {
+		t.Fatalf("a cut-off stream should be an error, got %v", err)
+	}
+}
