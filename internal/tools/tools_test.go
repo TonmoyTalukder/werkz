@@ -191,3 +191,23 @@ func TestSensitivePathsAndHome(t *testing.T) {
 		t.Fatalf("a bare search in the home folder should be refused: %q", r.Output)
 	}
 }
+
+// L2: a cancelled search stops instead of walking the whole tree.
+func TestSearchStopsOnCancel(t *testing.T) {
+	dir := t.TempDir()
+	for i := 0; i < 50; i++ {
+		must(t, os.WriteFile(filepath.Join(dir, fmt.Sprintf("f%02d.txt", i)), []byte("needle\n"), 0o644))
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	for _, tool := range []string{"Grep", "Glob"} {
+		args := `{"pattern":"needle","output_mode":"count"}`
+		if tool == "Glob" {
+			args = `{"pattern":"*.txt"}`
+		}
+		r := Run(ctx, llm.ToolCall{Name: tool, Args: args}, Env{Dirs: []string{dir}})
+		if !strings.Contains(r.Output, "interrupted") || strings.Count(r.Output, ".txt") > 1 {
+			t.Errorf("%s ignored cancellation: %q", tool, r.Output)
+		}
+	}
+}

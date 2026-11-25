@@ -115,9 +115,9 @@ func Run(ctx context.Context, tc llm.ToolCall, env Env) Result {
 		}
 		return Result{Output: strings.Join(lines, "\n"), Summary: fmt.Sprintf("%d entries", len(lines))}
 	case "Glob":
-		return globTool(a, env.Dirs)
+		return interrupted(ctx, globTool(ctx, a, env.Dirs))
 	case "Grep":
-		return grepTool(a, env.Dirs)
+		return interrupted(ctx, grepTool(ctx, a, env.Dirs))
 	}
 	return Fail("unknown tool %q", tc.Name)
 }
@@ -252,4 +252,13 @@ func runBash(ctx context.Context, a Args, env Env) Result {
 		sum = fmt.Sprintf("exit %d", code)
 	}
 	return Result{Output: fmt.Sprintf("exit=%d\n%s", code, s), Summary: sum, Detail: detail, IsError: code != 0}
+}
+
+// interrupted marks a search result that was cut short by cancellation.
+func interrupted(ctx context.Context, r Result) Result {
+	if ctx.Err() != nil {
+		r.Output += "\n(search interrupted)"
+		r.Summary += " · interrupted"
+	}
+	return r
 }

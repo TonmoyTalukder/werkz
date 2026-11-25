@@ -1,6 +1,7 @@
 package tools
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"os"
@@ -15,8 +16,12 @@ import (
 
 var skipDirs = map[string]bool{".git": true, "node_modules": true, "vendor": true, ".venv": true, "dist": true, "build": true, "__pycache__": true}
 
-func walk(root string, fn func(path string, d fs.DirEntry) bool) {
+// walk visits files under root until fn returns false or ctx is cancelled (Esc).
+func walk(ctx context.Context, root string, fn func(path string, d fs.DirEntry) bool) {
 	_ = filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		if ctx.Err() != nil {
+			return fs.SkipAll
+		}
 		if err != nil {
 			return nil //nolint:nilerr // unreadable entries are skipped, not fatal to a search
 		}
@@ -61,7 +66,7 @@ func globToRegexp(g string) *regexp.Regexp {
 	return re
 }
 
-func globTool(a Args, dirs []string) Result {
+func globTool(ctx context.Context, a Args, dirs []string) Result {
 	re := globToRegexp(a.Pattern)
 	type hit struct {
 		p string
@@ -73,7 +78,7 @@ func globTool(a Args, dirs []string) Result {
 		return Fail("%v", err)
 	}
 	for _, root := range rs {
-		walk(root, func(p string, d fs.DirEntry) bool {
+		walk(ctx, root, func(p string, d fs.DirEntry) bool {
 			rel, _ := filepath.Rel(root, p)
 			if !d.IsDir() && re.MatchString(filepath.ToSlash(rel)) {
 				h := hit{p: p}
@@ -98,7 +103,7 @@ func globTool(a Args, dirs []string) Result {
 	return Result{Output: strings.Join(out, "\n"), Summary: fmt.Sprintf("%d files", len(hits))}
 }
 
-func grepTool(a Args, dirs []string) Result {
+func grepTool(ctx context.Context, a Args, dirs []string) Result {
 	re, err := regexp.Compile(a.Pattern)
 	if err != nil {
 		return Fail("bad regexp: %v", err)
@@ -123,7 +128,7 @@ func grepTool(a Args, dirs []string) Result {
 		return Fail("%v", err)
 	}
 	for _, root := range rs {
-		walk(root, func(p string, d fs.DirEntry) bool {
+		walk(ctx, root, func(p string, d fs.DirEntry) bool {
 			if d.IsDir() {
 				return true
 			}
