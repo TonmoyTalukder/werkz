@@ -228,6 +228,9 @@ func (m *model) statusBar() string {
 	default:
 		modeLine = sDim.Render("? /help · shift+tab mode · ctrl+j newline · pgup/pgdn scroll")
 	}
+	if m.updated != "" {
+		modeLine = sGreen.Render("↑ werkz "+m.updated+" installed · restart to use it") + sDim.Render(" · ") + modeLine
+	}
 	if m.flash != "" {
 		modeLine = sYellow.Render(m.flash)
 	}

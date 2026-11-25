@@ -8,6 +8,7 @@ import (
 
 	"github.com/TonmoyTalukder/werkz/internal/catalog"
 	"github.com/TonmoyTalukder/werkz/internal/config"
+	"github.com/TonmoyTalukder/werkz/internal/update"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -22,6 +23,7 @@ var commands = []struct{ Name, Desc string }{
 	{"/add-dir", "Add a working folder, e.g. /add-dir ~/Desktop/mis-frontend"},
 	{"/dirs", "Show working folders"},
 	{"/compact", "Summarize the conversation to cut tokens · /compact <focus> · /compact auto on|off|300k"},
+	{"/update", "Check for and install a new werkz release · /update auto on|off"},
 	{"/openrouter", "OpenRouter models: /openrouter paid (free + paid) or /openrouter free (default)"},
 	{"/cache", "Prompt cache stats · /cache ttl 5m|1h · /cache keepalive on|off|30"},
 	{"/context", "Show context window usage"},
@@ -206,6 +208,22 @@ func (m *model) command(line string) tea.Cmd {
 			return p(renderNotice("info", fmt.Sprintf("The conversation is only ~%s tokens; compacting wouldn't save anything yet.", catalog.HumanTokens(m.stats.ctxUsed))))
 		}
 		return m.startCompact(strings.Join(args, " "))
+	case "/update":
+		if len(args) == 2 && args[0] == "auto" && (args[1] == "on" || args[1] == "off") {
+			m.cfg.NoAutoUpdate = args[1] == "off"
+			m.saveConfig()
+			if m.cfg.NoAutoUpdate {
+				return p(renderNotice("info", "Automatic updates off · /update checks and installs on demand"))
+			}
+			return p(renderNotice("info", "Automatic updates on · werkz checks for a new release once a day"))
+		}
+		if len(args) > 0 {
+			return p(renderNotice("warn", "Usage: /update (check and install now) · /update auto on|off"))
+		}
+		if !update.Newer("999.0.0", m.version) {
+			return p(renderNotice("info", "This is a development build ("+m.version+"); it doesn't update itself."))
+		}
+		return tea.Batch(p(renderNotice("info", "Checking for a new werkz release…")), m.checkUpdate(true))
 	case "/openrouter":
 		if len(args) == 1 && (args[0] == "paid" || args[0] == "free") {
 			m.cfg.OpenRouterPaid = args[0] == "paid"

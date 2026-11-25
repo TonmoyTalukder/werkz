@@ -2,6 +2,8 @@ package tui
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
@@ -20,6 +22,7 @@ import (
 	"github.com/TonmoyTalukder/werkz/internal/llm/claude"
 	"github.com/TonmoyTalukder/werkz/internal/testutil"
 	"github.com/TonmoyTalukder/werkz/internal/tools"
+	"github.com/TonmoyTalukder/werkz/internal/update"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -501,5 +504,53 @@ func TestLoginReenablesProvider(t *testing.T) {
 	m.Update(validateMsg{ID: "anthropic", OK: true}) // the new key works
 	if r := m.eng.Disabled("anthropic"); r != "" {
 		t.Fatalf("still disabled after a successful key check: %s", r)
+	}
+}
+
+// Auto-update: a newer release is installed in the background and the user is told to restart;
+// checks happen at most once a day and can be switched off.
+func TestAutoUpdate(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("WERKZ_NO_UPDATE", "")
+	u := &update.Updater{}
+	newBin := []byte("new werkz")
+	sum := sha256.Sum256(newBin)
+	srv := testutil.FakeReleases("0.2.0", map[string][]byte{
+		u.Asset("0.2.0"): newBin,
+		"SHA256SUMS":     []byte(hex.EncodeToString(sum[:]) + "  " + u.Asset("0.2.0") + "\n"),
+	})
+	defer srv.Close()
+	exe := filepath.Join(t.TempDir(), "werkz")
+	must(t, os.WriteFile(exe, []byte("old werkz"), 0o755))
+
+	cfg := config.Load()
+	cfg.Onboarded = true
+	cfg.Keys["anthropic"] = "k" // a connected provider, so werkz opens the chat (not the key screen)
+	m := New(cfg, agent.New(cfg, func(any) {}), Options{Version: "0.1.0",
+		Updater: &update.Updater{Base: srv.URL + "/releases", Exe: exe}}).(*model)
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	if !m.autoUpdateDue() {
+		t.Fatal("an update check should be due on first start")
+	}
+	m.Update(m.checkUpdate(false)()) // what Init schedules in the background
+	if got, _ := os.ReadFile(exe); string(got) != "new werkz" {
+		t.Fatal("the new release wasn't installed")
+	}
+	if m.updated != "0.2.0" || !strings.Contains(m.View(), "restart to use it") {
+		t.Fatal("the user should be told to restart")
+	}
+	if m.autoUpdateDue() {
+		t.Fatal("checks must happen at most once a day")
+	}
+
+	m.command("/update auto off")
+	cfg.UpdateCheckedAt = time.Time{}
+	if m.autoUpdateDue() || !config.Load().NoAutoUpdate {
+		t.Fatal("/update auto off should stop automatic updates and be saved")
+	}
+	dev := New(cfg, agent.New(cfg, func(any) {}), Options{Version: "dev"}).(*model)
+	cfg.NoAutoUpdate = false
+	if dev.autoUpdateDue() {
+		t.Fatal("a development build must never update itself")
 	}
 }

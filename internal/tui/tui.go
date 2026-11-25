@@ -4,6 +4,7 @@ package tui
 import (
 	"github.com/TonmoyTalukder/werkz/internal/agent"
 	"github.com/TonmoyTalukder/werkz/internal/config"
+	"github.com/TonmoyTalukder/werkz/internal/update"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -14,6 +15,9 @@ type Options struct {
 	Login     bool     // open the API key screen first
 	Workspace string   // open this saved workspace
 	Dirs      []string // or work in these folders (first is the main one)
+	// Updates: Updater replaces the release source/executable (tests); nil = GitHub releases
+	// and the running executable.
+	Updater *update.Updater
 }
 
 // New returns the Bubble Tea model. eng must deliver its events to the same program
@@ -21,6 +25,10 @@ type Options struct {
 func New(cfg *config.Config, eng *agent.Engine, opts Options) tea.Model {
 	m := newModel(cfg)
 	m.eng, m.version = eng, opts.Version
+	m.updater = opts.Updater
+	if m.updater == nil {
+		m.updater = &update.Updater{}
+	}
 	eng.SetMode(cfg.Mode)
 	if opts.Login {
 		m.state = stateLogin

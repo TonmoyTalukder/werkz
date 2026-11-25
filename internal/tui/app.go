@@ -13,6 +13,7 @@ import (
 	"github.com/TonmoyTalukder/werkz/internal/config"
 	"github.com/TonmoyTalukder/werkz/internal/llm/openai"
 	"github.com/TonmoyTalukder/werkz/internal/textutil"
+	"github.com/TonmoyTalukder/werkz/internal/update"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textarea"
@@ -98,6 +99,8 @@ type model struct {
 	startDir string
 	onStart  func() tea.Cmd // e.g. open a workspace given on the command line
 	version  string
+	updater  *update.Updater
+	updated  string // a newer version was installed in the background (restart to use it)
 }
 
 // turnState is the request currently running (if any) and what it has streamed so far.
@@ -178,6 +181,7 @@ func newModel(cfg *config.Config) *model {
 
 	m := &model{cfg: cfg, input: ta, w: 100, h: 30, follow: true, vp: viewport.New(100, 20)}
 	m.startDir, _ = os.Getwd()
+	m.updater = &update.Updater{}
 	m.vp.KeyMap = viewport.KeyMap{} // scrolling is handled explicitly (keys are needed for typing)
 	if !cfg.Onboarded || (!cfg.AnyConfigured() && cfg.Provider == "") {
 		m.state = stateLogin
@@ -219,6 +223,9 @@ func (m *model) Init() tea.Cmd {
 	cmds := []tea.Cmd{textarea.Blink, m.fetchCredits(), tea.SetWindowTitle("werkz")}
 	if m.cfg.Configured("openrouter") {
 		cmds = append(cmds, fetchModels(m.cfg, "openrouter")) // free models come and go: check ours
+	}
+	if m.autoUpdateDue() {
+		cmds = append(cmds, m.checkUpdate(false))
 	}
 	if m.state == stateChat {
 		m.push(m.banner)
@@ -286,6 +293,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case orCreditsMsg:
 		m.stats.orCredits, m.stats.orCreditsOK = msg.Amount, msg.OK
 		return m, nil
+
+	case updateMsg:
+		return m, m.handleUpdate(msg)
 
 	case modelsFetchedMsg:
 		if msg.Provider == "openrouter" {
