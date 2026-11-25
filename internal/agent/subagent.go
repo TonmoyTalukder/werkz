@@ -13,7 +13,7 @@ import (
 
 // The Task tool runs a sub-agent in a fresh context with read-only tools and returns only its
 // report, so broad exploration never enters (or bloats) the main conversation. It runs on the
-// cheapest capable model (Claude Haiku 5.5 at low effort when Claude is connected); its own
+// user's current provider (Claude Haiku 5.5 at low effort when that provider is Claude); its own
 // system prompt and tool list are fixed, so repeated Task calls hit the prompt cache too.
 
 const subAgentPrompt = `You are a read-only research sub-agent for a coding assistant. Investigate the brief using
@@ -43,9 +43,11 @@ func (e *Engine) runTask(ctx context.Context, tc llm.ToolCall) tools.Result {
 	if err != nil || strings.TrimSpace(a.Prompt) == "" {
 		return tools.Fail("Task needs a prompt")
 	}
+	// Stay on the provider the user chose: their code goes nowhere else, and nothing is billed
+	// to an account they didn't pick. On Claude, use the cheaper Haiku at low effort.
 	provider, model, effort := e.cfg.Provider, e.cfg.Model, e.cfg.Effort
-	if e.cfg.Configured("anthropic") && e.disabled["anthropic"] == "" {
-		provider, model, effort = "anthropic", subAgentModel, "low"
+	if provider == "anthropic" {
+		model, effort = subAgentModel, "low"
 	}
 	wsEnv, wsName := e.workspaceEnv()
 	hist := []llm.Msg{{Role: llm.RoleUser, Text: a.Prompt}, {Role: llm.RoleSystem, Text: EnvContext(e.dirs(), wsName)}}

@@ -212,3 +212,30 @@ func TestConcurrentUIAccess(t *testing.T) {
 		}
 	}
 }
+
+// H2: the sub-agent must stay on the user's provider even when an Anthropic key exists.
+func TestTaskStaysOnCurrentProvider(t *testing.T) {
+	srv := testutil.MockOpenAI(t)
+	defer srv.Close()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	cfg := config.Load()
+	cfg.Keys["anthropic"] = "sk-ant-should-not-be-used"
+	cfg.Keys["ollama"] = srv.URL
+	cfg.Provider, cfg.Model = "ollama", "mock-a"
+	var used []string
+	e := New(cfg, func(v any) {
+		if u, ok := v.(UsageMsg); ok && u.Sub {
+			used = append(used, u.Provider)
+		}
+	})
+	e.providerFor = func(c *config.Config, id string) llm.Provider {
+		if id == "anthropic" {
+			t.Fatal("sub-agent called Anthropic although the user chose Ollama")
+		}
+		return newProvider(c, id)
+	}
+	e.runTask(context.Background(), llm.ToolCall{Name: "Task", Args: `{"description":"x","prompt":"list files"}`})
+	if len(used) == 0 || used[0] != "ollama" {
+		t.Fatalf("sub-agent providers = %v, want ollama", used)
+	}
+}
