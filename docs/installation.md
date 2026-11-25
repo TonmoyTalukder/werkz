@@ -71,7 +71,7 @@ Verify any download with `sha256sum -c SHA256SUMS --ignore-missing` (Linux) or
 ## Homebrew (macOS and Linux)
 
 ```bash
-brew install --cask TonmoyTalukder/tap/werkz
+brew install --cask ZenixBit/tap/werkz
 ```
 
 This installs the `werkz` command (no app icon). Update with `brew upgrade --cask werkz`.

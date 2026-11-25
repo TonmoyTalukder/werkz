@@ -109,7 +109,7 @@ homebrew_casks:
     description: Agentic coding tool for the terminal
     license: Apache-2.0
     repository:
-      owner: TonmoyTalukder
+      owner: ZenixBit
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
     directory: Casks
@@ -137,7 +137,7 @@ release:
     - glob: build/packages/werkz-*-macos.zip
   footer: |
     **Install or update:** `curl -fsSL https://raw.githubusercontent.com/TonmoyTalukder/werkz/main/install.sh | sh`
-    · Homebrew: `brew install --cask TonmoyTalukder/tap/werkz`
+    · Homebrew: `brew install --cask ZenixBit/tap/werkz`
     · Linux packages: `.deb`, `.rpm`, `.apk` and Arch packages below.
     Installed copies update themselves; package-manager installs update through that package manager.
 

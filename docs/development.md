@@ -37,7 +37,7 @@ grouped by commit type (`feat:`, `fix:`, `docs:`). Each release contains:
 - `.deb`, `.rpm`, `.apk` and Arch Linux packages
 - `SHA256SUMS` covering all of the above
 
-It also updates the Homebrew cask in [TonmoyTalukder/homebrew-tap](https://github.com/TonmoyTalukder/homebrew-tap).
+It also updates the Homebrew cask in [ZenixBit/homebrew-tap](https://github.com/ZenixBit/homebrew-tap).
 That needs the repository secret `HOMEBREW_TAP_TOKEN`: a fine-grained GitHub token with **Contents: read and
 write** access to the `homebrew-tap` repository only.
 

@@ -1,5 +1,5 @@
 # Publishes a release when a version tag is pushed: git tag v0.2.0 && git push origin v0.2.0
-# Needs the repository secret HOMEBREW_TAP_TOKEN: a token that can write to TonmoyTalukder/homebrew-tap.
+# Needs the repository secret HOMEBREW_TAP_TOKEN: a token that can write to ZenixBit/homebrew-tap.
 name: release
 
 on:
