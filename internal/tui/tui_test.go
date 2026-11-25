@@ -1,16 +1,21 @@
 package tui
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/TonmoyTalukder/werkz/internal/agent"
 	"github.com/TonmoyTalukder/werkz/internal/catalog"
 	"github.com/TonmoyTalukder/werkz/internal/config"
+	"github.com/TonmoyTalukder/werkz/internal/llm"
+	"github.com/TonmoyTalukder/werkz/internal/llm/claude"
+	"github.com/TonmoyTalukder/werkz/internal/testutil"
 	"github.com/TonmoyTalukder/werkz/internal/tools"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -433,5 +438,37 @@ func TestEventsAreSanitized(t *testing.T) {
 		if strings.Contains(e.render(100), "\x1b]52") || strings.Contains(e.render(100), "\x1b[2J") {
 			t.Fatal("escape sequence reached a transcript entry")
 		}
+	}
+}
+
+// L8: switching model stops keeping the old model's cache warm.
+func TestModelSwitchStopsKeepAlive(t *testing.T) {
+	var bodies []map[string]any
+	var mu sync.Mutex
+	srv := testutil.FakeClaude(t, &bodies, &mu) // reports 5k cached tokens, enough for a keep-alive
+	defer srv.Close()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	cfg := config.Load()
+	cfg.Keys["anthropic"] = "k"
+	cfg.Onboarded = true
+	cfg.Provider, cfg.Model = "anthropic", "claude-opus-5-5"
+	m := newModel(cfg)
+	m.eng = agent.New(cfg, func(any) {}, agent.WithProviders(func(c *config.Config, id string) llm.Provider {
+		return claude.New(c.Key(id), srv.URL)
+	}))
+	m.eng.Run(context.Background(), "hello", *cfg)
+	if !m.eng.KeepAliveActive() {
+		t.Fatal("expected the keep-alive to be running after a Claude turn")
+	}
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m.command("/model")
+	for i, mi := range m.picker.shown {
+		if mi.ID == "claude-sonnet-5-5" {
+			m.picker.sel = i
+		}
+	}
+	m.pickerKey(tea.KeyMsg{Type: tea.KeyEnter})
+	if m.eng.KeepAliveActive() {
+		t.Fatal("keep-alive still warming the old model's cache after /model")
 	}
 }

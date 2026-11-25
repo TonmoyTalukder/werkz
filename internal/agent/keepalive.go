@@ -57,3 +57,10 @@ func (e *Engine) StopKeepAlive() {
 		e.kaCancel = nil
 	}
 }
+
+// KeepAliveActive reports whether an idle prompt cache is being kept warm.
+func (e *Engine) KeepAliveActive() bool {
+	e.kaMu.Lock()
+	defer e.kaMu.Unlock()
+	return e.kaCancel != nil
+}

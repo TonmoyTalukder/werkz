@@ -98,6 +98,7 @@ func (m *model) command(line string) tea.Cmd {
 			return p(renderNotice("warn", mi.Label+" has no fast mode. It is available on Opus 5.5 and Fable 5.2."))
 		}
 		m.cfg.Fast = !m.cfg.Fast
+		m.eng.StopKeepAlive() // fast mode has its own cache
 		m.saveConfig()
 		if w := m.cacheWarn("Switching fast mode"); w != "" {
 			m.printS(renderNotice("warn", w))

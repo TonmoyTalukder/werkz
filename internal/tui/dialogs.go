@@ -82,6 +82,7 @@ func (m *model) pickerKey(k tea.KeyMsg) tea.Cmd {
 			if w := m.cacheWarn("Switching model"); w != "" {
 				m.printS(renderNotice("warn", w))
 			}
+			m.eng.StopKeepAlive() // the old model's cache is no longer needed
 		}
 		m.selectModel(mi.Provider, mi.ID)
 		m.saveConfig()
@@ -159,12 +160,14 @@ func (m *model) effortKey(k tea.KeyMsg) tea.Cmd {
 	case "f", "tab":
 		if mi.FastIn > 0 {
 			m.cfg.Fast = !m.cfg.Fast
+			m.eng.StopKeepAlive() // fast mode has its own cache
 		}
 	case "enter":
 		if m.cfg.Effort != mi.Efforts[m.effortIdx] {
 			if w := m.cacheWarn("Changing effort"); w != "" {
 				m.printS(renderNotice("warn", w))
 			}
+			m.eng.StopKeepAlive() // a new effort level invalidates the cached conversation
 		}
 		m.cfg.Effort = mi.Efforts[m.effortIdx]
 		m.saveConfig()

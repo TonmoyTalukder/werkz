@@ -72,10 +72,22 @@ func (e *Engine) toolEnv() tools.Env {
 	return tools.Env{Dirs: e.dirs(), Env: env, Reads: e.reads}
 }
 
-func New(cfg *config.Config, send func(any)) *Engine {
-	return &Engine{cfg: cfg, send: send, disabled: map[string]string{}, allow: map[string]bool{},
+// Option configures an Engine.
+type Option func(*Engine)
+
+// WithProviders replaces how model clients are created (e.g. to use fake servers in tests).
+func WithProviders(f func(cfg *config.Config, id string) llm.Provider) Option {
+	return func(e *Engine) { e.providerFor = f }
+}
+
+func New(cfg *config.Config, send func(any), opts ...Option) *Engine {
+	e := &Engine{cfg: cfg, send: send, disabled: map[string]string{}, allow: map[string]bool{},
 		fbTurn: map[string]bool{}, fbSession: map[string]bool{}, reads: tools.NewReadTracker(),
 		sessionID: fmt.Sprintf("werkz-%d", time.Now().UnixNano())}
+	for _, o := range opts {
+		o(e)
+	}
+	return e
 }
 
 // Reset clears the conversation (and stops keeping its cache warm).
