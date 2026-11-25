@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Opens werkz in a new terminal window. Used by the werkz desktop/app-grid icon.
+# Override the terminal with WERKZ_TERMINAL=kitty (or any name below).
+SELF="$(readlink -f "$0")"
+BIN="${WERKZ_BIN:-$HOME/.local/bin/werkz}"
+
+if [ "${1:-}" = "--inner" ]; then
+  # Runs inside the new terminal window.
+  cd "${WERKZ_DIR:-$HOME}" || cd "$HOME"
+  printf '\033]0;werkz\007'
+  "$BIN"
+  s=$?
+  if [ $s -ne 0 ]; then
+    echo
+    read -rp "werkz exited ($s). Press enter to close…"
+  fi
+  exit $s
+fi
+
+open_with() {
+  case "$1" in
+    ptyxis)         ptyxis --new-window -T werkz -x "'$SELF' --inner" ;;
+    gnome-terminal) gnome-terminal --geometry=130x40 -- "$SELF" --inner ;;
+    kgx)            kgx -e "'$SELF' --inner" ;;
+    konsole)        konsole -e "$SELF" --inner ;;
+    kitty)          kitty --title werkz "$SELF" --inner ;;
+    alacritty)      alacritty --title werkz -e "$SELF" --inner ;;
+    wezterm)        wezterm start -- "$SELF" --inner ;;
+    foot)           foot --title werkz "$SELF" --inner ;;
+    xfce4-terminal) xfce4-terminal --title werkz -x "$SELF" --inner ;;
+    tilix)          tilix -e "'$SELF' --inner" ;;
+    xdg-terminal-exec) xdg-terminal-exec "$SELF" --inner ;;
+    x-terminal-emulator) x-terminal-emulator -e "$SELF" --inner ;;
+    xterm)          xterm -title werkz -bg '#0e0f16' -fg '#e5e7eb' -geometry 130x40 -e "$SELF" --inner ;;
+    *) return 1 ;;
+  esac
+}
+
+for t in ${WERKZ_TERMINAL:-} ptyxis gnome-terminal kgx konsole kitty alacritty wezterm foot xfce4-terminal tilix \
+         xdg-terminal-exec x-terminal-emulator xterm; do
+  if command -v "$t" >/dev/null 2>&1; then
+    open_with "$t" && exit 0
+  fi
+done
+
+notify-send "werkz" "No terminal emulator found. Install gnome-terminal or set WERKZ_TERMINAL." 2>/dev/null
+exit 1
