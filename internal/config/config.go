@@ -71,6 +71,7 @@ type Config struct {
 	Workspaces     []*Workspace      `json:"workspaces,omitempty"`
 
 	loadErr        error           // set when the file existed but couldn't be loaded: Save refuses
+	session        *sessionModel   // a model chosen on the command line: used, but not saved
 	loadedSpent    float64         // Spent as last read from or written to disk (merging across windows)
 	FallbackMode   string          `json:"fallback_mode"`             // off (default) | ask | auto
 	OpenRouterPaid bool            `json:"openrouter_paid,omitempty"` // also offer paid OpenRouter models (default: free only)
@@ -192,6 +193,20 @@ func Load() *Config {
 	return c
 }
 
+type sessionModel struct {
+	provider, model           string // what --model/--provider selected
+	savedProvider, savedModel string // what the config had before
+	savedEffort               string
+}
+
+// UseSessionModel switches to a model for this session only (command-line flags): it is used
+// like any other choice, but Save keeps the user's saved model unless they pick another one.
+func (c *Config) UseSessionModel(provider, model, effort string) {
+	c.session = &sessionModel{provider: provider, model: model,
+		savedProvider: c.Provider, savedModel: c.Model, savedEffort: c.Effort}
+	c.Provider, c.Model, c.Effort = provider, model, effort
+}
+
 // LoadErr reports why the config file couldn't be loaded (nil when it loaded or didn't exist).
 func (c *Config) LoadErr() error { return c.loadErr }
 
@@ -211,7 +226,13 @@ func (c *Config) Save() error {
 			c.Spent += disk.Spent - c.loadedSpent // another window spent money meanwhile
 		}
 	}
-	b, err := json.MarshalIndent(c, "", "  ")
+	out := c
+	if s := c.session; s != nil && c.Provider == s.provider && c.Model == s.model {
+		cp := *c // still on the command-line model: save what the user had chosen before
+		cp.Provider, cp.Model, cp.Effort = s.savedProvider, s.savedModel, s.savedEffort
+		out = &cp
+	}
+	b, err := json.MarshalIndent(out, "", "  ")
 	if err != nil {
 		return err
 	}

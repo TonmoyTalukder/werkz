@@ -22,7 +22,8 @@ var version = "dev"
 func main() {
 	showVersion := flag.Bool("version", false, "print version")
 	login := flag.Bool("login", false, "open the API key screen on start")
-	modelFlag := flag.String("model", "", "model id to use, e.g. claude-sonnet-5-5")
+	modelFlag := flag.String("model", "", "model id for this session, e.g. claude-sonnet-5-5 (not saved)")
+	providerFlag := flag.String("provider", "", "provider of --model: anthropic, openai, xai, gemini, openrouter, groq or ollama (default: guessed)")
 	wsFlag := flag.String("w", "", "open a saved workspace by name (default: no workspace)")
 	flag.Usage = func() {
 		fmt.Fprintln(os.Stderr, "usage: werkz [flags] [folder ...]")
@@ -34,20 +35,26 @@ func main() {
 		fmt.Println("werkz", version)
 		return
 	}
-	if err := run(*login, *modelFlag, *wsFlag, flag.Args()); err != nil {
+	if *providerFlag != "" && config.ProviderByID(*providerFlag) == nil {
+		fmt.Fprintln(os.Stderr, "werkz: unknown provider", *providerFlag)
+		os.Exit(2)
+	}
+	if err := run(*login, *providerFlag, *modelFlag, *wsFlag, flag.Args()); err != nil {
 		fmt.Fprintln(os.Stderr, "werkz:", err)
 		os.Exit(1)
 	}
 }
 
-func run(login bool, model, workspace string, dirs []string) error {
+func run(login bool, provider, model, workspace string, dirs []string) error {
 	// Use dark-terminal styles unless WERKZ_THEME=light.
 	lipgloss.SetHasDarkBackground(os.Getenv("WERKZ_THEME") != "light")
 
 	cfg := config.Load()
 	if model != "" {
-		cfg.Provider, cfg.Model = catalog.GuessProvider(model), model
-		cfg.Effort = catalog.Lookup(cfg.Provider, cfg.Model).DefaultEffort
+		if provider == "" {
+			provider = catalog.GuessProvider(model)
+		}
+		cfg.UseSessionModel(provider, model, catalog.Lookup(provider, model).DefaultEffort)
 	}
 
 	var p *tea.Program

@@ -38,3 +38,16 @@ func TestFreeLabels(t *testing.T) {
 		t.Fatalf("Gemini should be labelled as a free tier, got %q", label)
 	}
 }
+
+// L4: OpenAI o-series models are recognised.
+func TestGuessProvider(t *testing.T) {
+	for id, want := range map[string]string{
+		"claude-opus-5-5": "anthropic", "gpt-5": "openai", "o1": "openai", "o3": "openai", "o4-mini": "openai",
+		"grok-4": "xai", "gemini-2.5-flash": "gemini", "meta-llama/llama-3.3-70b-instruct": "openrouter",
+		"llama3.2": "ollama", "openchat": "ollama",
+	} {
+		if got := GuessProvider(id); got != want {
+			t.Errorf("GuessProvider(%q) = %q, want %q", id, got, want)
+		}
+	}
+}

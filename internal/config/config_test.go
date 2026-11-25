@@ -85,3 +85,27 @@ func TestDefaultFallbackOrder(t *testing.T) {
 		t.Fatalf("custom order changed: %v", got)
 	}
 }
+
+// L4: a model chosen with --model is used for the session but not saved, unless the user
+// then picks another model.
+func TestSessionModelNotSaved(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	c := Load()
+	c.Provider, c.Model, c.Effort = "anthropic", "claude-opus-5-5", "medium"
+	must(t, c.Save())
+
+	c = Load()
+	c.UseSessionModel("ollama", "llama3.2", "auto")
+	if c.Provider != "ollama" || c.Model != "llama3.2" {
+		t.Fatal("session model not applied")
+	}
+	must(t, c.Save())
+	if d := Load(); d.Provider != "anthropic" || d.Model != "claude-opus-5-5" || d.Effort != "medium" {
+		t.Fatalf("--model was saved: %s/%s/%s", d.Provider, d.Model, d.Effort)
+	}
+	c.Provider, c.Model = "anthropic", "claude-sonnet-5-5" // the user picks a model with /model
+	must(t, c.Save())
+	if d := Load(); d.Model != "claude-sonnet-5-5" {
+		t.Fatalf("a model picked in werkz should be saved, got %s", d.Model)
+	}
+}
