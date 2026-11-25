@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"sync"
@@ -206,5 +209,83 @@ func TestAutoCompactKeepsNewMessageVerbatim(t *testing.T) {
 	}
 	if strings.Contains(fmt.Sprint(bodies[len(bodies)-2]["messages"]), exact) {
 		t.Fatal("the compaction request should not include the new message")
+	}
+}
+
+// claudeServer answers every request with fn's (status, SSE or JSON body).
+func claudeServer(t *testing.T, fn func(body []byte) (int, string)) *httptest.Server {
+	t.Helper()
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		status, out := fn(b)
+		if status != http.StatusOK {
+			w.WriteHeader(status)
+		} else {
+			w.Header().Set("Content-Type", "text/event-stream")
+		}
+		_, _ = io.WriteString(w, out)
+	}))
+}
+
+func sseMessage(stop, text string) string {
+	ev := func(name, data string) string { return fmt.Sprintf("event: %s\ndata: %s\n\n", name, data) }
+	s := ev("message_start", `{"type":"message_start","message":{"id":"m","type":"message","role":"assistant","model":"claude-opus-5-5","content":[],"stop_reason":null,"usage":{"input_tokens":5,"output_tokens":0}}}`)
+	if text != "" {
+		s += ev("content_block_start", `{"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}`)
+		s += ev("content_block_delta", fmt.Sprintf(`{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":%q}}`, text))
+		s += ev("content_block_stop", `{"type":"content_block_stop","index":0}`)
+	}
+	s += ev("message_delta", fmt.Sprintf(`{"type":"message_delta","delta":{"stop_reason":%q},"usage":{"output_tokens":1}}`, stop))
+	return s + ev("message_stop", `{"type":"message_stop"}`)
+}
+
+// L12: an empty (refused) reply isn't stored, so the next request isn't poisoned.
+func TestEmptyReplyNotStored(t *testing.T) {
+	srv := claudeServer(t, func([]byte) (int, string) { return http.StatusOK, sseMessage("refusal", "") })
+	defer srv.Close()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	cfg := config.Load()
+	cfg.Keys["anthropic"] = "k"
+	cfg.Provider, cfg.Model = "anthropic", "claude-opus-5-5"
+	e := New(cfg, func(any) {}, WithProviders(claudeAt(srv.URL)))
+	e.Run(context.Background(), "hi", *cfg)
+	for _, m := range e.history {
+		if m.Role == llm.RoleAssistant {
+			t.Fatalf("an empty assistant reply was stored: %+v", m)
+		}
+	}
+}
+
+// L12: when the conversation is too big for the model, /compact retries on a shrunk copy.
+func TestCompactRecoversFromOverflow(t *testing.T) {
+	var sizes []int
+	srv := claudeServer(t, func(b []byte) (int, string) {
+		sizes = append(sizes, len(b))
+		if len(b) > 50_000 {
+			return http.StatusBadRequest, `{"type":"error","error":{"type":"invalid_request_error","message":"prompt is too long: 250000 tokens > 200000 maximum"}}`
+		}
+		return http.StatusOK, sseMessage("end_turn", "Task: summary")
+	})
+	defer srv.Close()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	cfg := config.Load()
+	cfg.Keys["anthropic"] = "k"
+	cfg.Provider, cfg.Model = "anthropic", "claude-opus-5-5"
+	e := New(cfg, func(any) {}, WithProviders(claudeAt(srv.URL)))
+	e.history = []llm.Msg{
+		{Role: llm.RoleUser, Text: "read the log"},
+		{Role: llm.RoleAssistant, ToolCalls: []llm.ToolCall{{ID: "t1", Name: "Read", Args: `{"path":"big.log"}`}}},
+		{Role: llm.RoleTool, ToolCallID: "t1", ToolName: "Read", Text: strings.Repeat("log line\n", 20000)},
+		{Role: llm.RoleAssistant, Text: "That's a big log."},
+	}
+	e.cfg = cfg
+	if err := e.compact(context.Background(), "", false); err != nil {
+		t.Fatalf("compaction should recover from an overflow: %v (request sizes %v)", err, sizes)
+	}
+	if len(sizes) < 2 || sizes[len(sizes)-1] > 50_000 {
+		t.Fatalf("expected a retry with a smaller request, sizes %v", sizes)
+	}
+	if !strings.Contains(e.history[0].Text, "Task: summary") {
+		t.Fatal("history not replaced by the summary")
 	}
 }

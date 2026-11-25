@@ -136,7 +136,11 @@ func (e *Engine) Run(ctx context.Context, userText string, settings config.Confi
 			e.finish(err)
 			return
 		}
-		e.appendHistory(llm.Msg{Role: llm.RoleAssistant, Text: turn.Text, ToolCalls: turn.ToolCalls, ClaudeRaw: turn.Raw})
+		// An empty reply (e.g. a refusal with no content) is not stored: an assistant message
+		// without content would make every later request fail.
+		if turn.Text != "" || len(turn.ToolCalls) > 0 {
+			e.appendHistory(llm.Msg{Role: llm.RoleAssistant, Text: turn.Text, ToolCalls: turn.ToolCalls, ClaudeRaw: turn.Raw})
+		}
 		switch turn.StopReason {
 		case string(anthropic.BetaStopReasonRefusal):
 			e.send(NoticeMsg{"warn", "The model declined this request (refusal)."})

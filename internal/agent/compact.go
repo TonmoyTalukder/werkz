@@ -107,6 +107,12 @@ func (e *Engine) compact(ctx context.Context, focus string, auto bool) error {
 	e.setHistory(append(append([]llm.Msg{}, saved...), llm.Msg{Role: llm.RoleUser, Text: instr}))
 	e.quiet = true
 	turn, err := e.callWithFallback(ctx, SystemPrompt())
+	if err != nil && ctx.Err() == nil && tooLong(err) {
+		// The conversation no longer fits the model (e.g. one enormous tool result): summarise a
+		// copy with oversized tool inputs and results cut down, so the session can recover.
+		e.setHistory(append(shrinkForSummary(saved), llm.Msg{Role: llm.RoleUser, Text: instr}))
+		turn, err = e.callWithFallback(ctx, SystemPrompt())
+	}
 	e.quiet = false
 	if err != nil {
 		e.setHistory(saved)
@@ -168,4 +174,49 @@ func gitRecap(dirs []string) string {
 		b.WriteString("\n")
 	}
 	return strings.TrimSpace(b.String())
+}
+
+// tooLong reports whether an error means the request exceeded the model's context window.
+func tooLong(err error) bool {
+	low := strings.ToLower(err.Error())
+	for _, s := range []string{"prompt is too long", "too long", "context length", "context window",
+		"maximum context", "too many tokens", "reduce the length"} {
+		if strings.Contains(low, s) {
+			return true
+		}
+	}
+	return false
+}
+
+const summaryClip = 2000 // characters kept from each tool input/result when shrinking
+
+// shrinkForSummary copies the history with tool results and tool-call inputs cut to
+// summaryClip characters. Provider-native messages are dropped (rebuilt from the neutral
+// form), since they would still carry the oversized content.
+func shrinkForSummary(h []llm.Msg) []llm.Msg {
+	clip := func(s string) string {
+		if len(s) <= summaryClip {
+			return s
+		}
+		return strings.ToValidUTF8(s[:summaryClip], "") + fmt.Sprintf("… (%d characters cut for the summary)", len(s)-summaryClip)
+	}
+	out := make([]llm.Msg, 0, len(h))
+	for _, m := range h {
+		m.ClaudeRaw = nil
+		if m.Role == llm.RoleTool {
+			m.Text = clip(m.Text)
+		}
+		if len(m.ToolCalls) > 0 {
+			calls := make([]llm.ToolCall, len(m.ToolCalls))
+			for i, tc := range m.ToolCalls {
+				if len(tc.Args) > summaryClip {
+					tc.Args = `{"note":"input cut for the summary"}`
+				}
+				calls[i] = tc
+			}
+			m.ToolCalls = calls
+		}
+		out = append(out, m)
+	}
+	return out
 }
