@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>werkz packages</title>
+<title>Install werkz</title>
 <style>
   body { font: 16px/1.6 system-ui, sans-serif; max-width: 46rem; margin: 3rem auto; padding: 0 1.25rem; color: #1f2328; }
   pre { background: #f6f8fa; padding: 1rem; border-radius: 6px; overflow-x: auto; font-size: 14px; }
@@ -12,10 +12,18 @@
 </style>
 </head>
 <body>
-<h1>werkz packages</h1>
-<p>Package repositories for <a href="https://github.com/TonmoyTalukder/werkz">werkz</a>, an agentic coding tool for the terminal.
-Packages and repository metadata are signed with the key <a href="werkz.asc">werkz.asc</a>
-(fingerprint <code>3148 F0F0 B5B3 55FC 9FC1 9B2C 20A3 4C2D 3430 3C54</code>).</p>
+<h1>Install werkz</h1>
+<p><a href="https://github.com/TonmoyTalukder/werkz">werkz</a> is an agentic coding tool for the terminal.
+Pick one way to install it.</p>
+
+<h2>One-line installer (Linux and macOS)</h2>
+<pre><code>curl -fsSL https://raw.githubusercontent.com/TonmoyTalukder/werkz/main/install.sh | sh</code></pre>
+<p>Installs the latest release for Linux (x86-64, ARM64) or macOS (Apple Silicon, Intel), with an app icon.
+werkz then updates itself.</p>
+
+<h2>Homebrew (macOS and Linux)</h2>
+<pre><code>brew install --cask ZenixBit/tap/werkz</code></pre>
+<p>Installs the <code>werkz</code> command. Update with <code>brew upgrade --cask werkz</code>.</p>
 
 <h2>Debian, Ubuntu (apt)</h2>
 <pre><code>sudo install -d -m 755 /etc/apt/keyrings
@@ -29,6 +37,8 @@ sudo apt install werkz</code></pre>
 sudo dnf install werkz</code></pre>
 
 <p>Updates arrive with <code>sudo apt upgrade</code> or <code>sudo dnf upgrade</code>.
+The apt and dnf packages and repositories are signed with the key <a href="werkz.asc">werkz.asc</a>
+(fingerprint <code>3148 F0F0 B5B3 55FC 9FC1 9B2C 20A3 4C2D 3430 3C54</code>).
 Other ways to install: <a href="https://github.com/TonmoyTalukder/werkz/blob/main/docs/installation.md">installation guide</a>.</p>
 </body>
 </html>
