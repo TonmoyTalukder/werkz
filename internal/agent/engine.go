@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/TonmoyTalukder/werkz/internal/catalog"
@@ -49,6 +50,7 @@ type Engine struct {
 	lastPrefix int64
 	lastMI     catalog.ModelInfo
 	lastFast   bool
+	kaMu       sync.Mutex // guards kaCancel (the UI may stop the keep-alive at any time)
 	kaCancel   context.CancelFunc
 
 	fbTurn    map[string]bool // fallback approved for the current message
@@ -80,9 +82,11 @@ func (e *Engine) Reset() {
 	e.reads = tools.NewReadTracker()
 }
 
+// finish ends a turn. The keep-alive is set up before the UI hears the turn is done, so the
+// UI can never interleave with it (e.g. /clear or a queued message stopping it).
 func (e *Engine) finish(err error) {
-	e.send(TurnDoneMsg{Err: err})
 	e.startKeepAlive()
+	e.send(TurnDoneMsg{Err: err})
 }
 
 // Run handles one user message: model calls, tool loop and provider fallback.

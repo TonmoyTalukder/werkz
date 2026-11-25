@@ -21,7 +21,9 @@ func (e *Engine) startKeepAlive() {
 		return
 	}
 	ctx, cancel := context.WithCancel(context.Background())
+	e.kaMu.Lock()
 	e.kaCancel = cancel
+	e.kaMu.Unlock()
 	go func() {
 		deadline := at.Add(win)
 		next := at.Add(keepAliveEvery)
@@ -46,7 +48,10 @@ func (e *Engine) startKeepAlive() {
 	}()
 }
 
+// StopKeepAlive stops pinging the cache. Safe to call from any goroutine.
 func (e *Engine) StopKeepAlive() {
+	e.kaMu.Lock()
+	defer e.kaMu.Unlock()
 	if e.kaCancel != nil {
 		e.kaCancel()
 		e.kaCancel = nil

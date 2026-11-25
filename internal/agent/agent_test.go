@@ -207,6 +207,7 @@ func TestConcurrentUIAccess(t *testing.T) {
 		_ = e.Dirs()
 		_ = e.Disabled("anthropic")
 		_, _, _ = e.Workspace()
+		e.StopKeepAlive()
 		if i == 10 {
 			e.AddDir(extra)
 		}
