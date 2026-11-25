@@ -5,33 +5,57 @@ go build -o werkz ./cmd/werkz   # build (version shows as "dev")
 go test -race ./...             # tests (fake servers only, no paid API calls)
 golangci-lint run ./...         # lint
 govulncheck ./...               # known vulnerabilities
-./packaging/build.sh            # release assets in dist/ (needs Python 3 with Pillow for the icons)
+./packaging/build.sh            # installer tarball, werkz.app and bare binaries in dist/release/
+goreleaser check                # validate .goreleaser.yaml
+goreleaser release --snapshot --clean   # build every release asset into dist/ without publishing
 ```
+
+The icons in `packaging/icons/` are committed; regenerate them with
+`python3 packaging/make_icon.py packaging/icons` (needs Pillow).
 
 `go.mod` pins the Go toolchain (`toolchain go1.26.11`); the `go` command downloads it automatically.
 
 ## Releasing
 
-1. Update `VERSION` (for example `0.2.0`) and commit.
-2. Run `./packaging/build.sh`. It writes to `dist/release/`:
-   - `werkz-<version>-linux.tar.gz` (x86-64 and ARM64, installer, launcher, icons)
-   - `werkz-<version>-macos.zip` (`werkz.app` for Apple Silicon and Intel)
-   - bare binaries `werkz-<version>-{linux,darwin}-{amd64,arm64}`
-   - `SHA256SUMS`
-3. Tag and publish:
+Releases are built by [GoReleaser](https://goreleaser.com) (`.goreleaser.yaml`) in GitHub Actions
+(`.github/workflows/release.yml`):
+
+1. Update `VERSION` (for example `0.2.0`), commit and push to `main`.
+2. Tag and push the tag:
 
    ```bash
    git tag -a v0.2.0 -m "werkz v0.2.0" && git push origin v0.2.0
-   gh release create v0.2.0 dist/release/* --title "werkz v0.2.0" --notes-file notes.md
    ```
+
+The workflow checks that `VERSION` matches the tag, runs the tests, and publishes the release with a changelog
+grouped by commit type (`feat:`, `fix:`, `docs:`). Each release contains:
+
+- bare binaries `werkz-<version>-{linux,darwin}-{amd64,arm64}` (used by the self-updater)
+- `werkz-<version>-linux.tar.gz` (x86-64 and ARM64, installer, launcher, icons) and
+  `werkz-<version>-macos.zip` (`werkz.app`), both built by `packaging/build.sh` as a GoReleaser hook
+- per-platform `werkz_<version>_<os>_<arch>.tar.gz` archives (used by Homebrew)
+- `.deb`, `.rpm`, `.apk` and Arch Linux packages
+- `SHA256SUMS` covering all of the above
+
+It also updates the Homebrew cask in [TonmoyTalukder/homebrew-tap](https://github.com/TonmoyTalukder/homebrew-tap).
+That needs the repository secret `HOMEBREW_TAP_TOKEN`: a fine-grained GitHub token with **Contents: read and
+write** access to the `homebrew-tap` repository only.
+
+**macOS `werkz.app`:** GoReleaser has no format for an app bundle with a Terminal launcher, so `build.sh` still
+builds it and GoReleaser attaches the zip. Homebrew users get the plain `werkz` command.
+
+Without GitHub Actions, the same release can be published from a machine with
+`GITHUB_TOKEN=… HOMEBREW_TAP_TOKEN=… goreleaser release --clean`.
 
 The version is injected at build time with `-ldflags "-X main.version=…"`; `go install …@vX.Y.Z` builds report
 the module version instead.
 
 **Installed copies update themselves from releases**, so every release must include the bare binaries
-(`werkz-<version>-<os>-<arch>`) and `SHA256SUMS` exactly as `build.sh` names them, and the tag must be
+(`werkz-<version>-<os>-<arch>`) and `SHA256SUMS` named exactly as they are now, and the tag must be
 `v<version>` with a plain `MAJOR.MINOR.PATCH` version. The updater (`internal/update`) follows
-`/releases/latest`, so a release marked as a pre-release or draft isn't offered to users.
+`/releases/latest`, so a release marked as a pre-release or draft isn't offered to users. Copies installed
+by Homebrew or a Linux package are never replaced (see `Updater.Managed`); they get a "update with your
+package manager" notice instead.
 
 ## Project layout
 
@@ -53,6 +77,8 @@ werkz/
 │   └── testutil/       fake model servers for tests
 ├── packaging/          icon generator, Linux launcher/installer, macOS app, build script
 ├── docs/               documentation
+├── .goreleaser.yaml    release build (binaries, packages, Homebrew cask)
+├── .github/workflows/  release workflow (runs GoReleaser on v* tags)
 ├── install.sh          one-line installer (downloads a GitHub release)
 └── VERSION
 ```

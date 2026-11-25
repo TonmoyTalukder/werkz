@@ -68,6 +68,29 @@ mv werkz-0.1.0-linux-amd64 ~/.local/bin/werkz
 Verify any download with `sha256sum -c SHA256SUMS --ignore-missing` (Linux) or
 `shasum -a 256 -c SHA256SUMS --ignore-missing` (macOS).
 
+## Homebrew (macOS and Linux)
+
+```bash
+brew install --cask TonmoyTalukder/tap/werkz
+```
+
+This installs the `werkz` command (no app icon). Update with `brew upgrade --cask werkz`.
+
+## Linux packages
+
+Each release has `.deb` (Debian, Ubuntu), `.rpm` (Fedora, RHEL, openSUSE), `.apk` (Alpine) and Arch Linux
+(`.pkg.tar.zst`) packages for x86-64 and ARM64. They install `werkz` in `/usr/bin` with an app-grid entry and
+icons. Download the one for your system from the [releases page](https://github.com/TonmoyTalukder/werkz/releases/latest), then:
+
+```bash
+sudo apt install ./werkz_0.2.0_amd64.deb        # Debian, Ubuntu
+sudo dnf install ./werkz-0.2.0-1.x86_64.rpm     # Fedora, RHEL
+sudo pacman -U ./werkz-0.2.0-1-x86_64.pkg.tar.zst  # Arch
+sudo apk add --allow-untrusted ./werkz_0.2.0_x86_64.apk  # Alpine
+```
+
+Update by installing the newer package the same way.
+
 ## With Go
 
 ```bash
@@ -100,6 +123,9 @@ needed.
 - If werkz is installed somewhere it can't write to (for example system-wide), it tells you an update is
   available instead; run the one-line installer again to update.
 - Builds made with `go build` without a version (shown as `dev`) never update themselves.
+- **Homebrew and Linux packages** (`.deb`, `.rpm`, `.apk`, Arch) are owned by the package manager, so werkz
+  never replaces them. It tells you a new version is out and how to update instead, for example
+  `brew upgrade --cask werkz`.
 
 Only the `werkz` command is replaced; app icons and launchers stay as installed. Running the one-line installer
 again also updates everything and keeps your settings.
@@ -109,5 +135,7 @@ again also updates everything and keeps your settings.
 - **Linux:** run `uninstall.sh` from the release package, or delete `~/.local/bin/werkz`,
   `~/.local/bin/werkz-launch`, `~/.local/share/applications/werkz.desktop` and the Desktop icon.
 - **macOS:** delete `werkz.app` and `~/.local/bin/werkz`.
+- **Homebrew:** `brew uninstall --cask werkz`. **Linux packages:** remove the `werkz` package with your package
+  manager (for example `sudo apt remove werkz`).
 
 Your settings and API keys are kept in `~/.config/werkz/`; delete that folder to remove them too.
