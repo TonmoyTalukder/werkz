@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/TonmoyTalukder/werkz/internal/agent"
 	"github.com/TonmoyTalukder/werkz/internal/config"
@@ -63,7 +64,16 @@ func TestViewsRender(t *testing.T) {
 	reply := make(chan agent.PermDecision, 1)
 	m.Update(agent.PermReqMsg{Tool: "Edit", Summary: "main.go", Detail: tools.DiffLines("old line", "new line\nsecond", 10), Reply: reply})
 	show("permission", m.View())
-	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("2")})
+	if m.permSel != 2 {
+		t.Fatal("permission dialog must start on No")
+	}
+	m.dialogAt = time.Time{}                                     // past the typeahead guard
+	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")}) // letters do nothing now
+	if m.state != statePerm {
+		t.Fatal("a letter must not answer the dialog")
+	}
+	m.Update(tea.KeyMsg{Type: tea.KeyUp})
+	m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	if d := <-reply; d != agent.PermAlways {
 		t.Fatalf("perm decision %v", d)
 	}
@@ -274,14 +284,16 @@ func TestFallbackDialog(t *testing.T) {
 		m.Update(agent.FallbackAskMsg{From: "openrouter", FromModel: "x:free", Reason: "HTTP 429: rate limited",
 			Candidates: []config.FallbackModel{{Provider: "anthropic", Model: "claude-haiku-5-5"}},
 			Exclude:    []config.FallbackModel{{Provider: "anthropic", Model: "claude-opus-5-5"}}, Reply: r})
+		m.dialogAt = time.Time{} // past the typeahead guard
 		return r
 	}
-	// 1 = first suggested model, for this message
+	// first suggested model, for this message (highlight starts on Stop)
 	r := ask()
 	if v := m.View(); !strings.Contains(v, "Switch to which model?") || !strings.Contains(v, "Haiku 5.5") || !strings.Contains(v, "Choose another model") {
 		t.Fatal("dialog should list the suggestions and 'Choose another model'")
 	}
-	m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("1")})
+	m.fbSel = 0
+	m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	if c := <-r; c.Model != "claude-haiku-5-5" || c.Session {
 		t.Fatalf("choice = %+v", c)
 	}
@@ -346,5 +358,34 @@ func TestOpenRouterPaidToggle(t *testing.T) {
 	m.command("/openrouter free")
 	if cfg.OpenRouterPaid {
 		t.Fatal("/openrouter free should turn it off")
+	}
+}
+
+// H3: keys arriving right after a dialog opens (typeahead) are ignored, and the dialogs
+// start on the safe answer.
+func TestDialogTypeaheadGuard(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	cfg := config.Load()
+	cfg.Onboarded = true
+	m := newModel(cfg)
+	m.eng = agent.New(cfg, func(any) {})
+	m.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	reply := make(chan agent.PermDecision, 1)
+	m.Update(agent.PermReqMsg{Tool: "Bash", Summary: "rm -rf build", Reply: reply})
+	for _, k := range []tea.KeyMsg{{Type: tea.KeyRunes, Runes: []rune("a")}, {Type: tea.KeyEnter}, {Type: tea.KeyUp}} {
+		m.Update(k)
+	}
+	select {
+	case d := <-reply:
+		t.Fatalf("typeahead answered the dialog: %v", d)
+	default:
+	}
+	if m.state != statePerm || m.permSel != 2 {
+		t.Fatalf("dialog should still be open on No (state %d, sel %d)", m.state, m.permSel)
+	}
+	m.dialogAt = time.Time{}
+	m.Update(tea.KeyMsg{Type: tea.KeyEnter})
+	if d := <-reply; d != agent.PermNo {
+		t.Fatalf("Enter on the default should deny, got %v", d)
 	}
 }

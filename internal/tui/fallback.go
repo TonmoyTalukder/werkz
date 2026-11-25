@@ -300,26 +300,18 @@ func (m *model) fallbackKey(k tea.KeyMsg) tea.Cmd {
 			return m.answerFallback(agent.FallbackChoice{Stop: true})
 		}
 	}
-	switch ks := k.String(); ks {
-	case "up", "k":
+	switch k.String() {
+	case "up":
 		m.fbSel = (m.fbSel + n - 1) % n
-	case "down", "j", "tab":
+	case "down", "tab":
 		m.fbSel = (m.fbSel + 1) % n
-	case "esc", "n":
+	case "esc":
 		return m.answerFallback(agent.FallbackChoice{Stop: true})
 	case "enter":
 		return pick(m.fbSel, false)
-	case "a":
+	case "ctrl+a": // use the highlighted model for the rest of the session
 		if m.fbSel < len(f.Candidates) {
 			return pick(m.fbSel, true)
-		}
-	case "o":
-		return m.openFallbackBrowse()
-	default:
-		if len(ks) == 1 && ks[0] >= '1' && ks[0] <= '9' {
-			if i := int(ks[0] - '1'); i < len(f.Candidates) {
-				return pick(i, false)
-			}
 		}
 	}
 	return nil
@@ -365,10 +357,10 @@ func (m *model) fallbackView() string {
 		return box(strings.TrimRight(b.String(), "\n"), cOrange, m.w)
 	}
 
-	b.WriteString(sText.Render("Switch to which model?") + sDim.Render("  enter this message · a whole session · esc stop") + "\n")
+	b.WriteString(sText.Render("Switch to which model?") + sDim.Render("  ↑/↓ choose · enter this message · ctrl+a whole session · esc stop") + "\n")
 	opts := make([]string, 0, len(f.Candidates)+2)
-	for i, c := range f.Candidates {
-		opts = append(opts, fmt.Sprintf("%d. %s", i+1, modelRow(catalog.Lookup(c.Provider, c.Model), m.w)))
+	for _, c := range f.Candidates {
+		opts = append(opts, modelRow(catalog.Lookup(c.Provider, c.Model), m.w))
 	}
 	opts = append(opts, "Choose another model…", "No, stop here · pick a model later with /model")
 	for i, o := range opts {

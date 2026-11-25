@@ -211,16 +211,14 @@ func (m *model) effortView() string {
 
 func (m *model) permKey(k tea.KeyMsg) {
 	choose := -1
+	// Arrows + Enter only: letters and digits typed into a half-written message must never
+	// answer the dialog.
 	switch k.String() {
 	case "up":
 		m.permSel = (m.permSel + 2) % 3
-	case "down":
+	case "down", "tab":
 		m.permSel = (m.permSel + 1) % 3
-	case "1", "y":
-		choose = 0
-	case "2", "a":
-		choose = 1
-	case "3", "n", "esc":
+	case "esc":
 		choose = 2
 	case "enter":
 		choose = m.permSel
@@ -239,13 +237,13 @@ func (m *model) permView() string {
 	if len(p.Detail) > 0 {
 		b.WriteString("\n" + renderDetail(p.Detail, m.w-8) + "\n")
 	}
-	b.WriteString("\n" + sText.Render("Do you want to proceed?") + "\n")
+	b.WriteString("\n" + sText.Render("Do you want to proceed?") + sDim.Render("  ↑/↓ choose · enter confirm · esc no") + "\n")
 	opts := []string{"Yes", "Yes, and don't ask again for " + p.Tool + " this session", "No, and tell werkz what to do differently (esc)"}
 	for i, o := range opts {
 		if i == m.permSel {
-			b.WriteString(sPink.Render("❯ ") + sPink.Bold(true).Render(fmt.Sprintf("%d. %s", i+1, o)) + "\n")
+			b.WriteString(sPink.Render("❯ ") + sPink.Bold(true).Render(o) + "\n")
 		} else {
-			b.WriteString(sDim.Render(fmt.Sprintf("  %d. %s", i+1, o)) + "\n")
+			b.WriteString(sDim.Render("  "+o) + "\n")
 		}
 	}
 	return box(strings.TrimRight(b.String(), "\n"), cYellow, m.w)

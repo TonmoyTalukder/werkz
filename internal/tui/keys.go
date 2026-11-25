@@ -53,6 +53,9 @@ func (m *model) handleKey(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case stateEffort:
 		return m, m.effortKey(k)
 	case statePerm:
+		if m.typeahead() {
+			return m, nil
+		}
 		m.permKey(k)
 		return m, nil
 	case stateWorkspaces:
@@ -60,6 +63,9 @@ func (m *model) handleKey(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case stateWsForm:
 		return m, m.wsFormKey(k)
 	case stateFallback:
+		if m.typeahead() {
+			return m, nil
+		}
 		return m, m.fallbackKey(k)
 	case stateFallbackMode:
 		return m, m.fallbackModeKey(k)
@@ -156,3 +162,9 @@ func (m *model) submit(text string) tea.Cmd {
 	m.push(func(w int) string { return renderUser(text, w) })
 	return tick()
 }
+
+// dialogGuard ignores keys for a moment after a permission or fallback dialog opens, so
+// keystrokes meant for the message being typed can't answer it.
+const dialogGuard = 400 * time.Millisecond
+
+func (m *model) typeahead() bool { return time.Since(m.dialogAt) < dialogGuard }

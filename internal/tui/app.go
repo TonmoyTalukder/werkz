@@ -72,6 +72,7 @@ type model struct {
 	effortIdx int
 	perm      *agent.PermReqMsg
 	permSel   int
+	dialogAt  time.Time // when a permission/fallback dialog opened (typeahead guard)
 	fb        *agent.FallbackAskMsg
 	fbSel     int
 	fbBrowse  bool
@@ -323,7 +324,8 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case agent.PermReqMsg:
 		mm := msg
-		m.perm, m.permSel, m.state = &mm, 0, statePerm
+		m.perm, m.permSel, m.state = &mm, 2, statePerm // highlight starts on "No"
+		m.dialogAt = time.Now()
 		return m, nil
 
 	case agent.UsageMsg:
@@ -376,7 +378,8 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case agent.FallbackAskMsg:
 		mm := msg
-		m.fb, m.fbSel, m.fbBrowse, m.state = &mm, 0, false, stateFallback
+		m.fb, m.fbSel, m.fbBrowse, m.state = &mm, len(mm.Candidates)+1, false, stateFallback // highlight starts on "Stop"
+		m.dialogAt = time.Now()
 		return m, nil
 
 	case agent.NoticeMsg:
