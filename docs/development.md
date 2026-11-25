@@ -28,6 +28,11 @@ govulncheck ./...               # known vulnerabilities
 The version is injected at build time with `-ldflags "-X main.version=…"`; `go install …@vX.Y.Z` builds report
 the module version instead.
 
+**Installed copies update themselves from releases**, so every release must include the bare binaries
+(`werkz-<version>-<os>-<arch>`) and `SHA256SUMS` exactly as `build.sh` names them, and the tag must be
+`v<version>` with a plain `MAJOR.MINOR.PATCH` version. The updater (`internal/update`) follows
+`/releases/latest`, so a release marked as a pre-release or draft isn't offered to users.
+
 ## Project layout
 
 ```text
@@ -43,6 +48,7 @@ werkz/
 │   │   └── openai/     OpenAI-compatible backend (OpenAI, Grok, Gemini, OpenRouter, Groq, Ollama)
 │   ├── tools/          Read/Write/Edit/Bash/LS/Glob/Grep, output trimming, read/edit guards
 │   ├── tui/            Bubble Tea interface: transcript, input, dialogs, status bar, theme
+│   ├── update/         self-update from GitHub releases (checksum-verified, atomic)
 │   ├── textutil/       small shared text helpers
 │   └── testutil/       fake model servers for tests
 ├── packaging/          icon generator, Linux launcher/installer, macOS app, build script

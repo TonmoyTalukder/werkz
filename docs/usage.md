@@ -16,6 +16,7 @@
 | `/context` | How much of the context window is in use |
 | `/cost` | Session tokens, cost and cache savings |
 | `/balance 100` | Track your remaining Claude credit |
+| `/update` | Check for a new werkz release and install it; `/update auto on\|off` |
 | `/openrouter paid\|free` | Show OpenRouter's paid models too, or only the free ones (default) |
 | `/mode` | Cycle the permission mode |
 | `/clear` | Start a fresh conversation |
@@ -46,6 +47,7 @@ werkz -w my-workspace              # open a saved workspace
 werkz --model claude-sonnet-5-5    # use a model for this session only (not saved)
 werkz --provider groq --model llama-3.3-70b-versatile   # name the provider when the id is ambiguous
 werkz --login                      # open the API key screen
+werkz --update                     # install the latest release and exit
 werkz --version
 ```
 

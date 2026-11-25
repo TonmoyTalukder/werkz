@@ -18,6 +18,7 @@ can be changed from inside werkz, so you rarely need to edit it by hand.
 | `WERKZ_THEME=light` | Use light-background styles |
 | `WERKZ_TERMINAL` | Terminal used by the Linux desktop icon (`kitty`, `alacritty`, `gnome-terminal`, …) |
 | `NO_TRIM=1` | In a command, disables test-output trimming for that run |
+| `WERKZ_NO_UPDATE=1` | Don't check for or install updates this session (see [Updating](installation.md#updating)) |
 
 ## Files werkz writes
 

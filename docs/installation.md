@@ -89,7 +89,20 @@ To build the Linux and macOS packages yourself, see [Development](development.md
 
 ## Updating
 
-Run the one-line installer again; it replaces the previous version and keeps your settings.
+werkz **updates itself**. Once a day, in the background, it checks GitHub for a newer release. If there is
+one, it downloads the binary for your system, verifies it against the release's `SHA256SUMS`, and replaces
+itself. The new version is used the next time you start werkz, and the status bar says when a restart is
+needed.
+
+- `/update` checks and installs right away; `werkz --update` does the same from a terminal.
+- `/update auto off` turns automatic updates off (`/update auto on` turns them back on); setting
+  `WERKZ_NO_UPDATE=1` disables them for a session.
+- If werkz is installed somewhere it can't write to (for example system-wide), it tells you an update is
+  available instead; run the one-line installer again to update.
+- Builds made with `go build` without a version (shown as `dev`) never update themselves.
+
+Only the `werkz` command is replaced; app icons and launchers stay as installed. Running the one-line installer
+again also updates everything and keeps your settings.
 
 ## Uninstalling
 

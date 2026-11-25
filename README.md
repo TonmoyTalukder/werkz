@@ -52,8 +52,9 @@ curl -fsSL https://raw.githubusercontent.com/TonmoyTalukder/werkz/main/install.s
 ```
 
 This installs the latest [release](https://github.com/TonmoyTalukder/werkz/releases) for Linux (x86-64, ARM64)
-or macOS (Apple Silicon, Intel), including a clickable app icon. Prefer to download the files yourself, or use
-`go install`? See [Installation](docs/installation.md).
+or macOS (Apple Silicon, Intel), including a clickable app icon. werkz then keeps itself up to date
+automatically. Prefer to download the files yourself, or use `go install`? See
+[Installation](docs/installation.md).
 
 ## Quick start
 
