@@ -1,6 +1,7 @@
 # Build output
 /werkz
 /dist/
+/build/
 *.exe
 *.test
 *.out

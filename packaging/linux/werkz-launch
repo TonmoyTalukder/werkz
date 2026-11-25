@@ -3,7 +3,9 @@
 # Override the terminal with WERKZ_TERMINAL=kitty (or any name below).
 SELF="$(readlink -f "$0")"
 QSELF="$(printf '%q' "$SELF")" # shell-quoted, for terminals that take one command string
-BIN="${WERKZ_BIN:-$HOME/.local/bin/werkz}"
+# The werkz binary sits next to this launcher (~/.local/bin, or /usr/bin for a .deb/.rpm).
+BIN="${WERKZ_BIN:-$(dirname "$SELF")/werkz}"
+[ -x "$BIN" ] || BIN="$(command -v werkz || echo "$HOME/.local/bin/werkz")"
 
 if [ "${1:-}" = "--inner" ]; then
   # Runs inside the new terminal window.

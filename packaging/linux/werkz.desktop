@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=werkz
+GenericName=AI Coding Assistant
+Comment=Agentic coding in your terminal, with paid or free models
+Exec=werkz-launch
+Icon=werkz
+Terminal=false
+Categories=Development;
+Keywords=ai;claude;gemini;terminal;coding;assistant;
+StartupNotify=true

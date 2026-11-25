@@ -1,15 +1,19 @@
 #!/usr/bin/env bash
-# Builds release packages into dist/:
+# Builds release packages into $DIST (default dist/):
 #   werkz-<ver>-linux.tar.gz   (amd64 + arm64, launcher, icons, install.sh)
 #   werkz-<ver>-macos.zip      (werkz.app with Intel + Apple Silicon binaries)
+#   release/                   (the above, bare binaries and SHA256SUMS)
+# Usage: packaging/build.sh [version]   (default: the VERSION file)
+# GoReleaser runs this as a hook with DIST=build/packages; see .goreleaser.yaml.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-VER="$(tr -d '[:space:]' < VERSION)"
-DIST=dist
-rm -rf "$DIST" && mkdir -p "$DIST/bin"
+VER="${1:-$(tr -d '[:space:]' < VERSION)}"
+VER="${VER#v}"
+DIST="${DIST:-dist}"
+rm -rf "$DIST" && mkdir -p "$DIST/bin" "$DIST/icons"
 
 echo "→ icons"
-python3 packaging/make_icon.py "$DIST/icons" >/dev/null
+cp packaging/icons/* "$DIST/icons/" # regenerate with: python3 packaging/make_icon.py packaging/icons
 
 echo "→ binaries v$VER"
 for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64; do
