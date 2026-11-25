@@ -69,3 +69,25 @@ func FakeClaude(_ *testing.T, bodies *[]map[string]any, mu *sync.Mutex) *httptes
 		ev("message_stop", `{"type":"message_stop"}`)
 	}))
 }
+
+// FakeReleases serves a GitHub-like release feed: /releases/latest redirects to
+// /releases/tag/v<latest>, and /releases/download/v<latest>/<name> serves files[name].
+func FakeReleases(latest string, files map[string][]byte) *httptest.Server {
+	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case r.URL.Path == "/releases/latest":
+			http.Redirect(w, r, "/releases/tag/v"+latest, http.StatusFound)
+		case strings.HasPrefix(r.URL.Path, "/releases/tag/"):
+			w.WriteHeader(http.StatusOK)
+		case strings.HasPrefix(r.URL.Path, "/releases/download/v"+latest+"/"):
+			b, ok := files[r.URL.Path[strings.LastIndex(r.URL.Path, "/")+1:]]
+			if !ok {
+				http.NotFound(w, r)
+				return
+			}
+			_, _ = w.Write(b)
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+}
