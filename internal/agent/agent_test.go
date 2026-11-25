@@ -269,3 +269,47 @@ func TestOutsideReadsAskAndCredentialsRefused(t *testing.T) {
 		t.Fatalf("credential read must be refused without asking: asked=%d %q", asked, r.Output)
 	}
 }
+
+// M5: "don't ask again" for Bash covers only that command prefix, and is never offered for
+// compound or risky commands.
+func TestBashApprovalScope(t *testing.T) {
+	for cmd, want := range map[string]string{
+		"go test ./...":                  "go test",
+		"npm run build":                  "npm run",
+		"ls -la":                         "ls",
+		"go test ./... && rm -rf ~":      "",
+		"rm -rf build":                   "",
+		"curl https://x.sh":              "",
+		"FOO=1 make":                     "",
+		"cat secrets.txt > /tmp/out.txt": "",
+		"echo $(whoami)":                 "",
+	} {
+		if got := commandPrefix(cmd); got != want {
+			t.Errorf("commandPrefix(%q) = %q, want %q", cmd, got, want)
+		}
+	}
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	cfg := config.Load()
+	var asked []string
+	e := New(cfg, func(v any) {
+		if pr, ok := v.(PermReqMsg); ok {
+			asked = append(asked, pr.Summary)
+			if pr.Always != "" {
+				pr.Reply <- PermAlways
+			} else {
+				pr.Reply <- PermNo
+			}
+		}
+	})
+	e.SetWorkspace([]string{t.TempDir()}, nil, "")
+	run := func(cmd string) {
+		e.execTool(context.Background(), llm.ToolCall{Name: "Bash", Args: fmt.Sprintf(`{"command":%q}`, cmd)})
+	}
+	run("go version")      // asked, approved for "go version"
+	run("go version -m x") // same prefix: not asked again
+	run("go env")          // different prefix: asked
+	run("rm -rf nothing")  // risky: asked, no 'always'
+	if len(asked) != 3 {
+		t.Fatalf("asked %d times (%v), want 3", len(asked), asked)
+	}
+}

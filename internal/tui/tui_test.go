@@ -62,7 +62,8 @@ func TestViewsRender(t *testing.T) {
 	show("effort", m.View())
 	m.state = stateChat
 	reply := make(chan agent.PermDecision, 1)
-	m.Update(agent.PermReqMsg{Tool: "Edit", Summary: "main.go", Detail: tools.DiffLines("old line", "new line\nsecond", 10), Reply: reply})
+	m.Update(agent.PermReqMsg{Tool: "Edit", Summary: "main.go", Detail: tools.DiffLines("old line", "new line\nsecond", 10),
+		Always: "Yes, and don't ask again for Edit this session", Reply: reply})
 	show("permission", m.View())
 	if m.permSel != 2 {
 		t.Fatal("permission dialog must start on No")
@@ -380,8 +381,8 @@ func TestDialogTypeaheadGuard(t *testing.T) {
 		t.Fatalf("typeahead answered the dialog: %v", d)
 	default:
 	}
-	if m.state != statePerm || m.permSel != 2 {
-		t.Fatalf("dialog should still be open on No (state %d, sel %d)", m.state, m.permSel)
+	if opts, _ := m.permOptions(); m.state != statePerm || m.permSel != len(opts)-1 || len(opts) != 2 {
+		t.Fatalf("dialog should still be open on No, without 'don't ask again' for rm (state %d, sel %d)", m.state, m.permSel)
 	}
 	m.dialogAt = time.Time{}
 	m.Update(tea.KeyMsg{Type: tea.KeyEnter})

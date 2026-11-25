@@ -209,22 +209,40 @@ func (m *model) effortView() string {
 
 // ---------------------------------------------------------------- overlays: permission
 
+// permOptions are the answers offered; "don't ask again" only when the engine offers it.
+func (m *model) permOptions() ([]string, []agent.PermDecision) {
+	opts := []string{"Yes"}
+	dec := []agent.PermDecision{agent.PermYes}
+	if m.perm.Always != "" {
+		opts = append(opts, m.perm.Always)
+		dec = append(dec, agent.PermAlways)
+	}
+	opts = append(opts, "No, and tell werkz what to do differently (esc)")
+	dec = append(dec, agent.PermNo)
+	return opts, dec
+}
+
 func (m *model) permKey(k tea.KeyMsg) {
+	if m.perm == nil {
+		return
+	}
+	_, dec := m.permOptions()
+	n := len(dec)
 	choose := -1
 	// Arrows + Enter only: letters and digits typed into a half-written message must never
 	// answer the dialog.
 	switch k.String() {
 	case "up":
-		m.permSel = (m.permSel + 2) % 3
+		m.permSel = (m.permSel + n - 1) % n
 	case "down", "tab":
-		m.permSel = (m.permSel + 1) % 3
+		m.permSel = (m.permSel + 1) % n
 	case "esc":
-		choose = 2
+		choose = n - 1
 	case "enter":
 		choose = m.permSel
 	}
-	if choose >= 0 && m.perm != nil {
-		m.perm.Reply <- []agent.PermDecision{agent.PermYes, agent.PermAlways, agent.PermNo}[choose]
+	if choose >= 0 {
+		m.perm.Reply <- dec[choose]
 		m.perm = nil
 		m.state = stateChat
 	}
@@ -238,7 +256,7 @@ func (m *model) permView() string {
 		b.WriteString("\n" + renderDetail(p.Detail, m.w-8) + "\n")
 	}
 	b.WriteString("\n" + sText.Render("Do you want to proceed?") + sDim.Render("  ↑/↓ choose · enter confirm · esc no") + "\n")
-	opts := []string{"Yes", "Yes, and don't ask again for " + p.Tool + " this session", "No, and tell werkz what to do differently (esc)"}
+	opts, _ := m.permOptions()
 	for i, o := range opts {
 		if i == m.permSel {
 			b.WriteString(sPink.Render("❯ ") + sPink.Bold(true).Render(o) + "\n")

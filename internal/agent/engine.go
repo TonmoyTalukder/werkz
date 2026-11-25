@@ -6,6 +6,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/TonmoyTalukder/werkz/internal/catalog"
@@ -279,18 +281,22 @@ func (e *Engine) execTool(ctx context.Context, tc llm.ToolCall) tools.Result {
 			summary += "  ⚠ outside working folders"
 		}
 	}
-	if need && (!e.allow[tc.Name] || outside) {
+	key, always := allowKey(tc)
+	if outside {
+		key, always = "", ""
+	}
+	if need && (key == "" || !e.allow[key]) {
 		if kind == "plan" {
 			r := tools.Result{Output: "Plan mode is on: only read-only tools may run. Describe the plan instead.", IsError: true}
 			e.send(ToolResultMsg{ID: tc.ID, Name: tc.Name, Summary: "blocked (plan mode)", IsError: true})
 			return r
 		}
 		reply := make(chan PermDecision, 1)
-		e.send(PermReqMsg{Tool: tc.Name, Summary: summary, Detail: tools.Preview(tc), Reply: reply})
+		e.send(PermReqMsg{Tool: tc.Name, Summary: summary, Detail: tools.Preview(tc), Always: always, Reply: reply})
 		select {
 		case d := <-reply:
-			if d == PermAlways && !outside {
-				e.allow[tc.Name] = true
+			if d == PermAlways && key != "" {
+				e.allow[key] = true
 			}
 			if d == PermNo {
 				e.send(ToolResultMsg{ID: tc.ID, Name: tc.Name, Summary: "denied by user", IsError: true})
@@ -320,3 +326,46 @@ func fileTool(name string) bool {
 }
 
 func writeTool(name string) bool { return name == "Write" || name == "Edit" }
+
+// allowKey is what a "don't ask again" approval covers, and the label for that option.
+// File tools are approved per tool. Bash is approved per command prefix (e.g. "go test"),
+// and never for compound commands or risky programs, where it returns "".
+func allowKey(tc llm.ToolCall) (key, label string) {
+	if tc.Name != "Bash" {
+		return tc.Name, "Yes, and don't ask again for " + tc.Name + " this session"
+	}
+	a, err := tools.ParseArgs(tc)
+	if err != nil {
+		return "", ""
+	}
+	p := commandPrefix(a.Command)
+	if p == "" {
+		return "", ""
+	}
+	return "Bash:" + p, "Yes, and don't ask again for `" + p + " …` commands this session"
+}
+
+// riskyCommands are never approved for the whole session.
+var riskyCommands = map[string]bool{
+	"rm": true, "sudo": true, "su": true, "doas": true, "dd": true, "mkfs": true, "curl": true, "wget": true,
+	"ssh": true, "scp": true, "rsync": true, "chmod": true, "chown": true, "kill": true, "pkill": true,
+	"killall": true, "shutdown": true, "reboot": true, "eval": true, "exec": true, "sh": true, "bash": true,
+	"zsh": true, "python": true, "python3": true, "node": true, "perl": true, "ruby": true,
+}
+
+// commandPrefix returns the program and first sub-command (e.g. "go test", "npm run") of a
+// simple command, or "" for compound/redirected commands and risky programs.
+func commandPrefix(cmd string) string {
+	cmd = strings.TrimSpace(cmd)
+	if cmd == "" || strings.ContainsAny(cmd, ";&|`$<>(){}\n\\") {
+		return ""
+	}
+	f := strings.Fields(cmd)
+	if strings.Contains(f[0], "=") || riskyCommands[filepath.Base(f[0])] {
+		return "" // env-var prefixes and risky programs always ask
+	}
+	if len(f) > 1 && !strings.HasPrefix(f[1], "-") && !strings.ContainsAny(f[1], "/.") {
+		return f[0] + " " + f[1]
+	}
+	return f[0]
+}

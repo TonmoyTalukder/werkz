@@ -74,7 +74,10 @@ const (
 type PermReqMsg struct {
 	Tool, Summary string
 	Detail        []string
-	Reply         chan PermDecision
+	// Always is the label of the "don't ask again" option ("" = not offered, e.g. for
+	// compound or risky shell commands and anything outside the working folders).
+	Always string
+	Reply  chan PermDecision
 }
 
 type CompactDoneMsg struct {

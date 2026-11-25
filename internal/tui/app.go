@@ -325,7 +325,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case agent.PermReqMsg:
 		mm := msg
-		m.perm, m.permSel, m.state = &mm, 2, statePerm // highlight starts on "No"
+		m.perm, m.state = &mm, statePerm
+		opts, _ := m.permOptions()
+		m.permSel = len(opts) - 1 // highlight starts on "No"
 		m.dialogAt = time.Now()
 		return m, nil
 
