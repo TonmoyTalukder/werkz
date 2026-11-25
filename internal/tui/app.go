@@ -138,6 +138,9 @@ type sessionStats struct {
 
 // saveConfig persists settings; a failure is shown instead of silently ignored.
 func (m *model) saveConfig() {
+	if m.cfg.LoadErr() != nil {
+		return // explained once at start-up; the file is left untouched
+	}
 	if err := m.cfg.Save(); err != nil {
 		m.printS(renderNotice("error", "Couldn't save settings: "+err.Error()))
 	}
@@ -215,6 +218,10 @@ func (m *model) Init() tea.Cmd {
 	if m.state == stateChat {
 		m.push(m.banner)
 		m.homeNotice()
+		if err := m.cfg.LoadErr(); err != nil {
+			m.printS(renderNotice("error", "Couldn't load your settings: "+err.Error()+
+				". werkz is running with defaults and won't overwrite the file this session."))
+		}
 		cmds = append(cmds, m.runOnStart())
 	} else {
 		cmds = append(cmds, m.login.inputs[0].Focus())

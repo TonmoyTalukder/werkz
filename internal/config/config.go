@@ -4,6 +4,9 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -65,14 +68,17 @@ type Config struct {
 	Onboarded      bool              `json:"onboarded"`
 	Mode           string            `json:"permission_mode"`
 	Workspaces     []*Workspace      `json:"workspaces,omitempty"`
-	FallbackMode   string            `json:"fallback_mode"`             // off (default) | ask | auto
-	OpenRouterPaid bool              `json:"openrouter_paid,omitempty"` // also offer paid OpenRouter models (default: free only)
-	CacheTTL       string            `json:"cache_ttl,omitempty"`       // 5m (default) | 1h
-	KeepAliveMin   int               `json:"cache_keepalive_minutes"`   // 0 = default (30)
-	NoKeepAlive    bool              `json:"cache_keepalive_off,omitempty"`
-	FallbackChain  []FallbackModel   `json:"fallback_models,omitempty"`     // ordered; empty = one model per provider in FallbackOrder
-	CompactAt      int               `json:"auto_compact_tokens,omitempty"` // 0 = default (300k)
-	NoAutoCompact  bool              `json:"auto_compact_off,omitempty"`
+
+	loadErr        error           // set when the file existed but couldn't be loaded: Save refuses
+	loadedSpent    float64         // Spent as last read from or written to disk (merging across windows)
+	FallbackMode   string          `json:"fallback_mode"`             // off (default) | ask | auto
+	OpenRouterPaid bool            `json:"openrouter_paid,omitempty"` // also offer paid OpenRouter models (default: free only)
+	CacheTTL       string          `json:"cache_ttl,omitempty"`       // 5m (default) | 1h
+	KeepAliveMin   int             `json:"cache_keepalive_minutes"`   // 0 = default (30)
+	NoKeepAlive    bool            `json:"cache_keepalive_off,omitempty"`
+	FallbackChain  []FallbackModel `json:"fallback_models,omitempty"`     // ordered; empty = one model per provider in FallbackOrder
+	CompactAt      int             `json:"auto_compact_tokens,omitempty"` // 0 = default (300k)
+	NoAutoCompact  bool            `json:"auto_compact_off,omitempty"`
 }
 
 // Permission modes (Config.Mode).
@@ -144,11 +150,22 @@ func Path() string {
 	return filepath.Join(dir, "werkz", "config.json")
 }
 
+// Load reads the config file. If the file exists but can't be read or parsed, Load returns
+// defaults and remembers the error (see LoadErr): Save then refuses to overwrite the file, so a
+// typo made while hand-editing it never wipes the user's keys and workspaces.
 func Load() *Config {
 	c := &Config{}
-	if b, err := os.ReadFile(Path()); err == nil {
-		_ = json.Unmarshal(b, c)
+	b, err := os.ReadFile(Path())
+	switch {
+	case err == nil:
+		if jerr := json.Unmarshal(b, c); jerr != nil {
+			*c = Config{}
+			c.loadErr = fmt.Errorf("%s is not valid JSON (%w); fix or remove it", Path(), jerr)
+		}
+	case !errors.Is(err, fs.ErrNotExist):
+		c.loadErr = fmt.Errorf("can't read %s: %w", Path(), err)
 	}
+	c.loadedSpent = c.Spent
 	if c.Keys == nil {
 		c.Keys = map[string]string{}
 	}
@@ -166,13 +183,50 @@ func Load() *Config {
 	return c
 }
 
+// LoadErr reports why the config file couldn't be loaded (nil when it loaded or didn't exist).
+func (c *Config) LoadErr() error { return c.loadErr }
+
+// Save writes the config atomically (temp file, fsync, rename) with owner-only permissions.
+// Spend recorded by another werkz window since this one loaded is merged in, not overwritten.
 func (c *Config) Save() error {
+	if c.loadErr != nil {
+		return fmt.Errorf("not saving settings: %w", c.loadErr)
+	}
 	p := Path()
 	if err := os.MkdirAll(filepath.Dir(p), 0o700); err != nil {
 		return err
 	}
-	b, _ := json.MarshalIndent(c, "", "  ")
-	return os.WriteFile(p, b, 0o600)
+	if b, err := os.ReadFile(p); err == nil {
+		var disk Config
+		if json.Unmarshal(b, &disk) == nil && disk.Spent != c.loadedSpent && disk.Balance == c.Balance {
+			c.Spent += disk.Spent - c.loadedSpent // another window spent money meanwhile
+		}
+	}
+	b, err := json.MarshalIndent(c, "", "  ")
+	if err != nil {
+		return err
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(p), ".config-*.json") // created with mode 0600
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name()) // no-op after a successful rename
+	if _, err := tmp.Write(b); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Sync(); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp.Name(), p); err != nil {
+		return err
+	}
+	c.loadedSpent = c.Spent
+	return nil
 }
 
 // Key returns the stored key, falling back to the provider's environment variable.
