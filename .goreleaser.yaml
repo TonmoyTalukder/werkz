@@ -1,0 +1,166 @@
+# GoReleaser config for werkz: https://goreleaser.com
+# Release:  push a tag (git tag v0.2.0 && git push origin v0.2.0); .github/workflows/release.yml runs this.
+# Test it:  goreleaser check && goreleaser release --snapshot --clean
+#
+# Asset names stay compatible with install.sh and the self-updater (internal/update):
+#   werkz-<ver>-<os>-<arch>      bare binaries the updater downloads
+#   werkz-<ver>-linux.tar.gz     installer package (launcher, icons, app-grid entry)
+#   werkz-<ver>-macos.zip        werkz.app
+#   SHA256SUMS                   checksums of everything above
+version: 2
+
+project_name: werkz
+
+before:
+  hooks:
+    - go mod tidy -diff
+    - go test ./...
+    # The Linux installer tarball and the macOS werkz.app aren't GoReleaser formats, so the
+    # existing script builds them; they are attached through release/checksum extra_files below.
+    - env DIST=build/packages bash packaging/build.sh {{ .Version }}
+
+builds:
+  - id: werkz
+    main: ./cmd/werkz
+    binary: werkz
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  # Bare binaries, named the way install.sh and the self-updater expect.
+  - id: bare
+    ids: [werkz]
+    formats: [binary]
+    name_template: "werkz-{{ .Version }}-{{ .Os }}-{{ .Arch }}"
+  # Per-platform tarballs, used by the Homebrew cask.
+  - id: tarball
+    ids: [werkz]
+    formats: [tar.gz]
+    name_template: "werkz_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE
+      - NOTICE
+
+checksum:
+  name_template: SHA256SUMS
+  algorithm: sha256
+  extra_files:
+    - glob: build/packages/werkz-*-linux.tar.gz
+    - glob: build/packages/werkz-*-macos.zip
+
+nfpms:
+  - id: packages
+    ids: [werkz]
+    package_name: werkz
+    file_name_template: "{{ .ConventionalFileName }}"
+    vendor: Tonmoy Talukder
+    maintainer: Tonmoy Talukder
+    homepage: https://github.com/TonmoyTalukder/werkz
+    description: |-
+      Agentic coding tool for the terminal.
+      werkz reads your codebase, edits files and runs commands, using a paid API key
+      (Claude, OpenAI, Grok) or free models (Gemini, OpenRouter, Groq, Ollama).
+    license: Apache-2.0
+    section: devel
+    formats: [deb, rpm, apk, archlinux]
+    bindir: /usr/bin
+    contents:
+      - src: packaging/linux/werkz-launch
+        dst: /usr/bin/werkz-launch
+        file_info:
+          mode: 0755
+      - src: packaging/linux/werkz.desktop
+        dst: /usr/share/applications/werkz.desktop
+        file_info:
+          mode: 0644
+      - src: packaging/icons/werkz-16.png
+        dst: /usr/share/icons/hicolor/16x16/apps/werkz.png
+      - src: packaging/icons/werkz-24.png
+        dst: /usr/share/icons/hicolor/24x24/apps/werkz.png
+      - src: packaging/icons/werkz-32.png
+        dst: /usr/share/icons/hicolor/32x32/apps/werkz.png
+      - src: packaging/icons/werkz-48.png
+        dst: /usr/share/icons/hicolor/48x48/apps/werkz.png
+      - src: packaging/icons/werkz-64.png
+        dst: /usr/share/icons/hicolor/64x64/apps/werkz.png
+      - src: packaging/icons/werkz-128.png
+        dst: /usr/share/icons/hicolor/128x128/apps/werkz.png
+      - src: packaging/icons/werkz-256.png
+        dst: /usr/share/icons/hicolor/256x256/apps/werkz.png
+      - src: packaging/icons/werkz-512.png
+        dst: /usr/share/icons/hicolor/512x512/apps/werkz.png
+      - src: LICENSE
+        dst: /usr/share/licenses/werkz/LICENSE
+      - src: NOTICE
+        dst: /usr/share/licenses/werkz/NOTICE
+
+homebrew_casks:
+  - name: werkz
+    ids: [tarball]
+    binaries: [werkz]
+    homepage: https://github.com/TonmoyTalukder/werkz
+    description: Agentic coding tool for the terminal
+    license: Apache-2.0
+    repository:
+      owner: TonmoyTalukder
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Casks
+    commit_author:
+      name: TonmoyTalukder
+      email: TonmoyTalukder@users.noreply.github.com
+    commit_msg_template: "werkz {{ .Tag }}"
+    skip_upload: auto # no tap update for pre-releases
+    hooks:
+      post:
+        # The binary isn't notarized: clear the download quarantine so macOS lets it run.
+        install_steps: |
+          on_macos do
+            run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ .StagedPath }}/werkz"]
+          end
+
+release:
+  github:
+    owner: TonmoyTalukder
+    name: werkz
+  name_template: "v{{ .Version }}"
+  prerelease: auto
+  extra_files:
+    - glob: build/packages/werkz-*-linux.tar.gz
+    - glob: build/packages/werkz-*-macos.zip
+  footer: |
+    **Install or update:** `curl -fsSL https://raw.githubusercontent.com/TonmoyTalukder/werkz/main/install.sh | sh`
+    · Homebrew: `brew install --cask TonmoyTalukder/tap/werkz`
+    · Linux packages: `.deb`, `.rpm`, `.apk` and Arch packages below.
+    Installed copies update themselves; package-manager installs update through that package manager.
+
+changelog:
+  use: git
+  sort: asc
+  filters:
+    exclude:
+      - "^chore: release"
+      - "^test(\\(.+\\))?:"
+      - "^Merge "
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 0
+    - title: Bug fixes
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 1
+    - title: Documentation
+      regexp: '^.*?docs(\(.+\))??!?:.+$'
+      order: 2
+    - title: Other changes
+      order: 999
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"

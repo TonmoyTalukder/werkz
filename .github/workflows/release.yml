@@ -1,0 +1,36 @@
+# Publishes a release when a version tag is pushed: git tag v0.2.0 && git push origin v0.2.0
+# Needs the repository secret HOMEBREW_TAP_TOKEN: a token that can write to TonmoyTalukder/homebrew-tap.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # create the release and upload its assets
+
+jobs:
+  goreleaser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # the changelog needs the full history and tags
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Check the VERSION file matches the tag
+        run: |
+          test "v$(tr -d '[:space:]' < VERSION)" = "$GITHUB_REF_NAME" ||
+            { echo "::error::VERSION is $(cat VERSION) but the tag is $GITHUB_REF_NAME"; exit 1; }
+
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
