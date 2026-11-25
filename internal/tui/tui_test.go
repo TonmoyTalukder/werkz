@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/TonmoyTalukder/werkz/internal/agent"
+	"github.com/TonmoyTalukder/werkz/internal/catalog"
 	"github.com/TonmoyTalukder/werkz/internal/config"
 	"github.com/TonmoyTalukder/werkz/internal/tools"
 
@@ -388,5 +389,29 @@ func TestDialogTypeaheadGuard(t *testing.T) {
 	m.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	if d := <-reply; d != agent.PermNo {
 		t.Fatalf("Enter on the default should deny, got %v", d)
+	}
+}
+
+// A withdrawn free OpenRouter model is replaced by one that is still offered.
+func TestStaleOpenRouterModelReplaced(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	cfg := config.Load()
+	cfg.Keys["openrouter"] = "k"
+	cfg.Onboarded = true
+	cfg.Provider, cfg.Model = "openrouter", "meta-llama/llama-3.3-70b-instruct:free"
+	m := newModel(cfg)
+	m.eng = agent.New(cfg, func(any) {})
+	catalog.SetRemote("openrouter", []catalog.ModelInfo{
+		{ID: "z/paid", Provider: "openrouter", In: 1, Out: 2},
+		{ID: "a/still-free:free", Provider: "openrouter", Free: true},
+	})
+	defer catalog.SetRemote("openrouter", nil)
+	m.Update(modelsFetchedMsg{Provider: "openrouter"})
+	if cfg.Model != "a/still-free:free" || cfg.ProviderModels["openrouter"] != "a/still-free:free" {
+		t.Fatalf("stale model not replaced: model=%s", cfg.Model)
+	}
+	m.Update(modelsFetchedMsg{Provider: "openrouter"})
+	if cfg.Model != "a/still-free:free" {
+		t.Fatal("a model that is still offered must be kept")
 	}
 }

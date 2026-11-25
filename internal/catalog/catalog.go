@@ -58,6 +58,13 @@ func SetRemote(provider string, ms []ModelInfo) {
 	remoteMu.Unlock()
 }
 
+// Remote returns the last fetched model list for a provider (nil if not fetched).
+func Remote(provider string) []ModelInfo {
+	remoteMu.Lock()
+	defer remoteMu.Unlock()
+	return append([]ModelInfo(nil), remoteModels[provider]...)
+}
+
 func Lookup(provider, id string) ModelInfo {
 	if provider == "anthropic" {
 		for _, m := range ClaudeModels {

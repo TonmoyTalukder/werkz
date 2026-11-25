@@ -38,7 +38,7 @@ var Providers = []ProviderInfo{
 		BaseURL: "https://generativelanguage.googleapis.com/v1beta/openai", DefaultModel: "gemini-2.5-flash",
 		KeyHint: "AIza…", SignupURL: "aistudio.google.com/apikey", NeedsKey: true, Free: true},
 	{ID: "openrouter", Name: "OpenRouter", EnvVar: "OPENROUTER_API_KEY", BaseURL: "https://openrouter.ai/api/v1",
-		DefaultModel: "meta-llama/llama-3.3-70b-instruct:free", KeyHint: "sk-or-…", SignupURL: "openrouter.ai/keys",
+		DefaultModel: "baidu/ernie-5.5-flash-preview:free", KeyHint: "sk-or-…", SignupURL: "openrouter.ai/keys",
 		NeedsKey: true, Free: true},
 	{ID: "groq", Name: "Groq (free tier)", EnvVar: "GROQ_API_KEY", BaseURL: "https://api.groq.com/openai/v1",
 		DefaultModel: "llama-3.3-70b-versatile", KeyHint: "gsk_…", SignupURL: "console.groq.com/keys", NeedsKey: true, Free: true},

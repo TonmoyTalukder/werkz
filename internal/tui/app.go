@@ -216,6 +216,9 @@ func (m *model) selectModel(provider, id string) {
 
 func (m *model) Init() tea.Cmd {
 	cmds := []tea.Cmd{textarea.Blink, m.fetchCredits(), tea.SetWindowTitle("werkz")}
+	if m.cfg.Configured("openrouter") {
+		cmds = append(cmds, fetchModels(m.cfg, "openrouter")) // free models come and go: check ours
+	}
 	if m.state == stateChat {
 		m.push(m.banner)
 		m.homeNotice()
@@ -283,6 +286,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case modelsFetchedMsg:
+		if msg.Provider == "openrouter" {
+			m.ensureOpenRouterModel()
+		}
 		if m.state == stateModels {
 			m.picker.refresh(catalog.All(m.cfg))
 		}
@@ -494,4 +500,35 @@ func (m *model) homeNotice() {
 		m.printS(renderNotice("info", "You're in your home folder, which werkz never treats as a project: "+
 			"every file change asks first. Open a project with /workspace or /add-dir <folder>."))
 	}
+}
+
+// ensureOpenRouterModel replaces an OpenRouter model that is no longer listed (free models are
+// withdrawn regularly) with the first free one, so requests don't fail with "unavailable".
+func (m *model) ensureOpenRouterModel() {
+	list := catalog.Remote("openrouter")
+	if len(list) == 0 {
+		return
+	}
+	cur := m.cfg.ModelFor("openrouter")
+	if !m.cfg.OpenRouterPaid && !catalog.IsFree("openrouter", cur) {
+		return // a paid model the user picked: the free-only list can't tell if it's gone
+	}
+	var first string
+	for _, mi := range list {
+		if mi.ID == cur {
+			return // still offered
+		}
+		if first == "" && mi.Free {
+			first = mi.ID
+		}
+	}
+	if first == "" {
+		return
+	}
+	m.cfg.ProviderModels["openrouter"] = first
+	if m.cfg.Provider == "openrouter" && m.cfg.Model == cur {
+		m.cfg.Model = first
+	}
+	m.saveConfig()
+	m.printS(renderNotice("info", "OpenRouter no longer offers "+cur+"; using the free model "+first+" instead (/model to choose another)."))
 }
