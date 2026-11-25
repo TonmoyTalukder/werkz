@@ -76,7 +76,30 @@ brew install --cask ZenixBit/tap/werkz
 
 This installs the `werkz` command (no app icon). Update with `brew upgrade --cask werkz`.
 
-## Linux packages
+## apt (Debian, Ubuntu)
+
+```bash
+sudo install -d -m 755 /etc/apt/keyrings
+curl -fsSL https://tonmoytalukder.github.io/werkz/werkz.gpg | sudo tee /etc/apt/keyrings/werkz.gpg >/dev/null
+echo "deb [signed-by=/etc/apt/keyrings/werkz.gpg] https://tonmoytalukder.github.io/werkz/apt stable main" | sudo tee /etc/apt/sources.list.d/werkz.list
+sudo apt update
+sudo apt install werkz
+```
+
+The first three lines add the werkz repository once; after that `sudo apt upgrade` keeps werkz up to date.
+
+## dnf (Fedora, RHEL)
+
+```bash
+sudo curl -fsSL https://tonmoytalukder.github.io/werkz/rpm/werkz.repo -o /etc/yum.repos.d/werkz.repo
+sudo dnf install werkz
+```
+
+`sudo dnf upgrade` then keeps it up to date. Both repositories are signed with the werkz key
+(fingerprint `3148 F0F0 B5B3 55FC 9FC1 9B2C 20A3 4C2D 3430 3C54`), served from
+[tonmoytalukder.github.io/werkz](https://tonmoytalukder.github.io/werkz/).
+
+## Linux package files
 
 Each release has `.deb` (Debian, Ubuntu), `.rpm` (Fedora, RHEL, openSUSE), `.apk` (Alpine) and Arch Linux
 (`.pkg.tar.zst`) packages for x86-64 and ARM64. They install `werkz` in `/usr/bin` with an app-grid entry and
@@ -136,6 +159,7 @@ again also updates everything and keeps your settings.
   `~/.local/bin/werkz-launch`, `~/.local/share/applications/werkz.desktop` and the Desktop icon.
 - **macOS:** delete `werkz.app` and `~/.local/bin/werkz`.
 - **Homebrew:** `brew uninstall --cask werkz`. **Linux packages:** remove the `werkz` package with your package
-  manager (for example `sudo apt remove werkz`).
+  manager (for example `sudo apt remove werkz`). To drop the repository too, delete
+  `/etc/apt/sources.list.d/werkz.list` and `/etc/apt/keyrings/werkz.gpg`, or `/etc/yum.repos.d/werkz.repo`.
 
 Your settings and API keys are kept in `~/.config/werkz/`; delete that folder to remove them too.

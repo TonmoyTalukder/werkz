@@ -37,6 +37,11 @@ grouped by commit type (`feat:`, `fix:`, `docs:`). Each release contains:
 - `.deb`, `.rpm`, `.apk` and Arch Linux packages
 - `SHA256SUMS` covering all of the above
 
+It then rebuilds the signed apt and dnf repositories on the `gh-pages` branch (served by GitHub Pages at
+<https://tonmoytalukder.github.io/werkz/>) with `packaging/repos/build-repos.sh`, keeping only the latest
+release; pre-releases are skipped. The RPMs and the repository metadata are signed with the werkz GPG key, which
+the workflow reads from the repository secret `SIGNING_KEY` (the armored private key).
+
 It also updates the Homebrew cask in [ZenixBit/homebrew-tap](https://github.com/ZenixBit/homebrew-tap).
 That needs the repository secret `HOMEBREW_TAP_TOKEN`: a fine-grained GitHub token with **Contents: read and
 write** access to the `homebrew-tap` repository only.

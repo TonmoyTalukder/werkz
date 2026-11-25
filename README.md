@@ -61,8 +61,9 @@ With [Homebrew](https://brew.sh) (macOS or Linux):
 brew install --cask ZenixBit/tap/werkz
 ```
 
-There are also `.deb`, `.rpm`, `.apk` and Arch Linux packages on each release; Homebrew and package installs
-update through their package manager. Prefer to download the files yourself, or use `go install`? See
+On Debian/Ubuntu and Fedora/RHEL you can also install with `sudo apt install werkz` or `sudo dnf install werkz`
+after adding the werkz repository ([two commands](docs/installation.md#apt-debian-ubuntu)), and each release has
+`.apk` and Arch Linux packages too. Homebrew and package installs update through their package manager. Prefer to download the files yourself, or use `go install`? See
 [Installation](docs/installation.md).
 
 ## Quick start
