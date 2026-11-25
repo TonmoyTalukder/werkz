@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -190,5 +191,42 @@ func TestFallbackOffNeverSwitchesAfterDisable(t *testing.T) {
 	}
 	if len(errs) != 1 || !strings.Contains(errs[0].Error(), "fallback is off") {
 		t.Fatalf("expected a 'fallback is off' error, got %v", errs)
+	}
+}
+
+// M11: after switching to a fallback model, the rest of the turn stays on it instead of
+// retrying the failing main model at every tool step.
+func TestFallbackPinsForTheTurn(t *testing.T) {
+	var mainCalls int
+	failing := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		mainCalls++
+		w.Header().Set("retry-after", "0")
+		w.WriteHeader(http.StatusTooManyRequests)
+		_, _ = io.WriteString(w, `{"type":"error","error":{"type":"rate_limit_error","message":"slow down"}}`)
+	}))
+	defer failing.Close()
+	srv := testutil.MockOpenAI(t) // first call: a tool call; second: the answer
+	defer srv.Close()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	cfg := config.Load()
+	cfg.Keys["anthropic"] = "k"
+	cfg.Keys["ollama"] = srv.URL
+	cfg.Provider, cfg.Model, cfg.Mode = "anthropic", "claude-haiku-5-5", config.ModeAuto
+	cfg.FallbackMode = config.FallbackAuto
+	cfg.FallbackOrder = []string{"anthropic", "ollama"}
+	cfg.ProviderModels["ollama"] = "mock-a"
+	var switches int
+	e := New(cfg, func(v any) {
+		if _, ok := v.(FallbackMsg); ok {
+			switches++
+		}
+	})
+	e.providerFor = claudeAt(failing.URL)
+	e.Run(context.Background(), "list files", *cfg)
+	if switches != 1 {
+		t.Fatalf("switched %d times in one turn, want 1", switches)
+	}
+	if mainCalls > 2 { // one attempt (+1 SDK retry); not one per tool step
+		t.Fatalf("failing model was called %d times in one turn", mainCalls)
 	}
 }

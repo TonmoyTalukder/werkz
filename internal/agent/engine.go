@@ -36,6 +36,7 @@ type Engine struct {
 
 	quiet          bool                                             // don't stream text to the UI (compaction)
 	providerFor    func(cfg *config.Config, id string) llm.Provider // nil = real clients
+	turnPin        *attempt                                         // model switched to this turn after a failure (nil = use the chain)
 	autoCompactOff bool                                             // auto-compaction failed this session; don't retry every turn
 	reads          *tools.ReadTracker
 	sessionID      string // prompt_cache_key for OpenAI (routes requests to the same cache)
@@ -106,6 +107,7 @@ func (e *Engine) Run(ctx context.Context, userText string, settings config.Confi
 		e.envSent = env
 	}
 	e.fbTurn = map[string]bool{}
+	e.turnPin = nil
 	sys := SystemPrompt()
 	lastSig, repeats, loopStop := "", 0, false
 	for i := 0; i < maxIterations; i++ {
@@ -179,9 +181,11 @@ func (e *Engine) callWithFallback(ctx context.Context, sys string) (*llm.Turn, e
 	}
 	tried := map[string]bool{}
 	a := chain[0]
-	// An unusable main model is a failure like any other: the fallback mode (off by default)
-	// decides whether to switch, so a disabled provider never silently routes elsewhere.
-	if why := e.unusable(a.provider); why != "" {
+	if e.turnPin != nil {
+		a = *e.turnPin // already switched this turn: don't retry the failing model every step
+	} else if why := e.unusable(a.provider); why != "" {
+		// An unusable main model is a failure like any other: the fallback mode (off by default)
+		// decides whether to switch, so a disabled provider never silently routes elsewhere.
 		tried[a.key()] = true
 		e.send(ProviderFailMsg{Provider: a.provider, Model: a.model, Reason: why})
 		next, err := e.nextFallback(ctx, a, chain, tried, fmt.Errorf("%s: %s", a.provider, why))
@@ -195,6 +199,10 @@ func (e *Engine) callWithFallback(ctx context.Context, sys string) (*llm.Turn, e
 		tried[a.key()] = true
 		turn, err := e.attemptOnce(ctx, sys, a)
 		if err == nil {
+			if a != chain[0] {
+				pin := a
+				e.turnPin = &pin // stay on the fallback model for the rest of this turn
+			}
 			return turn, nil
 		}
 		if ctx.Err() != nil {
