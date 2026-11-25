@@ -1,0 +1,25 @@
+# Build output
+/werkz
+/dist/
+*.exe
+*.test
+*.out
+coverage.*
+
+# Editors and OS
+.idea/
+.vscode/
+*.swp
+*~
+.DS_Store
+
+# Local settings and secrets (werkz keeps keys in ~/.config/werkz, never in the repo)
+.env
+.env.*
+*.pem
+*.key
+.claude/settings.local.json
+
+# Python (icon generator)
+__pycache__/
+*.pyc
