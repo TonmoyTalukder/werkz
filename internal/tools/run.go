@@ -149,25 +149,31 @@ func readFile(a Args) Result {
 	sc := bufio.NewScanner(f)
 	sc.Buffer(make([]byte, 1024*1024), 8*1024*1024)
 	var sb strings.Builder
-	n, shown := 0, 0
+	n, shown, more := 0, 0, false
 	for sc.Scan() {
 		n++
-		if n < start || shown >= limit {
+		if n < start {
 			continue
+		}
+		if shown == limit {
+			more = true // at least one line after the requested range
+			break
 		}
 		line := sc.Text()
 		if len(line) > maxLineChars {
-			line = line[:maxLineChars] + "… (line cut)"
+			line = strings.ToValidUTF8(line[:maxLineChars], "") + "… (line cut)"
 		}
 		fmt.Fprintf(&sb, "%6d\t%s\n", n, line)
 		shown++
 		if sb.Len() > maxOut {
 			fmt.Fprintf(&sb, "… (stopped at line %d to save context; continue with offset=%d)\n", n, n+1)
-			break
+			return Result{Output: sb.String(), Summary: fmt.Sprintf("Read %d lines", shown)}
 		}
 	}
-	if n >= start+limit-1 && shown == limit {
-		fmt.Fprintf(&sb, "… (more lines follow; continue with offset=%d)\n", start+limit)
+	if err := sc.Err(); err != nil {
+		fmt.Fprintf(&sb, "… (stopped at line %d: %v; Grep the file instead)\n", n+1, err)
+	} else if more {
+		fmt.Fprintf(&sb, "… (more lines follow; continue with offset=%d)\n", start+shown)
 	}
 	return Result{Output: sb.String(), Summary: fmt.Sprintf("Read %d lines", shown)}
 }

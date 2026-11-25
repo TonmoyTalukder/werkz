@@ -211,3 +211,27 @@ func TestSearchStopsOnCancel(t *testing.T) {
 		}
 	}
 }
+
+// L3: "more lines follow" only when there are more lines; an unreadable long line is reported.
+func TestReadContinuationHint(t *testing.T) {
+	dir := t.TempDir()
+	read := func(name string, content string, args string) string {
+		p := filepath.Join(dir, name)
+		must(t, os.WriteFile(p, []byte(content), 0o644))
+		return Run(context.Background(), llm.ToolCall{Name: "Read", Args: fmt.Sprintf(`{"path":%q%s}`, p, args)}, Env{}).Output
+	}
+	exact := strings.Repeat("x\n", 2000) // exactly the default limit
+	if out := read("exact.txt", exact, ""); strings.Contains(out, "more lines follow") {
+		t.Fatal("a 2000-line file must not claim more lines follow")
+	}
+	if out := read("more.txt", exact+"last\n", ""); !strings.Contains(out, "offset=2001") {
+		t.Fatal("a 2001-line file should point at offset=2001")
+	}
+	if out := read("range.txt", strings.Repeat("y\n", 30), `,"offset":10,"limit":5`); !strings.Contains(out, "offset=15") {
+		t.Fatalf("ranged read hint wrong: %q", out)
+	}
+	huge := "a\n" + strings.Repeat("z", 9<<20) + "\nb\n" // a 9 MB line
+	if out := read("huge.txt", huge, `,"offset":1,"limit":5`); !strings.Contains(out, "stopped at line 2") {
+		t.Fatalf("over-long line should be reported: %.200q", out)
+	}
+}
