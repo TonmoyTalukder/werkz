@@ -65,6 +65,11 @@ func (m *model) handleUpdate(msg updateMsg) tea.Cmd {
 		return m.printS(renderNotice("info", fmt.Sprintf(
 			"werkz %s was downloaded and installed. Restart werkz to use it (this session keeps running %s).",
 			msg.Latest, m.version)))
+	case errors.As(msg.Err, new(*update.ManagedError)):
+		var me *update.ManagedError
+		errors.As(msg.Err, &me)
+		return m.printS(renderNotice("info", fmt.Sprintf("werkz %s is available. You installed werkz with a package manager, so update it with: %s",
+			msg.Latest, me.Command)))
 	case errors.Is(msg.Err, update.ErrNotWritable):
 		return m.printS(renderNotice("warn", fmt.Sprintf(
 			"werkz %s is available, but this installation can't update itself. Update with: %s", msg.Latest, installScript)))

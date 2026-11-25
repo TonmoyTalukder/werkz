@@ -153,3 +153,21 @@ func TestReadOnlyInstallFolder(t *testing.T) {
 		t.Fatalf("want ErrNotWritable, got %v", err)
 	}
 }
+
+// Package-manager installs are never overwritten: the user is told how to update instead.
+func TestPackageManagedInstallsAreLeftAlone(t *testing.T) {
+	for exe, want := range map[string]string{
+		"/usr/bin/werkz":                                "your package manager (apt, dnf, apk or pacman)",
+		"/opt/homebrew/Caskroom/werkz/0.1.1/werkz":      "brew upgrade --cask werkz",
+		"/home/linuxbrew/.linuxbrew/Cellar/werkz/x/bin": "brew upgrade werkz",
+	} {
+		u := &Updater{Base: "http://127.0.0.1:1", Exe: exe}
+		var me *ManagedError
+		if err := u.Install(context.Background(), "9.9.9"); !errors.As(err, &me) || me.Command != want {
+			t.Errorf("%s: got %v, want ManagedError(%q)", exe, err, want)
+		}
+	}
+	if _, ok := (&Updater{Exe: filepath.Join(t.TempDir(), "werkz")}).Managed(); ok {
+		t.Error("a user-installed copy must not count as package-managed")
+	}
+}

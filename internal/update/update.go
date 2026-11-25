@@ -30,6 +30,43 @@ const maxBinary = 200 << 20
 // (e.g. installed system-wide); the user has to update it themselves.
 var ErrNotWritable = errors.New("werkz's install folder isn't writable")
 
+// ManagedError means werkz was installed by a package manager, which owns the file: werkz must
+// not replace it, and the user should update through that package manager instead.
+type ManagedError struct {
+	Command string // how to update, e.g. "brew upgrade --cask werkz"
+}
+
+func (e *ManagedError) Error() string {
+	return "werkz was installed with a package manager; update it with: " + e.Command
+}
+
+// packageManaged maps install locations owned by package managers to the update command.
+var packageManaged = []struct{ prefix, command string }{
+	{"/opt/homebrew/Caskroom/", "brew upgrade --cask werkz"},
+	{"/usr/local/Caskroom/", "brew upgrade --cask werkz"},
+	{"/opt/homebrew/Cellar/", "brew upgrade werkz"},
+	{"/usr/local/Cellar/", "brew upgrade werkz"},
+	{"/home/linuxbrew/.linuxbrew/", "brew upgrade werkz"},
+	{"/usr/bin/", "your package manager (apt, dnf, apk or pacman)"},
+	{"/usr/sbin/", "your package manager (apt, dnf, apk or pacman)"},
+	{"/nix/store/", "nix"},
+	{"/snap/", "snap refresh werkz"},
+}
+
+// Managed reports whether the executable belongs to a package manager, and how to update it.
+func (u *Updater) Managed() (command string, ok bool) {
+	exe, err := u.target()
+	if err != nil {
+		return "", false
+	}
+	for _, p := range packageManaged {
+		if strings.HasPrefix(exe, p.prefix) {
+			return p.command, true
+		}
+	}
+	return "", false
+}
+
 // Updater checks for and installs releases. The zero value uses the real GitHub releases and
 // replaces the running executable.
 type Updater struct {
@@ -125,6 +162,9 @@ func (u *Updater) Asset(version string) string {
 
 // Install downloads version, verifies its checksum and replaces the executable atomically.
 func (u *Updater) Install(ctx context.Context, version string) error {
+	if cmd, ok := u.Managed(); ok {
+		return &ManagedError{Command: cmd} // never replace a file a package manager owns
+	}
 	exe, err := u.target()
 	if err != nil {
 		return err
