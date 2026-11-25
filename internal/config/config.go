@@ -158,7 +158,9 @@ func Load() *Config {
 	if len(c.FallbackOrder) == 0 {
 		c.FallbackOrder = []string{"anthropic", "openai", "xai", "gemini", "openrouter", "groq", "ollama"}
 	}
-	if c.Mode == "" {
+	// Prompt-free modes are per session: a new session (maybe in a freshly cloned, untrusted
+	// repo) always starts asking. Only the stricter plan mode is remembered.
+	if c.Mode != ModePlan {
 		c.Mode = ModeDefault
 	}
 	return c
