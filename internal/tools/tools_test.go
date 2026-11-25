@@ -139,3 +139,23 @@ func TestBashProcessControl(t *testing.T) {
 		t.Fatalf("output not capped: %.200q", r.Output)
 	}
 }
+
+// M1: a symlink inside a working folder that points outside it must not count as inside.
+func TestInsideDirsResolvesSymlinks(t *testing.T) {
+	proj, outside := t.TempDir(), t.TempDir()
+	must(t, os.Symlink(outside, filepath.Join(proj, "docs")))
+	must(t, os.WriteFile(filepath.Join(outside, "secret"), []byte("x"), 0o600))
+	must(t, os.Symlink(filepath.Join(outside, "secret"), filepath.Join(proj, "link")))
+	cases := map[string]bool{
+		filepath.Join(proj, "main.go"):          true,  // new file inside
+		filepath.Join(proj, "sub", "new.go"):    true,  // new file in a new folder inside
+		filepath.Join(proj, "docs", "x.txt"):    false, // through a symlinked folder
+		filepath.Join(proj, "link"):             false, // a symlinked file
+		filepath.Join(proj, "..", "escape.txt"): false,
+	}
+	for p, want := range cases {
+		if got := InsideDirs(p, []string{proj}); got != want {
+			t.Errorf("InsideDirs(%s) = %v, want %v", p, got, want)
+		}
+	}
+}
