@@ -10,9 +10,16 @@ import (
 
 type attempt struct{ provider, model string }
 
+// chain is the main model first (always, even if it is unusable this session, so the
+// fallback mode decides what happens next), then the usable fallback models.
 func (e *Engine) chain() []attempt {
 	var out []attempt
 	seen := map[string]bool{}
+	if m := e.cfg.ModelFor(e.cfg.Provider); m != "" {
+		main := attempt{e.cfg.Provider, m}
+		seen[main.key()] = true
+		out = append(out, main)
+	}
 	add := func(p, model string) {
 		key := p + "|" + model
 		if model == "" || seen[key] || !e.cfg.Configured(p) || e.disabled[p] != "" {
@@ -21,7 +28,6 @@ func (e *Engine) chain() []attempt {
 		seen[key] = true
 		out = append(out, attempt{p, model})
 	}
-	add(e.cfg.Provider, e.cfg.ModelFor(e.cfg.Provider))
 	if len(e.cfg.FallbackChain) > 0 {
 		// the exact models the user chose, in their order
 		for _, f := range e.cfg.FallbackChain {
@@ -36,6 +42,17 @@ func (e *Engine) chain() []attempt {
 }
 
 func (a attempt) key() string { return a.provider + "|" + a.model }
+
+// unusable explains why a provider can't be used right now ("" = usable).
+func (e *Engine) unusable(provider string) string {
+	if r := e.Disabled(provider); r != "" {
+		return r + " (earlier this session)"
+	}
+	if !e.cfg.Configured(provider) {
+		return "not connected (add a key with /login)"
+	}
+	return ""
+}
 
 // nextFallback decides which model to try after a failure, following the fallback mode:
 // off stops; auto takes the next untried model in the chain; ask lets the user pick any

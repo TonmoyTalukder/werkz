@@ -2,6 +2,8 @@ package agent
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"strings"
 	"testing"
@@ -160,5 +162,33 @@ func TestErrMessage(t *testing.T) {
 	body := `{"error":{"message":"Provider returned error","code":400,"metadata":{"raw":"{\"error\":{\"code\":\"invalid_argument\",\"message\":\"Invalid Argument\",\"type\":\"invalid_request_error\"}}","provider_name":"Baidu"}}}`
 	if got := errMessage(body); got != "Provider returned error: Invalid Argument (Baidu)" {
 		t.Fatalf("errMessage = %q", got)
+	}
+}
+
+// H1: with fallback off, a provider disabled earlier in the session must not cause the next
+// message to be sent to another provider.
+func TestFallbackOffNeverSwitchesAfterDisable(t *testing.T) {
+	calls := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { calls++ }))
+	defer srv.Close()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	cfg := config.Load()
+	cfg.Keys["anthropic"] = "k"
+	cfg.Keys["ollama"] = srv.URL
+	cfg.Provider, cfg.Model = "anthropic", "claude-opus-5-5"
+	cfg.FallbackMode = config.FallbackOff
+	var errs []error
+	e := New(cfg, func(v any) {
+		if d, ok := v.(TurnDoneMsg); ok && d.Err != nil {
+			errs = append(errs, d.Err)
+		}
+	})
+	e.disable("anthropic", "out of API credits")
+	e.Run(context.Background(), "next message", *cfg)
+	if calls != 0 {
+		t.Fatalf("message was sent to another provider %d time(s) with fallback off", calls)
+	}
+	if len(errs) != 1 || !strings.Contains(errs[0].Error(), "fallback is off") {
+		t.Fatalf("expected a 'fallback is off' error, got %v", errs)
 	}
 }

@@ -175,6 +175,18 @@ func (e *Engine) callWithFallback(ctx context.Context, sys string) (*llm.Turn, e
 	}
 	tried := map[string]bool{}
 	a := chain[0]
+	// An unusable main model is a failure like any other: the fallback mode (off by default)
+	// decides whether to switch, so a disabled provider never silently routes elsewhere.
+	if why := e.unusable(a.provider); why != "" {
+		tried[a.key()] = true
+		e.send(ProviderFailMsg{Provider: a.provider, Model: a.model, Reason: why})
+		next, err := e.nextFallback(ctx, a, chain, tried, fmt.Errorf("%s: %s", a.provider, why))
+		if err != nil {
+			return nil, err
+		}
+		e.send(FallbackMsg{From: a.provider, To: next.provider + " · " + next.model})
+		a = next
+	}
 	for {
 		tried[a.key()] = true
 		turn, err := e.attemptOnce(ctx, sys, a)
