@@ -5,6 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime/debug"
+	"strings"
 
 	"github.com/TonmoyTalukder/werkz/internal/agent"
 	"github.com/TonmoyTalukder/werkz/internal/catalog"
@@ -16,8 +18,18 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-// version is set at build time: go build -ldflags "-X main.version=1.2.3".
+// version is set at build time: go build -ldflags "-X main.version=1.2.3". Builds made with
+// "go install …@vX.Y.Z" report the module version instead.
 var version = "dev"
+
+func init() {
+	if version != "dev" {
+		return
+	}
+	if bi, ok := debug.ReadBuildInfo(); ok && bi.Main.Version != "" && bi.Main.Version != "(devel)" {
+		version = strings.TrimPrefix(bi.Main.Version, "v")
+	}
+}
 
 func main() {
 	showVersion := flag.Bool("version", false, "print version")
