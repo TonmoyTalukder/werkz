@@ -12,6 +12,7 @@ import (
 	"github.com/TonmoyTalukder/werkz/internal/catalog"
 	"github.com/TonmoyTalukder/werkz/internal/config"
 	"github.com/TonmoyTalukder/werkz/internal/llm/openai"
+	"github.com/TonmoyTalukder/werkz/internal/textutil"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/textarea"
@@ -268,6 +269,7 @@ func tick() tea.Cmd {
 // ---------------------------------------------------------------- update
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	msg = sanitizeEvent(msg)
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
@@ -531,4 +533,50 @@ func (m *model) ensureOpenRouterModel() {
 	}
 	m.saveConfig()
 	m.printS(renderNotice("info", "OpenRouter no longer offers "+cur+"; using the free model "+first+" instead (/model to choose another)."))
+}
+
+// sanitizeEvent strips terminal escape sequences and control characters from everything the
+// engine forwards from models, tools and providers before it is rendered.
+func sanitizeEvent(msg tea.Msg) tea.Msg {
+	clean := textutil.Sanitize
+	lines := func(ls []string) []string {
+		out := make([]string, len(ls))
+		for i, l := range ls {
+			out[i] = clean(l)
+		}
+		return out
+	}
+	switch v := msg.(type) {
+	case agent.TextDeltaMsg:
+		return agent.TextDeltaMsg(clean(string(v)))
+	case agent.ThinkingDeltaMsg:
+		return agent.ThinkingDeltaMsg(clean(string(v)))
+	case agent.ToolPrepMsg:
+		return agent.ToolPrepMsg(clean(string(v)))
+	case agent.ToolCallMsg:
+		v.Name, v.Summary = clean(v.Name), clean(v.Summary)
+		return v
+	case agent.ToolResultMsg:
+		v.Name, v.Summary, v.Detail = clean(v.Name), clean(v.Summary), lines(v.Detail)
+		return v
+	case agent.PermReqMsg:
+		v.Tool, v.Summary, v.Detail = clean(v.Tool), clean(v.Summary), lines(v.Detail)
+		return v
+	case agent.ProviderFailMsg:
+		v.Reason = clean(v.Reason)
+		return v
+	case agent.FallbackAskMsg:
+		v.Reason = clean(v.Reason)
+		return v
+	case agent.NoticeMsg:
+		v.Text = clean(v.Text)
+		return v
+	case agent.TurnDoneMsg:
+		// replace the error only if it carried control characters, so errors.Is still works
+		if v.Err != nil && clean(v.Err.Error()) != v.Err.Error() {
+			v.Err = errors.New(clean(v.Err.Error()))
+		}
+		return v
+	}
+	return msg
 }

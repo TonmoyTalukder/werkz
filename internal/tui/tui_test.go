@@ -415,3 +415,23 @@ func TestStaleOpenRouterModelReplaced(t *testing.T) {
 		t.Fatal("a model that is still offered must be kept")
 	}
 }
+
+// L1: escape sequences in streamed model text or tool output are stripped before rendering.
+func TestEventsAreSanitized(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	cfg := config.Load()
+	cfg.Onboarded = true
+	m := newModel(cfg)
+	m.eng = agent.New(cfg, func(any) {})
+	m.turn.active = true
+	m.Update(agent.TextDeltaMsg("hi \x1b]52;c;cm0gLXJmIH4=\x07there"))
+	m.Update(agent.ToolResultMsg{Name: "Bash", Summary: "exit 0", Detail: []string{"\x1b[2Jcleared"}})
+	if strings.Contains(m.turn.live.String(), "\x1b") {
+		t.Fatalf("escape sequence reached the transcript: %q", m.turn.live.String())
+	}
+	for _, e := range m.entries {
+		if strings.Contains(e.render(100), "\x1b]52") || strings.Contains(e.render(100), "\x1b[2J") {
+			t.Fatal("escape sequence reached a transcript entry")
+		}
+	}
+}
