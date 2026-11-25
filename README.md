@@ -263,7 +263,8 @@ Safety rules that apply in **every** mode:
 werkz                              # start in the current folder
 werkz ~/code/api ~/code/web        # work in several folders (the first is the main one)
 werkz -w my-workspace              # open a saved workspace
-werkz --model claude-sonnet-5-5    # start with a specific model
+werkz --model claude-sonnet-5-5    # use a model for this session only (not saved)
+werkz --provider groq --model llama-3.3-70b-versatile   # name the provider when the id is ambiguous
 werkz --login                      # open the API key screen
 werkz --version
 ```
