@@ -186,7 +186,7 @@ func (m *model) fallbackChainView() string {
 			name = sPink.Bold(true).Render(padRight(textutil.Truncate(mi.Label, 34), 34))
 		}
 		price, paid := catalog.PriceLabel(mi)
-		tag := sGreen.Render("free")
+		tag := sGreen.Render(mi.FreeKind())
 		if paid {
 			tag = sYellow.Render(textutil.Truncate(strings.TrimPrefix(price, "paid · "), 22))
 		}
@@ -319,7 +319,7 @@ func (m *model) fallbackKey(k tea.KeyMsg) tea.Cmd {
 
 func modelRow(mi catalog.ModelInfo, w int) string {
 	price, paid := catalog.PriceLabel(mi)
-	tag := sGreen.Render("free")
+	tag := sGreen.Render(textutil.Truncate(price, 30))
 	if paid {
 		tag = sYellow.Render(textutil.Truncate(strings.TrimPrefix(price, "paid · "), 30))
 	}

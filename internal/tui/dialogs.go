@@ -122,8 +122,8 @@ func (m *model) pickerView() string {
 			cur = sGreen.Render("●")
 		}
 		price := mi.PriceTag()
-		if price == "free" {
-			price = sGreen.Render("free")
+		if mi.FreeKind() != "" {
+			price = sGreen.Render(price)
 		} else {
 			price = sDim.Render(price)
 		}

@@ -149,8 +149,8 @@ func (m ModelInfo) CacheSaving(cacheRead int64, fast bool) float64 {
 }
 
 func (m ModelInfo) PriceTag() string {
-	if m.Free {
-		return "free"
+	if k := m.FreeKind(); k != "" {
+		return k
 	}
 	if m.In == 0 {
 		return ""

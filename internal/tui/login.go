@@ -177,7 +177,7 @@ func (l *loginModel) view(w, h int) string {
 	}
 	b.WriteString(sBold.Render(gradient("✦ "+title, 0)) + "\n")
 	if h >= rows+12 {
-		b.WriteString(wrapTo(sDim.Render("Connect Claude plus any fallbacks you have. Free options: Gemini, OpenRouter :free models, Groq, or local Ollama. OpenRouter paid models: /openrouter paid."), w) + "\n")
+		b.WriteString(wrapTo(sDim.Render("Connect Claude plus any fallbacks you have. Free options: Gemini and Groq free tiers*, OpenRouter :free models, or local Ollama. OpenRouter paid models: /openrouter paid. *Free tiers are billed if your key's project has billing on."), w) + "\n")
 		b.WriteString(wrapTo(sFaint.Render("Keys are stored in "+config.Path()+" (mode 0600). Environment variables also work."), w) + "\n")
 	}
 	b.WriteString("\n")
@@ -219,7 +219,7 @@ func (l *loginModel) view(w, h int) string {
 		}
 		tag := "     "
 		if p.Free {
-			tag = sGreen.Render("free ")
+			tag = sGreen.Render(map[bool]string{true: "local", false: "free*"}[p.ID == "ollama"])
 		}
 		row := lipgloss.JoinHorizontal(lipgloss.Top, cursor+name+tag, field, "  "+st)
 		b.WriteString(row + "\n")

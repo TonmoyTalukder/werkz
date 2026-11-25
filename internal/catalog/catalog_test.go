@@ -19,3 +19,22 @@ func TestPricing(t *testing.T) {
 		t.Fatalf("cost = %v, want %v", got, want)
 	}
 }
+
+// M10: only genuinely free models are labelled "free".
+func TestFreeLabels(t *testing.T) {
+	for _, c := range []struct{ provider, id, want string }{
+		{"openrouter", "meta-llama/llama-3.3-70b-instruct:free", "free"},
+		{"openrouter", "anthropic/claude-sonnet-4.5", ""},
+		{"gemini", "gemini-2.5-flash", "free tier"},
+		{"groq", "llama-3.3-70b-versatile", "free tier"},
+		{"ollama", "llama3.2", "local"},
+		{"anthropic", "claude-haiku-5-5", ""},
+	} {
+		if got := Lookup(c.provider, c.id).FreeKind(); got != c.want {
+			t.Errorf("%s/%s = %q, want %q", c.provider, c.id, got, c.want)
+		}
+	}
+	if label, paid := PriceLabel(Lookup("gemini", "gemini-2.5-flash")); paid || label == "free" {
+		t.Fatalf("Gemini should be labelled as a free tier, got %q", label)
+	}
+}
