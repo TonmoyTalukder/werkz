@@ -1,0 +1,18 @@
+Package: werkz
+Architecture: amd64
+Version: 0.1.2
+Priority: optional
+Section: devel
+Maintainer: Tonmoy Talukder
+Installed-Size: 37572
+Filename: pool/main/werkz_0.1.2_amd64.deb
+Size: 10382356
+MD5sum: 54286683f3726a9823f57585cea50793
+SHA1: 8c2ff36db423d10fc8c6895afe340441a7583386
+SHA256: 5f14982e12f770ff87c1073596f18e7bab29eb5b04677ea282525210fd58f978
+SHA512: a8dc6d6a86f2437e08f7af72f369090dc1aa3d20f7cab1f0da62ddf00c0511f13af4ad06e598a5cdf96ac6ee5ff7d86ccbc130099f2b8c25232ad5f1b0ad3a18
+Homepage: https://github.com/TonmoyTalukder/werkz
+Description: Agentic coding tool for the terminal.
+ werkz reads your codebase, edits files and runs commands, using a paid API key
+ (Claude, OpenAI, Grok) or free models (Gemini, OpenRouter, Groq, Ollama).
+

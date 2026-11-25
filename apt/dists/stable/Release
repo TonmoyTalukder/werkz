@@ -1,0 +1,28 @@
+Architectures: amd64 arm64
+Codename: stable
+Components: main
+Date: Wed, 25 Nov 2026 10:43:09 +0000
+Description: werkz packages
+Label: werkz
+Origin: werkz
+Suite: stable
+MD5Sum:
+ ffa9477aecb3a0056909484f28dd0809              746 main/binary-amd64/Packages
+ 559d6a071790032881a92ef8e8d34389              535 main/binary-amd64/Packages.gz
+ 6e29c50f689862077fbb4366e535f405              745 main/binary-arm64/Packages
+ 4a0c4be5e8941cc3454c1b76ca26278d              535 main/binary-arm64/Packages.gz
+SHA1:
+ 7a03da60dc93397b1d584ef2c76134b809163377              746 main/binary-amd64/Packages
+ fada8e6ac40fa6575f89f52d5c7658a0c8ff989e              535 main/binary-amd64/Packages.gz
+ e8a0afca3674e241023b13e56176e918be07650f              745 main/binary-arm64/Packages
+ 3b00968bbace118b8280a86b3e9a717b4d488ee6              535 main/binary-arm64/Packages.gz
+SHA256:
+ 2b2f4394e427e8c28119a1a36e2bfd67c984e317acbd9058c771fbfc5bc3d225              746 main/binary-amd64/Packages
+ e76a13a738cb2576b9b48cd2cf2cefa961a729024af0be627dc420191cc56831              535 main/binary-amd64/Packages.gz
+ 2092b9ffe296c4bbb07202b264f442a3b8cebbbf3b7544e2ed3daf9763e27223              745 main/binary-arm64/Packages
+ bdcc3fca98ecf1bbb25666cb78546d60b031626189321083154ceb8418ed2c41              535 main/binary-arm64/Packages.gz
+SHA512:
+ 419d02ae12faa4865024cb7eae03118e396da8da8e92538d0c7ad2a295003596a6c468e012baff3f88582496ef083896480880777e73de990bc34a877bc23ccd              746 main/binary-amd64/Packages
+ aa7f8c468b367709c9dac2bab938516e257c2c8e108c4674576a615c4aa62b81208e22774cdd388a1dd190901ad7b3e1c8815188641e5f94657f7577ec6d1b74              535 main/binary-amd64/Packages.gz
+ 22c13da8d7eb48fc73b0077b20b1a0a16bb56375f5ff52681170bc2854fc3d9ffc4902c9617403280a3ac0043122a6bbdcbb8524b0e4fcd1523f9545a06b8613              745 main/binary-arm64/Packages
+ 79368f6236d65f09714fa33d1f93c5c57789a8ab79c365b035ee016a1a8df0264f3a3876ec7222ea3af9659ccaf27fd72d2cb01e3e92a03f8bf8bce914fe6587              535 main/binary-arm64/Packages.gz
