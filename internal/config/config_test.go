@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 )
 
@@ -61,5 +62,26 @@ func must(t *testing.T, err error) {
 	t.Helper()
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+// M12: free providers come first by default; the previous default is migrated, a custom
+// order is kept.
+func TestDefaultFallbackOrder(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	if got := Load().FallbackOrder; !slices.Equal(got, DefaultFallbackOrder) || got[0] != "gemini" {
+		t.Fatalf("default order = %v", got)
+	}
+	c := Load()
+	c.FallbackOrder = slices.Clone(oldDefaultOrder)
+	must(t, c.Save())
+	if got := Load().FallbackOrder; !slices.Equal(got, DefaultFallbackOrder) {
+		t.Fatalf("old default not migrated: %v", got)
+	}
+	c = Load()
+	c.FallbackOrder = []string{"openai", "ollama"}
+	must(t, c.Save())
+	if got := Load().FallbackOrder; !slices.Equal(got, []string{"openai", "ollama"}) {
+		t.Fatalf("custom order changed: %v", got)
 	}
 }

@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 )
@@ -88,6 +89,12 @@ const (
 	ModePlan        = "plan"        // read-only
 	ModeAuto        = "auto"        // no prompts (writes outside the working folders still ask)
 )
+
+// DefaultFallbackOrder tries free and local providers before paid ones.
+var DefaultFallbackOrder = []string{"gemini", "openrouter", "groq", "ollama", "anthropic", "openai", "xai"}
+
+// oldDefaultOrder was the default before free providers came first.
+var oldDefaultOrder = []string{"anthropic", "openai", "xai", "gemini", "openrouter", "groq", "ollama"}
 
 // Fallback modes (Config.FallbackMode).
 const (
@@ -172,8 +179,10 @@ func Load() *Config {
 	if c.ProviderModels == nil {
 		c.ProviderModels = map[string]string{}
 	}
-	if len(c.FallbackOrder) == 0 {
-		c.FallbackOrder = []string{"anthropic", "openai", "xai", "gemini", "openrouter", "groq", "ollama"}
+	// Free options first: a failure (most often a free-tier rate limit) shouldn't escalate
+	// straight to the most expensive models. The old default is migrated; a custom order stays.
+	if len(c.FallbackOrder) == 0 || slices.Equal(c.FallbackOrder, oldDefaultOrder) {
+		c.FallbackOrder = slices.Clone(DefaultFallbackOrder)
 	}
 	// Prompt-free modes are per session: a new session (maybe in a freshly cloned, untrusted
 	// repo) always starts asking. Only the stricter plan mode is remembered.
