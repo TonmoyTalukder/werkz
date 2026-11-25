@@ -178,3 +178,33 @@ func TestCompaction(t *testing.T) {
 		t.Fatal("auto-compaction did not run")
 	}
 }
+
+// M7: when auto-compaction is due, the user's new message still reaches the model verbatim.
+func TestAutoCompactKeepsNewMessageVerbatim(t *testing.T) {
+	var bodies []map[string]any
+	var mu sync.Mutex
+	srv := testutil.FakeClaude(t, &bodies, &mu)
+	defer srv.Close()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	cfg := config.Load()
+	cfg.Keys["anthropic"] = "sk-ant-test"
+	cfg.Provider, cfg.Model = "anthropic", "claude-opus-5-5"
+	e := New(cfg, func(any) {})
+	e.providerFor = claudeAt(srv.URL)
+	e.Run(context.Background(), "one", *cfg)
+	e.Run(context.Background(), "two", *cfg)
+	cfg.CompactAt = 1000
+	e.lastContext, e.lastWindow = 5000, 1_000_000
+	const exact = "rename the Foo type to Bar in every file, exactly"
+	e.Run(context.Background(), exact, *cfg)
+	e.StopKeepAlive()
+	mu.Lock()
+	last := bodies[len(bodies)-1]
+	mu.Unlock()
+	if !strings.Contains(fmt.Sprint(last["messages"]), exact) {
+		t.Fatalf("the new message was summarised away: %v", last["messages"])
+	}
+	if strings.Contains(fmt.Sprint(bodies[len(bodies)-2]["messages"]), exact) {
+		t.Fatal("the compaction request should not include the new message")
+	}
+}

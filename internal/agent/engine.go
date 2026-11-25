@@ -95,6 +95,10 @@ func (e *Engine) finish(err error) {
 func (e *Engine) Run(ctx context.Context, userText string, settings config.Config) {
 	e.cfg = &settings
 	e.StopKeepAlive()
+	// Compact (if due) before adding the new message, so it reaches the model word for word.
+	if e.shouldAutoCompact() && !e.autoCompact(ctx, "") {
+		return
+	}
 	e.appendHistory(llm.Msg{Role: llm.RoleUser, Text: userText})
 	_, wsName := e.workspaceEnv()
 	if env := EnvContext(e.dirs(), wsName); env != e.envSent {
@@ -105,15 +109,9 @@ func (e *Engine) Run(ctx context.Context, userText string, settings config.Confi
 	sys := SystemPrompt()
 	lastSig, repeats, loopStop := "", 0, false
 	for i := 0; i < maxIterations; i++ {
-		if e.shouldAutoCompact() {
-			if err := e.compact(ctx, "", true); err != nil {
-				if ctx.Err() != nil {
-					e.finish(context.Canceled)
-					return
-				}
-				e.send(NoticeMsg{"warn", "Auto-compaction failed, continuing with the full context: " + err.Error()})
-				e.autoCompactOff = true // don't retry every iteration this session
-			}
+		// Mid-turn compaction keeps the current request verbatim after the summary.
+		if i > 0 && e.shouldAutoCompact() && !e.autoCompact(ctx, userText) {
+			return
 		}
 		turn, err := e.callWithFallback(ctx, sys)
 		if err != nil {
@@ -372,4 +370,22 @@ func commandPrefix(cmd string) string {
 		return f[0] + " " + f[1]
 	}
 	return f[0]
+}
+
+// autoCompact runs automatic compaction; repeat (if set) is re-added verbatim afterwards.
+// It returns false when the turn must end (cancelled).
+func (e *Engine) autoCompact(ctx context.Context, repeat string) bool {
+	if err := e.compact(ctx, "", true); err != nil {
+		if ctx.Err() != nil {
+			e.finish(context.Canceled)
+			return false
+		}
+		e.send(NoticeMsg{"warn", "Auto-compaction failed, continuing with the full context: " + err.Error()})
+		e.autoCompactOff = true // don't retry every turn this session
+		return true
+	}
+	if repeat != "" {
+		e.appendHistory(llm.Msg{Role: llm.RoleUser, Text: "My current request, repeated word for word:\n\n" + repeat})
+	}
+	return true
 }
