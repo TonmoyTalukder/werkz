@@ -301,6 +301,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case validateMsg:
 		m.login.handleValidate(msg)
+		if msg.OK {
+			m.eng.Enable(msg.ID) // the key works now: undo "disabled for this session"
+		}
 		return m, nil
 
 	case agent.StreamStartMsg:

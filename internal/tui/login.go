@@ -120,6 +120,9 @@ func (l *loginModel) save() tea.Cmd {
 }
 
 func (l *loginModel) handleValidate(v validateMsg) {
+	if l.status == nil {
+		return // the login screen isn't open (e.g. a late result)
+	}
 	l.validating--
 	if v.OK {
 		l.status[v.ID] = "ok"

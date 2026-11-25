@@ -3,6 +3,9 @@ package tui
 import (
 	"context"
 	"fmt"
+	"io"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -470,5 +473,33 @@ func TestModelSwitchStopsKeepAlive(t *testing.T) {
 	m.pickerKey(tea.KeyMsg{Type: tea.KeyEnter})
 	if m.eng.KeepAliveActive() {
 		t.Fatal("keep-alive still warming the old model's cache after /model")
+	}
+}
+
+// L9: a provider disabled earlier is usable again once /login confirms its key works.
+func TestLoginReenablesProvider(t *testing.T) {
+	bad := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = io.WriteString(w, `{"type":"error","error":{"type":"authentication_error","message":"invalid x-api-key"}}`)
+	}))
+	defer bad.Close()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	cfg := config.Load()
+	cfg.Keys["anthropic"] = "sk-ant-wrong"
+	cfg.Onboarded = true
+	cfg.Provider, cfg.Model = "anthropic", "claude-haiku-5-5"
+	m := newModel(cfg)
+	m.eng = agent.New(cfg, func(any) {}, agent.WithProviders(func(c *config.Config, id string) llm.Provider {
+		return claude.New(c.Key(id), bad.URL)
+	}))
+	m.eng.Run(context.Background(), "hi", *cfg)
+	if m.eng.Disabled("anthropic") == "" {
+		t.Fatal("a 401 should disable the provider for the session")
+	}
+	m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m.command("/login")
+	m.Update(validateMsg{ID: "anthropic", OK: true}) // the new key works
+	if r := m.eng.Disabled("anthropic"); r != "" {
+		t.Fatalf("still disabled after a successful key check: %s", r)
 	}
 }

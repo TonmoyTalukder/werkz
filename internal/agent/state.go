@@ -105,3 +105,11 @@ func (e *Engine) mode() string {
 	}
 	return e.cfg.Mode
 }
+
+// Enable makes a provider usable again after it was disabled this session (e.g. once the user
+// has fixed its key or topped up credits).
+func (e *Engine) Enable(provider string) {
+	e.stateMu.Lock()
+	delete(e.disabled, provider)
+	e.stateMu.Unlock()
+}
