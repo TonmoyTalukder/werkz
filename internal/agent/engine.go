@@ -51,7 +51,9 @@ type Engine struct {
 	lastPrefix int64
 	lastMI     catalog.ModelInfo
 	lastFast   bool
-	kaMu       sync.Mutex // guards kaCancel (the UI may stop the keep-alive at any time)
+	clientsMu  sync.Mutex
+	clients    map[string]llm.Provider // one client per provider+key+endpoint (connection reuse)
+	kaMu       sync.Mutex              // guards kaCancel (the UI may stop the keep-alive at any time)
 	kaCancel   context.CancelFunc
 
 	fbTurn    map[string]bool // fallback approved for the current message

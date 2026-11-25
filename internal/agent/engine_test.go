@@ -230,3 +230,19 @@ func TestFallbackPinsForTheTurn(t *testing.T) {
 		t.Fatalf("failing model was called %d times in one turn", mainCalls)
 	}
 }
+
+// L6: one client per provider and key is reused across requests.
+func TestProviderClientsAreReused(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	cfg := config.Load()
+	cfg.Keys["anthropic"] = "k1"
+	e := New(cfg, func(any) {})
+	a, b := e.provider("anthropic"), e.provider("anthropic")
+	if a != b {
+		t.Fatal("a new Claude client was built for each request")
+	}
+	cfg.Keys["anthropic"] = "k2" // a different key gets its own client
+	if e.provider("anthropic") == a {
+		t.Fatal("changing the key must not reuse the old client")
+	}
+}

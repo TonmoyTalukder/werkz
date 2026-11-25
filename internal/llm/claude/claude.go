@@ -137,6 +137,7 @@ func (c *Client) Stream(ctx context.Context, req llm.Request, h llm.Handlers) (*
 	}
 
 	stream := c.client.Beta.Messages.NewStreaming(ctx, params)
+	defer stream.Close()
 	msg := anthropic.BetaMessage{}
 	for stream.Next() {
 		ev := stream.Current()
