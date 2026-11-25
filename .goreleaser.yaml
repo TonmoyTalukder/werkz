@@ -71,6 +71,10 @@ nfpms:
     section: devel
     formats: [deb, rpm, apk, archlinux]
     bindir: /usr/bin
+    rpm:
+      signature:
+        # Set in the release workflow; empty (unsigned) for local snapshot builds.
+        key_file: '{{ envOrDefault "SIGNING_KEY_FILE" "" }}'
     contents:
       - src: packaging/linux/werkz-launch
         dst: /usr/bin/werkz-launch
