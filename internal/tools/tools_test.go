@@ -159,3 +159,35 @@ func TestInsideDirsResolvesSymlinks(t *testing.T) {
 		}
 	}
 }
+
+// M2/M3: credential locations are recognised (through symlinks too) and the home folder is
+// never a project root.
+func TestSensitivePathsAndHome(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	must(t, os.MkdirAll(filepath.Join(home, ".ssh"), 0o700))
+	must(t, os.MkdirAll(filepath.Join(home, ".config", "werkz"), 0o700))
+	proj := filepath.Join(home, "proj")
+	must(t, os.MkdirAll(proj, 0o755))
+	must(t, os.Symlink(filepath.Join(home, ".ssh"), filepath.Join(proj, "keys")))
+	for p, want := range map[string]bool{
+		"~/.ssh/id_ed25519": true,
+		filepath.Join(home, ".config/werkz/config.json"): true,
+		filepath.Join(proj, "keys", "id_rsa"):            true, // via symlink
+		filepath.Join(proj, "main.go"):                   false,
+	} {
+		if got := Sensitive(p); got != want {
+			t.Errorf("Sensitive(%s) = %v, want %v", p, got, want)
+		}
+	}
+	if InsideDirs(filepath.Join(home, ".bashrc"), []string{home}) {
+		t.Error("the home folder must not count as a project root")
+	}
+	if !InsideDirs(filepath.Join(proj, "a.go"), []string{proj}) {
+		t.Error("a real project folder should still work")
+	}
+	r := Run(context.Background(), llm.ToolCall{Name: "Grep", Args: `{"pattern":"x"}`}, Env{Dirs: []string{home}})
+	if !r.IsError || !strings.Contains(r.Output, "home folder") {
+		t.Fatalf("a bare search in the home folder should be refused: %q", r.Output)
+	}
+}

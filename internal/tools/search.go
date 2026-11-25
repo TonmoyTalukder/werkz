@@ -68,7 +68,11 @@ func globTool(a Args, dirs []string) Result {
 		t time.Time
 	}
 	var hits []hit
-	for _, root := range roots(a.Path, dirs) {
+	rs, err := roots(a.Path, dirs)
+	if err != nil {
+		return Fail("%v", err)
+	}
+	for _, root := range rs {
 		walk(root, func(p string, d fs.DirEntry) bool {
 			rel, _ := filepath.Rel(root, p)
 			if !d.IsDir() && re.MatchString(filepath.ToSlash(rel)) {
@@ -114,7 +118,11 @@ func grepTool(a Args, dirs []string) Result {
 	}
 	var files []fileHits
 	total := 0
-	for _, root := range roots(a.Path, dirs) {
+	rs, err := roots(a.Path, dirs)
+	if err != nil {
+		return Fail("%v", err)
+	}
+	for _, root := range rs {
 		walk(root, func(p string, d fs.DirEntry) bool {
 			if d.IsDir() {
 				return true

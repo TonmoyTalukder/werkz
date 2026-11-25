@@ -214,6 +214,7 @@ func (m *model) Init() tea.Cmd {
 	cmds := []tea.Cmd{textarea.Blink, m.fetchCredits(), tea.SetWindowTitle("werkz")}
 	if m.state == stateChat {
 		m.push(m.banner)
+		m.homeNotice()
 		cmds = append(cmds, m.runOnStart())
 	} else {
 		cmds = append(cmds, m.login.inputs[0].Focus())
@@ -473,4 +474,13 @@ func (m *model) curModelLabel() string {
 		return catalog.Lookup(m.turn.curProv, m.turn.curModel).Label
 	}
 	return m.curModelInfo().Label
+}
+
+// homeNotice explains the stricter rules when werkz starts in the home folder (e.g. from the
+// desktop icon): home is never treated as a project.
+func (m *model) homeNotice() {
+	if h, err := os.UserHomeDir(); err == nil && m.startDir == h {
+		m.printS(renderNotice("info", "You're in your home folder, which werkz never treats as a project: "+
+			"every file change asks first. Open a project with /workspace or /add-dir <folder>."))
+	}
 }

@@ -7,6 +7,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"github.com/TonmoyTalukder/werkz/internal/tools"
 )
 
 // systemPrompt is frozen (no dates, paths or settings) so the tools+system prefix stays
@@ -56,7 +58,11 @@ func memoryFiles(dirs []string) string {
 	var b strings.Builder
 	for _, d := range dirs {
 		for _, name := range []string{"AGENTS.md", "CLAUDE.md", filepath.Join(".claude", "CLAUDE.md")} {
-			data, err := os.ReadFile(filepath.Join(d, name))
+			p := filepath.Join(d, name)
+			if tools.Sensitive(p) {
+				continue // a memory file symlinked to a credential file is never loaded
+			}
+			data, err := os.ReadFile(p)
 			if err != nil || len(strings.TrimSpace(string(data))) == 0 {
 				continue
 			}

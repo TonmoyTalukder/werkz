@@ -239,3 +239,33 @@ func TestTaskStaysOnCurrentProvider(t *testing.T) {
 		t.Fatalf("sub-agent providers = %v, want ollama", used)
 	}
 }
+
+// M2: reads outside the working folders ask (even in auto mode); credential files are refused
+// without asking.
+func TestOutsideReadsAskAndCredentialsRefused(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	must(t, os.MkdirAll(filepath.Join(home, ".ssh"), 0o700))
+	must(t, os.WriteFile(filepath.Join(home, ".ssh", "id_rsa"), []byte("KEY"), 0o600))
+	proj, other := t.TempDir(), t.TempDir()
+	must(t, os.WriteFile(filepath.Join(other, "notes.txt"), []byte("hi"), 0o644))
+	cfg := config.Load()
+	cfg.Mode = config.ModeAuto
+	var asked int
+	e := New(cfg, func(v any) {
+		if pr, ok := v.(PermReqMsg); ok {
+			asked++
+			pr.Reply <- PermNo
+		}
+	})
+	e.SetWorkspace([]string{proj}, nil, "")
+	r := e.execTool(context.Background(), llm.ToolCall{Name: "Read", Args: fmt.Sprintf(`{"path":%q}`, filepath.Join(other, "notes.txt"))})
+	if asked != 1 || !r.IsError {
+		t.Fatalf("outside read should ask in auto mode (asked=%d)", asked)
+	}
+	r = e.execTool(context.Background(), llm.ToolCall{Name: "Read", Args: `{"path":"~/.ssh/id_rsa"}`})
+	if asked != 1 || !r.IsError || strings.Contains(r.Output, "KEY") || !strings.Contains(r.Output, "credential") {
+		t.Fatalf("credential read must be refused without asking: asked=%d %q", asked, r.Output)
+	}
+}

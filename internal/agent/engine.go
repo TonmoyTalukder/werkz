@@ -262,10 +262,18 @@ func (e *Engine) execTool(ctx context.Context, tc llm.ToolCall) tools.Result {
 
 	need, kind := tools.NeedsPermission(tc.Name, e.mode())
 	outside := false
-	if tc.Name == "Write" || tc.Name == "Edit" {
-		if a, err := tools.ParseArgs(tc); err == nil && !tools.InsideDirs(a.Path, e.dirs()) {
-			outside = true // writes outside the working folders always ask, even in auto mode
-			if kind != "plan" {
+	if a, err := tools.ParseArgs(tc); err == nil && fileTool(tc.Name) {
+		path := a.Path
+		if tools.Sensitive(path) {
+			r := tools.Fail("%s is a credential location; werkz's file tools never open it", path)
+			e.send(ToolResultMsg{ID: tc.ID, Name: tc.Name, Summary: "refused (credentials)", IsError: true})
+			return r
+		}
+		// Reads, listings and searches with a path outside the working folders, and any write
+		// outside them, always ask, in every mode. (Glob/Grep without a path stay inside.)
+		if (path != "" || tc.Name == "Write" || tc.Name == "Edit") && !tools.InsideDirs(path, e.dirs()) {
+			outside = true
+			if kind != "plan" || !writeTool(tc.Name) {
 				need, kind = true, "ask"
 			}
 			summary += "  ⚠ outside working folders"
@@ -302,3 +310,13 @@ func (e *Engine) execTool(ctx context.Context, tc llm.ToolCall) tools.Result {
 	e.send(ToolResultMsg{ID: tc.ID, Name: tc.Name, Summary: res.Summary, Detail: res.Detail, IsError: res.IsError})
 	return res
 }
+
+func fileTool(name string) bool {
+	switch name {
+	case "Read", "Write", "Edit", "LS", "Glob", "Grep":
+		return true
+	}
+	return false
+}
+
+func writeTool(name string) bool { return name == "Write" || name == "Edit" }
