@@ -170,7 +170,7 @@ func TestErrMessage(t *testing.T) {
 // message to be sent to another provider.
 func TestFallbackOffNeverSwitchesAfterDisable(t *testing.T) {
 	calls := 0
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { calls++ }))
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) { calls++ }))
 	defer srv.Close()
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
 	cfg := config.Load()
