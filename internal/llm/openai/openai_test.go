@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/TonmoyTalukder/werkz/internal/catalog"
+	"github.com/TonmoyTalukder/werkz/internal/llm"
 	"github.com/TonmoyTalukder/werkz/internal/tools"
 )
 
@@ -66,5 +67,27 @@ func TestIsFree(t *testing.T) {
 		if got := catalog.IsFree(k[0], k[1]); got != want {
 			t.Errorf("IsFree(%s, %s) = %v", k[0], k[1], got)
 		}
+	}
+}
+
+// M9: OpenRouter is asked for, and werkz uses, the actual cost of each request.
+func TestOpenRouterReportedCost(t *testing.T) {
+	var body map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&body)
+		_, _ = io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"hi\"},\"finish_reason\":\"stop\"}],\"usage\":{\"prompt_tokens\":10,\"completion_tokens\":2,\"cost\":0.0042}}\n\ndata: [DONE]\n\n")
+	}))
+	defer srv.Close()
+	c := &Client{ID: "openrouter", BaseURL: srv.URL, Key: "k"}
+	turn, err := c.Stream(context.Background(), llm.Request{Model: "x/y", History: []llm.Msg{{Role: llm.RoleUser, Text: "hi"}}},
+		llm.Handlers{OnText: func(string) {}, OnThinking: func(string) {}, OnToolStart: func(string) {}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if turn.Usage.CostUSD != 0.0042 {
+		t.Fatalf("reported cost = %v", turn.Usage.CostUSD)
+	}
+	if u, _ := body["usage"].(map[string]any); u["include"] != true {
+		t.Fatalf("request should ask OpenRouter for usage/cost: %v", body["usage"])
 	}
 }

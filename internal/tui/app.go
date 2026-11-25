@@ -120,6 +120,7 @@ type turnState struct {
 // sessionStats are the session's usage, cost and prompt-cache counters.
 type sessionStats struct {
 	cost        float64
+	unpriced    bool // some usage had no known price, so cost is a lower bound
 	tokIn       int64
 	tokOut      int64
 	ctxUsed     int
@@ -340,6 +341,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case agent.UsageMsg:
 		m.stats.cost += msg.Cost
+		m.stats.unpriced = m.stats.unpriced || msg.Unpriced
 		if msg.Provider == "anthropic" {
 			m.cfg.Spent += msg.Cost // the UI owns the config; the engine only reports usage
 		}

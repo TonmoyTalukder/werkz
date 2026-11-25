@@ -136,6 +136,9 @@ func (m *model) costText() string {
 	var b strings.Builder
 	b.WriteString(gradient("Usage & balance", 0) + "\n")
 	b.WriteString(fmt.Sprintf("  %s %s\n", sDim.Render(padRight("session cost", 18)), sGreen.Render(fmt.Sprintf("$%.4f", m.stats.cost))))
+	if m.stats.unpriced {
+		b.WriteString("  " + sDim.Render(padRight("", 18)) + sYellow.Render("+ unknown: some requests used models whose price werkz doesn't know (e.g. OpenAI, xAI); check that provider's billing page") + "\n")
+	}
 	b.WriteString(fmt.Sprintf("  %s %s in · %s out\n", sDim.Render(padRight("session tokens", 18)), catalog.HumanTokens(int(m.stats.tokIn)), catalog.HumanTokens(int(m.stats.tokOut))))
 	if m.cfg.Balance > 0 {
 		b.WriteString(fmt.Sprintf("  %s $%.2f − $%.4f spent = %s\n", sDim.Render(padRight("Claude credit", 18)), m.cfg.Balance, m.cfg.Spent,

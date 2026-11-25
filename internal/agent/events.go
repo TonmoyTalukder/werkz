@@ -24,6 +24,7 @@ type UsageMsg struct {
 	Provider, Model string
 	Usage           llm.Usage
 	Cost            float64
+	Unpriced        bool // the model's price is unknown, so Cost is a lower bound (shown as "+?")
 	ContextUsed     int
 	ContextMax      int
 }

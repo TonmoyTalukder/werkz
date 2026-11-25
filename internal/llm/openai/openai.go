@@ -106,6 +106,9 @@ func (o *Client) Stream(ctx context.Context, req llm.Request, h llm.Handlers) (*
 	if o.ID == "openai" && req.CacheKey != "" {
 		body["prompt_cache_key"] = req.CacheKey // keeps a session's requests on the same prefix cache
 	}
+	if o.ID == "openrouter" {
+		body["usage"] = map[string]any{"include": true} // report the actual cost of each request
+	}
 	turn, err := o.do(ctx, body, h)
 	var he *llm.HTTPError
 	if errors.As(err, &he) && he.Status == 400 {
@@ -114,6 +117,7 @@ func (o *Client) Stream(ctx context.Context, req llm.Request, h llm.Handlers) (*
 		delete(body, "reasoning_effort")
 		delete(body, "stream_options")
 		delete(body, "prompt_cache_key")
+		delete(body, "usage")
 		if strings.Contains(low, "tool") {
 			delete(body, "tools")
 		}
@@ -177,8 +181,9 @@ func (o *Client) do(ctx context.Context, body map[string]any, h llm.Handlers) (*
 				FinishReason string `json:"finish_reason"`
 			} `json:"choices"`
 			Usage *struct {
-				Prompt     int64 `json:"prompt_tokens"`
-				Completion int64 `json:"completion_tokens"`
+				Prompt     int64   `json:"prompt_tokens"`
+				Completion int64   `json:"completion_tokens"`
+				Cost       float64 `json:"cost"` // OpenRouter: actual USD charged
 			} `json:"usage"`
 			Error *struct {
 				Message string `json:"message"`
@@ -191,7 +196,7 @@ func (o *Client) do(ctx context.Context, body map[string]any, h llm.Handlers) (*
 			return nil, &llm.HTTPError{Status: 502, Body: chunk.Error.Message}
 		}
 		if chunk.Usage != nil {
-			turn.Usage = llm.Usage{In: chunk.Usage.Prompt, Out: chunk.Usage.Completion}
+			turn.Usage = llm.Usage{In: chunk.Usage.Prompt, Out: chunk.Usage.Completion, CostUSD: chunk.Usage.Cost}
 		}
 		for _, ch := range chunk.Choices {
 			d := ch.Delta

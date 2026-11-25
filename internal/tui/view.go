@@ -183,6 +183,9 @@ func (m *model) statusBar() string {
 	ctxFull := ctxBar(m.stats.ctxUsed, ctxMax)
 	ctxShort := sDim.Render(fmt.Sprintf("ctx %d%%", int(float64(m.stats.ctxUsed)/float64(max(ctxMax, 1))*100)))
 	money := sGreen.Render(fmt.Sprintf("$%.2f", m.stats.cost))
+	if m.stats.unpriced {
+		money += sYellow.Render("+?") // some models' prices are unknown
+	}
 	if hr := m.cacheHitRate(); hr >= 0 {
 		money += sDim.Render(fmt.Sprintf(" · cache %d%%", hr))
 	}

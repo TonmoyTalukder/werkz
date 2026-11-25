@@ -248,13 +248,17 @@ func (e *Engine) attemptOnce(ctx context.Context, sys string, a attempt) (*llm.T
 		return nil, err
 	}
 	cost := mi.Cost(turn.Usage.In, turn.Usage.Out, turn.Usage.CacheRead, turn.Usage.CacheWrite, req.Fast, req.TTL1h)
+	if turn.Usage.CostUSD > 0 {
+		cost = turn.Usage.CostUSD // the provider's own figure beats our estimate
+	}
+	unpriced := cost == 0 && !mi.Priced()
 	e.lastContext = turn.Usage.In + turn.Usage.CacheRead + turn.Usage.CacheWrite + turn.Usage.Out
 	e.lastWindow = mi.Context
 	if turn.KeepAlive != nil {
 		e.lastKA, e.lastReqAt, e.lastMI, e.lastFast = turn.KeepAlive, reqStart, mi, req.Fast
 		e.lastPrefix = turn.Usage.In + turn.Usage.CacheRead + turn.Usage.CacheWrite
 	}
-	e.send(UsageMsg{Provider: a.provider, Model: a.model, Usage: turn.Usage, Cost: cost,
+	e.send(UsageMsg{Provider: a.provider, Model: a.model, Usage: turn.Usage, Cost: cost, Unpriced: unpriced,
 		ContextUsed: int(turn.Usage.In + turn.Usage.CacheRead + turn.Usage.CacheWrite + turn.Usage.Out),
 		ContextMax:  mi.Context})
 	return turn, nil

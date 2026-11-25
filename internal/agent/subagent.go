@@ -66,8 +66,11 @@ func (e *Engine) runTask(ctx context.Context, tc llm.ToolCall) tools.Result {
 			return tools.Fail("sub-agent failed: %s", r)
 		}
 		c := mi.Cost(turn.Usage.In, turn.Usage.Out, turn.Usage.CacheRead, turn.Usage.CacheWrite, false, false)
+		if turn.Usage.CostUSD > 0 {
+			c = turn.Usage.CostUSD
+		}
 		cost += c
-		e.send(UsageMsg{Provider: provider, Model: model, Usage: turn.Usage, Cost: c, Sub: true})
+		e.send(UsageMsg{Provider: provider, Model: model, Usage: turn.Usage, Cost: c, Sub: true, Unpriced: c == 0 && !mi.Priced()})
 		hist = append(hist, llm.Msg{Role: llm.RoleAssistant, Text: turn.Text, ToolCalls: turn.ToolCalls, ClaudeRaw: turn.Raw})
 		if len(turn.ToolCalls) == 0 {
 			report := strings.TrimSpace(turn.Text)

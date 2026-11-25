@@ -40,6 +40,9 @@ type Msg struct {
 
 type Usage struct {
 	In, Out, CacheRead, CacheWrite int64
+	// CostUSD is the cost the provider itself reported for the request (OpenRouter does);
+	// 0 when not reported, in which case werkz estimates from the price table.
+	CostUSD float64
 }
 
 type Turn struct {

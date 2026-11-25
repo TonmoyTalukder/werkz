@@ -65,7 +65,11 @@ func Lookup(provider, id string) ModelInfo {
 				return m
 			}
 		}
-		return ModelInfo{ID: id, Label: id, Provider: provider, Context: 1_000_000, Efforts: ClaudeEfforts, DefaultEffort: "high"}
+		mi := ModelInfo{ID: id, Label: id, Provider: provider, Context: 1_000_000, Efforts: ClaudeEfforts, DefaultEffort: "high"}
+		if p, ok := olderClaudePrices[id]; ok {
+			mi.In, mi.Out, mi.CacheReadX = p[0], p[1], p[2]
+		}
+		return mi
 	}
 	remoteMu.Lock()
 	defer remoteMu.Unlock()
@@ -163,3 +167,20 @@ func HumanTokens(n int) string {
 	}
 	return fmt.Sprint(n)
 }
+
+// olderClaudePrices prices previous Claude models that can still be used with --model or a
+// fallback list: input and output USD per 1M tokens, and the cache-read multiplier.
+var olderClaudePrices = map[string][3]float64{
+	"claude-fable-5-1":  {10, 50, 0.025},
+	"claude-fable-5":    {10, 50, 0.1},
+	"claude-opus-5":     {5, 25, 0.1},
+	"claude-opus-4-8":   {5, 25, 0.1},
+	"claude-opus-4-7":   {5, 25, 0.1},
+	"claude-opus-4-6":   {5, 25, 0.1},
+	"claude-sonnet-5":   {2, 10, 0.1},
+	"claude-sonnet-4-6": {3, 15, 0.1},
+	"claude-haiku-4-5":  {1, 5, 0.1},
+}
+
+// Priced reports whether werkz can estimate this model's cost (free, or a known price).
+func (m ModelInfo) Priced() bool { return m.Free || m.In > 0 || m.Provider == "ollama" }
