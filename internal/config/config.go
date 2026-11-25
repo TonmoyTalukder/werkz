@@ -285,7 +285,10 @@ func (c *Config) BaseURL(id string) string {
 	}
 	if id == "ollama" {
 		if h := c.Key("ollama"); h != "" {
-			return strings.TrimRight(h, "/") + "/v1"
+			if !strings.Contains(h, "://") {
+				h = "http://" + h // OLLAMA_HOST is often just host:port, e.g. 0.0.0.0:11434
+			}
+			return strings.TrimSuffix(strings.TrimRight(h, "/"), "/v1") + "/v1"
 		}
 	}
 	return p.BaseURL

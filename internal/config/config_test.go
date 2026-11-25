@@ -109,3 +109,20 @@ func TestSessionModelNotSaved(t *testing.T) {
 		t.Fatalf("a model picked in werkz should be saved, got %s", d.Model)
 	}
 }
+
+// L5: OLLAMA_HOST works with or without a scheme (and with a trailing /v1).
+func TestOllamaHost(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	for host, want := range map[string]string{
+		"":                          "http://localhost:11434/v1",
+		"0.0.0.0:11434":             "http://0.0.0.0:11434/v1",
+		"localhost:11434":           "http://localhost:11434/v1",
+		"http://gpu-box:11434/":     "http://gpu-box:11434/v1",
+		"https://ollama.example/v1": "https://ollama.example/v1",
+	} {
+		t.Setenv("OLLAMA_HOST", host)
+		if got := Load().BaseURL("ollama"); got != want {
+			t.Errorf("OLLAMA_HOST=%q → %q, want %q", host, got, want)
+		}
+	}
+}
