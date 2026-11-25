@@ -113,3 +113,29 @@ func must(t *testing.T, err error) {
 		t.Fatal(err)
 	}
 }
+
+// H4: a timeout or cancel kills the command's children; background jobs don't hang the
+// turn; output is capped in memory.
+func TestBashProcessControl(t *testing.T) {
+	env := Env{Dirs: []string{t.TempDir()}}
+	run := func(ctx context.Context, cmd string, timeout int) (Result, time.Duration) {
+		start := time.Now()
+		r := Run(ctx, llm.ToolCall{Name: "Bash", Args: fmt.Sprintf(`{"command":%q,"timeout_sec":%d}`, cmd, timeout)}, env)
+		return r, time.Since(start)
+	}
+	if r, d := run(context.Background(), "sleep 8; echo never", 1); d > 4*time.Second || strings.Contains(r.Output, "never") || !strings.Contains(r.Output, "timed out") {
+		t.Fatalf("timeout didn't kill the child: %v %q", d, r.Output)
+	}
+	if r, d := run(context.Background(), "(sleep 8) & echo started", 30); d > 5*time.Second || !strings.Contains(r.Output, "started") {
+		t.Fatalf("background job blocked the turn: %v %q", d, r.Output)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	time.AfterFunc(500*time.Millisecond, cancel)
+	if _, d := run(ctx, "sleep 8 | cat", 30); d > 4*time.Second {
+		t.Fatalf("cancel (Esc) didn't stop the pipeline: %v", d)
+	}
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	if r, _ := run(context.Background(), "yes | head -c 20000000", 30); !strings.Contains(r.Output, "output capped at 8 MB") {
+		t.Fatalf("output not capped: %.200q", r.Output)
+	}
+}

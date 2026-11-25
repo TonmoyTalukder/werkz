@@ -191,20 +191,40 @@ func runBash(ctx context.Context, a Args, env Env) Result {
 	if len(env.Env) > 0 {
 		cmd.Env = append(os.Environ(), env.Env...)
 	}
-	out, err := cmd.CombinedOutput()
-	s := trimOutput(a.Command, string(out))
+	// Own process group: a timeout or Esc kills the command and everything it started.
+	// WaitDelay stops a background child that keeps the output pipe open (e.g. `npm run dev &`)
+	// from blocking the turn. Output is capped so a runaway command can't exhaust memory.
+	setProcessGroup(cmd)
+	cmd.WaitDelay = 2 * time.Second
+	buf := &cappedBuffer{limit: maxCapture}
+	cmd.Stdout, cmd.Stderr = buf, buf
+	err := cmd.Start()
+	if err == nil {
+		track(cmd)
+		err = cmd.Wait()
+		untrack(cmd)
+	}
+	raw := buf.String()
+	if buf.dropped > 0 {
+		raw += fmt.Sprintf("\n… (output capped at %d MB; %d more bytes discarded)", maxCapture>>20, buf.dropped)
+	}
+	s := trimOutput(a.Command, raw)
 	if len(s) > maxOut {
-		// Keep a short head and a longer tail (errors and summaries live at the end); the full
-		// output goes to a file the model can Grep or Read by range instead of carrying it in context.
-		full := s
-		s = s[:2000] + fmt.Sprintf("\n… (%d characters omitted) …\n", len(full)-10000) + full[len(full)-8000:]
-		if path := spillOutput(full); path != "" {
-			s += fmt.Sprintf("\n[output was %d lines / %d characters; full output saved to %s — Grep it or Read it with offset/limit]",
-				strings.Count(full, "\n")+1, len(full), path)
+		// Keep a short head and a longer tail (errors and summaries live at the end); the full,
+		// untrimmed output goes to a file the model can Grep or Read by range.
+		short := s[:2000] + fmt.Sprintf("\n… (%d characters omitted) …\n", len(s)-10000) + s[len(s)-8000:]
+		if path := spillOutput(raw); path != "" {
+			short += fmt.Sprintf("\n[output was %d lines / %d characters; full output saved to %s — Grep it or Read it with offset/limit]",
+				strings.Count(raw, "\n")+1, len(raw), path)
 		}
+		s = short
 	}
 	code := 0
-	if err != nil {
+	switch {
+	case errors.Is(err, exec.ErrWaitDelay):
+		code = cmd.ProcessState.ExitCode()
+		s += "\n(the command left background processes running; their later output isn't captured)"
+	case err != nil:
 		var ee *exec.ExitError
 		if errors.As(err, &ee) {
 			code = ee.ExitCode()
@@ -213,7 +233,7 @@ func runBash(ctx context.Context, a Args, env Env) Result {
 			s += "\n" + err.Error()
 		}
 	}
-	if cctx.Err() == context.DeadlineExceeded {
+	if errors.Is(cctx.Err(), context.DeadlineExceeded) {
 		s += fmt.Sprintf("\n(timed out after %ds)", t)
 	}
 	lines := strings.Split(strings.TrimRight(s, "\n"), "\n")

@@ -42,6 +42,9 @@ func (m *model) command(line string) tea.Cmd {
 	pp := func(f func() string) tea.Cmd { return m.push(func(int) string { return f() }) }
 	switch cmd {
 	case "/exit", "/quit":
+		if m.turn.cancel != nil {
+			m.turn.cancel() // stop the running turn (and its commands) before quitting
+		}
 		m.saveConfig()
 		return tea.Quit
 	case "/help":

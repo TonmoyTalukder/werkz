@@ -9,6 +9,7 @@ import (
 	"github.com/TonmoyTalukder/werkz/internal/agent"
 	"github.com/TonmoyTalukder/werkz/internal/catalog"
 	"github.com/TonmoyTalukder/werkz/internal/config"
+	"github.com/TonmoyTalukder/werkz/internal/tools"
 	"github.com/TonmoyTalukder/werkz/internal/tui"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -53,6 +54,7 @@ func run(login bool, model, workspace string, dirs []string) error {
 	eng := agent.New(cfg, func(v any) { p.Send(v) })
 	m := tui.New(cfg, eng, tui.Options{Version: version, Login: login, Workspace: workspace, Dirs: dirs})
 	p = tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
+	defer tools.KillAll() // don't leave commands started by the agent running after exit
 	if _, err := p.Run(); err != nil {
 		return err
 	}
