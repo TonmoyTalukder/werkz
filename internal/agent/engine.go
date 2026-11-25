@@ -33,6 +33,7 @@ type Engine struct {
 	allow    map[string]bool   // tools approved for the session
 
 	envSent string // last environment context sent to the model
+	memDirs string // working folders whose project instruction files were last sent
 
 	quiet          bool                                             // don't stream text to the UI (compaction)
 	providerFor    func(cfg *config.Config, id string) llm.Provider // nil = real clients
@@ -81,7 +82,7 @@ func New(cfg *config.Config, send func(any)) *Engine {
 func (e *Engine) Reset() {
 	e.StopKeepAlive()
 	e.setHistory(nil)
-	e.envSent, e.lastKA = "", nil
+	e.envSent, e.memDirs, e.lastKA = "", "", nil
 	e.reads = tools.NewReadTracker()
 }
 
@@ -102,6 +103,7 @@ func (e *Engine) Run(ctx context.Context, userText string, settings config.Confi
 	if e.shouldAutoCompact() && !e.autoCompact(ctx, "") {
 		return
 	}
+	e.addMemory()
 	e.appendHistory(llm.Msg{Role: llm.RoleUser, Text: userText})
 	_, wsName := e.workspaceEnv()
 	if env := EnvContext(e.dirs(), wsName); env != e.envSent {
@@ -402,4 +404,18 @@ func (e *Engine) autoCompact(ctx context.Context, repeat string) bool {
 		e.appendHistory(llm.Msg{Role: llm.RoleUser, Text: "My current request, repeated word for word:\n\n" + repeat})
 	}
 	return true
+}
+
+// addMemory sends the project instruction files once per set of working folders (again after
+// a workspace change or compaction), instead of re-reading and re-sending them every turn.
+func (e *Engine) addMemory() {
+	dirs := e.dirs()
+	key := strings.Join(dirs, "\x00")
+	if key == e.memDirs {
+		return
+	}
+	e.memDirs = key
+	if mem := MemoryContext(dirs); mem != "" {
+		e.appendHistory(llm.Msg{Role: llm.RoleUser, Text: mem})
+	}
 }

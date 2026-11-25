@@ -21,13 +21,49 @@ import (
 func TestMemoryFiles(t *testing.T) {
 	dir := t.TempDir()
 	must(t, os.WriteFile(filepath.Join(dir, "CLAUDE.md"), []byte("# Rules\nUse tabs."), 0o644))
-	if env := EnvContext([]string{dir}, ""); !strings.Contains(env, "Use tabs.") {
+	if mem := MemoryContext([]string{dir}); !strings.Contains(mem, "Use tabs.") {
 		t.Fatal("CLAUDE.md not loaded")
 	}
+	if strings.Contains(EnvContext([]string{dir}, ""), "Use tabs.") {
+		t.Fatal("project instructions must not be part of the system-role environment context")
+	}
 	must(t, os.WriteFile(filepath.Join(dir, "AGENTS.md"), []byte(strings.Repeat("x", 40000)), 0o644))
-	env := EnvContext([]string{dir}, "")
-	if strings.Contains(env, "Use tabs.") || !strings.Contains(env, "32 KiB") || len(env) > 34000 {
-		t.Fatalf("AGENTS.md should win and be capped (len %d)", len(env))
+	mem := MemoryContext([]string{dir})
+	if strings.Contains(mem, "Use tabs.") || !strings.Contains(mem, "32 KiB") || len(mem) > 34000 {
+		t.Fatalf("AGENTS.md should win and be capped (len %d)", len(mem))
+	}
+}
+
+// L7: project instructions are sent once (as user-role context), not every turn.
+func TestMemorySentOnce(t *testing.T) {
+	srv := testutil.MockOpenAI(t)
+	defer srv.Close()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	proj := t.TempDir()
+	must(t, os.WriteFile(filepath.Join(proj, "AGENTS.md"), []byte("Always write tests."), 0o644))
+	cfg := config.Load()
+	cfg.Keys["ollama"] = srv.URL
+	cfg.Provider, cfg.Model, cfg.Mode = "ollama", "mock-a", config.ModeAuto
+	e := New(cfg, func(v any) {
+		if pr, ok := v.(PermReqMsg); ok {
+			pr.Reply <- PermNo // the mock lists ".", outside the test project
+		}
+	})
+	e.SetWorkspace([]string{proj}, nil, "")
+	e.Run(context.Background(), "one", *cfg)
+	must(t, os.WriteFile(filepath.Join(proj, "AGENTS.md"), []byte("Always write tests. Edited."), 0o644))
+	e.Run(context.Background(), "two", *cfg)
+	count := 0
+	for _, m := range e.history {
+		if strings.Contains(m.Text, "Always write tests") {
+			count++
+			if m.Role != llm.RoleUser {
+				t.Fatalf("project instructions sent as %s, want user", m.Role)
+			}
+		}
+	}
+	if count != 1 {
+		t.Fatalf("project instructions sent %d times in two turns, want 1", count)
 	}
 }
 

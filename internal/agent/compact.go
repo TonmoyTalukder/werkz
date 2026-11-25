@@ -124,7 +124,10 @@ func (e *Engine) compact(ctx context.Context, focus string, auto bool) error {
 	}
 	_, wsName := e.workspaceEnv()
 	env := EnvContext(e.dirs(), wsName)
-	e.setHistory([]llm.Msg{{Role: llm.RoleUser, Text: text}, {Role: llm.RoleSystem, Text: env}})
+	e.setHistory([]llm.Msg{{Role: llm.RoleUser, Text: text}})
+	e.memDirs = "" // the summary drops them: send the project instructions again
+	e.addMemory()
+	e.appendHistory(llm.Msg{Role: llm.RoleSystem, Text: env})
 	e.envSent = env
 	e.lastKA = nil
 	after := int64(len(text)/4 + len(env)/4 + 2500) // rough: summary + env + system/tools
