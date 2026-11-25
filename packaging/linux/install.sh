@@ -22,6 +22,9 @@ for s in 16 24 32 48 64 128 256 512; do
   install -m 644 "$HERE/icons/werkz-$s.png" "$ICON_DIR/${s}x${s}/apps/werkz.png"
 done
 
+# Quote a path for a .desktop Exec= value (spec: double quotes; escape " ` $ \\).
+desktop_quote() { printf '%s' "$1" | sed -e 's/[\\"`$]/\\&/g'; }
+
 DESKTOP_FILE="$APP_DIR/werkz.desktop"
 cat > "$DESKTOP_FILE" <<EOF
 [Desktop Entry]
@@ -29,7 +32,7 @@ Type=Application
 Name=werkz
 GenericName=AI Coding Assistant
 Comment=Claude + free fallback models in your terminal
-Exec=$BIN_DIR/werkz-launch
+Exec="$(desktop_quote "$BIN_DIR/werkz-launch")"
 Icon=werkz
 Terminal=false
 Categories=Development;

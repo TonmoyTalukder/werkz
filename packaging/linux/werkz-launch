@@ -2,6 +2,7 @@
 # Opens werkz in a new terminal window. Used by the werkz desktop/app-grid icon.
 # Override the terminal with WERKZ_TERMINAL=kitty (or any name below).
 SELF="$(readlink -f "$0")"
+QSELF="$(printf '%q' "$SELF")" # shell-quoted, for terminals that take one command string
 BIN="${WERKZ_BIN:-$HOME/.local/bin/werkz}"
 
 if [ "${1:-}" = "--inner" ]; then
@@ -19,16 +20,16 @@ fi
 
 open_with() {
   case "$1" in
-    ptyxis)         ptyxis --new-window -T werkz -x "'$SELF' --inner" ;;
+    ptyxis)         ptyxis --new-window -T werkz -x "$QSELF --inner" ;;
     gnome-terminal) gnome-terminal --geometry=130x40 -- "$SELF" --inner ;;
-    kgx)            kgx -e "'$SELF' --inner" ;;
+    kgx)            kgx -e "$QSELF --inner" ;;
     konsole)        konsole -e "$SELF" --inner ;;
     kitty)          kitty --title werkz "$SELF" --inner ;;
     alacritty)      alacritty --title werkz -e "$SELF" --inner ;;
     wezterm)        wezterm start -- "$SELF" --inner ;;
     foot)           foot --title werkz "$SELF" --inner ;;
     xfce4-terminal) xfce4-terminal --title werkz -x "$SELF" --inner ;;
-    tilix)          tilix -e "'$SELF' --inner" ;;
+    tilix)          tilix -e "$QSELF --inner" ;;
     xdg-terminal-exec) xdg-terminal-exec "$SELF" --inner ;;
     x-terminal-emulator) x-terminal-emulator -e "$SELF" --inner ;;
     xterm)          xterm -title werkz -bg '#0e0f16' -fg '#e5e7eb' -geometry 130x40 -e "$SELF" --inner ;;
