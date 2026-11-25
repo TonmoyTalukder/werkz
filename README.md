@@ -44,7 +44,7 @@ models at any time, and you can let werkz fall back to another model when one fa
   step. A read-only sub-agent handles broad exploration.
 - **Bring your own model.** It supports Claude (Fable 5.2, Opus 5.5, Sonnet 5.5, Haiku 5.5), OpenAI, Grok,
   Gemini, OpenRouter, Groq and Ollama. Model lists are fetched live.
-- **Free models built in.** Gemini, OpenRouter `:free` models and Groq have free tiers, and Ollama runs
+- **Free models built in.** OpenRouter's `:free` models are free, Gemini and Groq have free tiers, and Ollama runs
   locally and offline.
 - **Fallback only when you choose it.** It's off by default. You can set it to ask before switching (it shows
   whether the next model is free or paid), or to switch automatically.
@@ -136,8 +136,8 @@ go build -o werkz ./cmd/werkz
    ❯ add pagination to the /users endpoint and update the tests
    ❯ why does `go test ./...` fail? fix it
    ```
-4. **Approve the risky steps.** werkz shows each edit as a diff and each command before running it. Answer
-   **1** (yes), **2** (yes, and don't ask again this session) or **3**/**Esc** (no, and tell werkz what to do
+4. **Approve the risky steps.** werkz shows each edit as a diff and each command before running it. Choose
+   with **↑/↓** and **Enter**: yes, yes and don't ask again this session, or no (also **Esc**: no, and tell werkz what to do
    instead).
 
 Useful next steps: `/model` to switch models, `/effort` to set how hard the model thinks, `/workspace` to work
@@ -150,10 +150,13 @@ across several repos, and `/help` for everything else.
 | **Claude** (Anthropic) | paid | [platform.claude.com](https://platform.claude.com/settings/keys) | `ANTHROPIC_API_KEY` |
 | **OpenAI** (GPT / Codex models) | paid | [platform.openai.com](https://platform.openai.com/api-keys) | `OPENAI_API_KEY` |
 | **xAI Grok** | paid | [console.x.ai](https://console.x.ai) | `XAI_API_KEY` |
-| **Google Gemini** | free tier | [aistudio.google.com](https://aistudio.google.com/apikey) | `GEMINI_API_KEY` |
+| **Google Gemini** | free tier* | [aistudio.google.com](https://aistudio.google.com/apikey) | `GEMINI_API_KEY` |
 | **OpenRouter** | `:free` models; paid models optional | [openrouter.ai/keys](https://openrouter.ai/keys) | `OPENROUTER_API_KEY` |
-| **Groq** | free tier | [console.groq.com](https://console.groq.com/keys) | `GROQ_API_KEY` |
+| **Groq** | free tier* | [console.groq.com](https://console.groq.com/keys) | `GROQ_API_KEY` |
 | **Ollama** | free, local, offline | [ollama.com](https://ollama.com/download) (no key) | `OLLAMA_HOST` |
+
+\* Gemini and Groq are free only while the key's project has no billing; werkz labels their models "free tier"
+for that reason. OpenRouter's `:free` models are labelled "free", and Ollama "local".
 
 Add or change keys at any time with `/login` (or `werkz --login`). Keys are checked when you save them.
 
@@ -205,8 +208,22 @@ Press **Shift+Tab** (or type `/mode`) to cycle through the modes:
 | **plan** | ✓ | blocked (read-only) | blocked |
 | **auto** | ✓ | ✓ | ✓ |
 
-In every mode, a write outside your working folders asks first. Edits are refused if the model hasn't read
-the file or if the file changed on disk since it was read.
+Safety rules that apply in **every** mode:
+
+- Reading, listing, searching or writing **outside your working folders** asks first (symlinks are followed,
+  so a link inside the project can't point the model elsewhere).
+- **Credential locations** (`~/.ssh`, `~/.aws`, `~/.gnupg`, `~/.config/werkz`, `.netrc`, `.git-credentials`, …)
+  are never opened by the file tools.
+- Your **home folder is never treated as a project**: started in `~` (for example from the desktop icon),
+  every file change asks first and searches need a path. Open a project with `/workspace` or `/add-dir`.
+- Edits are refused if the model hasn't read the file, or if the file changed on disk since it was read.
+- Dialogs ignore keys for a moment after they appear and start on **No**, so text you're typing can't answer
+  them by accident.
+- "Don't ask again" for a shell command covers only that command (for example `go test …`), and isn't offered
+  for compound commands (`;`, `&&`, pipes, redirects) or risky ones (`rm`, `sudo`, `curl`, `ssh`, …).
+- **Auto** and **accept edits** last only for the current session; werkz always starts in **default**.
+- Timeouts and **Esc** stop a command together with everything it started, and werkz stops its running
+  commands when you quit.
 
 ## Commands and keys
 
@@ -272,11 +289,14 @@ provider. Fallback is **off by default**. Choose your default with `/fallback`:
 | Mode | What happens when a model fails |
 |---|---|
 | **Off** (default) | The request stops and you decide what to do, for example `/model` |
-| **Ask** | werkz shows the failure, the next model and whether it's **free or paid**, then you choose: yes for this message, yes for the whole session, or stop |
+| **Ask** | werkz shows the failure and asks **which model** to switch to: your fallback models (labelled free or paid), any other connected model, or stop. Use it for this message (**Enter**) or the whole session (**Ctrl+A**) |
 | **Auto** | werkz switches to the next provider without asking (this may use paid models) |
 
-The order is set with `/fallback gemini,openrouter,groq,ollama`. The conversation continues seamlessly on
-the new model. A provider that's out of credits or has a bad key is skipped for the rest of the session.
+Choosing **Ask** or **Auto** in `/fallback` lets you pick exactly which models to fall back to, in order
+(`/fallback models` edits the list). Without a list, werkz uses one model per connected provider, free ones
+first: Gemini, OpenRouter, Groq, Ollama, then Claude, OpenAI and Grok. The conversation continues on the
+new model for the rest of that message. A provider that's out of credits or has a bad key is skipped for the
+rest of the session, and with fallback **off** werkz never sends your next message somewhere else instead.
 
 ## Workspaces
 
@@ -309,7 +329,7 @@ OpenCode, Gemini CLI, Aider and others manage context.
 | **Quiet test output** | Passing tests and progress lines from `go test`, vitest, jest, npm test, pytest and `cargo test` are hidden; failures are kept. |
 | **Big output to a file** | Command output over 30k characters is cut to its start and end, and the full output is saved to a file the model can search. |
 | **Capped reads and searches** | Read returns at most 2,000 lines and asks for a range on files over 256 KB. Grep returns file names by default. |
-| **Cheap sub-agent** | Broad exploration runs on Claude Haiku 5.5 at low effort and returns only a short report. |
+| **Cheap sub-agent** | Broad exploration runs in a separate context on your current provider (Claude Haiku 5.5 at low effort when you're on Claude) and returns only a short report. |
 | **Loop guard** | Five identical tool calls in a row stop the turn. |
 
 The status bar shows the **cache hit rate**. `/cache` and `/cost` show tokens read from and written to the
@@ -320,14 +340,17 @@ cache, money saved, and whether the cache is still warm.
 
 ### Cost and balance
 
-The status bar shows the session cost. Anthropic doesn't expose your prepaid credit to an API key, so set your
-starting credit once with `/balance 100` and werkz subtracts its cost estimate as you work. The Console's
-Billing page is the exact figure. OpenRouter credit is read live from its API.
+The status bar shows the session cost. For OpenRouter it's the cost OpenRouter reports for each request; for
+Claude it's estimated from token usage and list prices. werkz doesn't know OpenAI's or xAI's prices, so usage
+there makes the figure a lower bound, shown as `$0.42+?`. Anthropic doesn't expose your prepaid credit to an
+API key, so set your starting credit once with `/balance 100` and werkz subtracts its estimate as you work; the
+Console's Billing page is the exact figure. OpenRouter credit is read live from its API.
 
 ## Configuration
 
 Settings live in **`~/.config/werkz/config.json`** (file mode `0600`). Everything in it can be changed from
-inside werkz, so you rarely need to edit it by hand.
+inside werkz, so you rarely need to edit it by hand. Saves are atomic, and if the file ever can't be read
+(say, after a typo while editing it), werkz tells you and runs with defaults without overwriting it.
 
 | Environment variable | Purpose |
 |---|---|
@@ -349,10 +372,12 @@ Other files werkz writes:
   and the files the model reads are sent to the model provider you selected (or stay on your machine with
   Ollama).
 - **Keys stay on your machine**, in a config file only your user can read.
-- **Approval before risky actions:** edits and commands ask by default; writes outside your working folders
-  always ask; plan mode is read-only.
-- **No surprise spending:** fallback is off unless you turn it on, Ask mode labels paid models, and model or
-  effort changes that would re-send the conversation uncached warn you first.
+- **Approval before risky actions:** edits and commands ask by default; anything outside your working folders
+  always asks; credential files are never opened; plan mode is read-only (see
+  [Permission modes](#permission-modes)).
+- **No surprise spending or sharing:** fallback is off unless you turn it on, the sub-agent stays on your
+  provider, Ask mode labels paid models, and model or effort changes that would re-send the conversation
+  uncached warn you first.
 - **Mind your provider's data policy.** Free tiers (Gemini, OpenRouter `:free`) may use prompts to improve
   their models. Use a paid key or Ollama for sensitive code.
 
