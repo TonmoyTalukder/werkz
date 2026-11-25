@@ -282,6 +282,9 @@ func (e *Engine) attemptOnce(ctx context.Context, sys string, a attempt) (*llm.T
 		e.lastKA, e.lastReqAt, e.lastMI, e.lastFast = turn.KeepAlive, reqStart, mi, req.Fast
 		e.lastPrefix = turn.Usage.In + turn.Usage.CacheRead + turn.Usage.CacheWrite
 	}
+	if turn.Note != "" {
+		e.send(NoticeMsg{"warn", turn.Note})
+	}
 	e.send(UsageMsg{Provider: a.provider, Model: a.model, Usage: turn.Usage, Cost: cost, Unpriced: unpriced,
 		ContextUsed: int(turn.Usage.In + turn.Usage.CacheRead + turn.Usage.CacheWrite + turn.Usage.Out),
 		ContextMax:  mi.Context})

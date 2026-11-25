@@ -53,6 +53,9 @@ type Turn struct {
 	Raw        *anthropic.BetaMessageParam
 	// KeepAlive (Claude only) refreshes the prompt cache for this request's prefix.
 	KeepAlive func(ctx context.Context) (Usage, error)
+	// Note is something the user should know about how the answer was produced
+	// (e.g. the model can't use tools, so it answered without them).
+	Note string
 }
 
 type Handlers struct {

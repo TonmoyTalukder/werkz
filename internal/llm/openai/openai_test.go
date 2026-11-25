@@ -121,3 +121,38 @@ func TestStreamParsingEdgeCases(t *testing.T) {
 		t.Fatalf("a cut-off stream should be an error, got %v", err)
 	}
 }
+
+// L10: a model that rejects tools/reasoning_effort is retried once, the user is told, and later
+// requests don't send the rejected fields again.
+func TestRejectedOptionsRemembered(t *testing.T) {
+	var bodies []map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var b map[string]any
+		_ = json.NewDecoder(r.Body).Decode(&b)
+		bodies = append(bodies, b)
+		if _, ok := b["tools"]; ok {
+			w.WriteHeader(http.StatusBadRequest)
+			_, _ = io.WriteString(w, `{"error":{"message":"model does not support tools or reasoning_effort"}}`)
+			return
+		}
+		_, _ = io.WriteString(w, "data: {\"choices\":[{\"delta\":{\"content\":\"ok\"},\"finish_reason\":\"stop\"}]}\n\ndata: [DONE]\n\n")
+	}))
+	defer srv.Close()
+	c := &Client{ID: "ollama", BaseURL: srv.URL}
+	req := llm.Request{Model: "tiny", Effort: "high", Tools: []llm.ToolDef{{Name: "LS"}},
+		History: []llm.Msg{{Role: llm.RoleUser, Text: "hi"}}}
+	h := llm.Handlers{OnText: func(string) {}, OnThinking: func(string) {}, OnToolStart: func(string) {}}
+	turn, err := c.Stream(context.Background(), req, h)
+	if err != nil || !strings.Contains(turn.Note, "can't use tools") {
+		t.Fatalf("first request: err=%v note=%q", err, turn.Note)
+	}
+	if _, err := c.Stream(context.Background(), req, h); err != nil {
+		t.Fatal(err)
+	}
+	if len(bodies) != 3 { // 400 + retry, then a single clean request
+		t.Fatalf("requests = %d, want 3 (the rejection should be remembered)", len(bodies))
+	}
+	if _, ok := bodies[2]["tools"]; ok || bodies[2]["reasoning_effort"] != nil {
+		t.Fatalf("rejected fields sent again: %v", bodies[2])
+	}
+}

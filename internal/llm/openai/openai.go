@@ -9,10 +9,12 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/TonmoyTalukder/werkz/internal/catalog"
@@ -25,7 +27,23 @@ import (
 type Client struct {
 	ID, BaseURL, Key string
 	IncludePaid      bool // OpenRouter: list paid models too (default: only free ones)
+
+	mu       sync.Mutex
+	noTools  map[string]bool // models that rejected tool definitions this session
+	noEffort map[string]bool // models that rejected reasoning_effort
 }
+
+// httpClient has connection and response-header timeouts (the default client has none) but no
+// overall timeout, since a streamed answer can legitimately take minutes.
+var httpClient = &http.Client{Transport: &http.Transport{
+	Proxy:                 http.ProxyFromEnvironment,
+	DialContext:           (&net.Dialer{Timeout: 30 * time.Second, KeepAlive: 30 * time.Second}).DialContext,
+	TLSHandshakeTimeout:   15 * time.Second,
+	ResponseHeaderTimeout: 3 * time.Minute,
+	IdleConnTimeout:       90 * time.Second,
+	MaxIdleConnsPerHost:   4,
+	ForceAttemptHTTP2:     true,
+}}
 
 type oaToolCall struct {
 	Index    *int   `json:"index,omitempty"`
@@ -97,10 +115,11 @@ func (o *Client) Stream(ctx context.Context, req llm.Request, h llm.Handlers) (*
 		"stream":         true,
 		"stream_options": map[string]any{"include_usage": true},
 	}
-	if len(req.Tools) > 0 {
+	noTools, noEffort := o.rejected(req.Model)
+	if len(req.Tools) > 0 && !noTools {
 		body["tools"] = oaTools(req.Tools)
 	}
-	if req.Effort != "" && req.Effort != "auto" {
+	if req.Effort != "" && req.Effort != "auto" && !noEffort {
 		body["reasoning_effort"] = req.Effort
 	}
 	if o.ID == "openai" && req.CacheKey != "" {
@@ -112,18 +131,49 @@ func (o *Client) Stream(ctx context.Context, req llm.Request, h llm.Handlers) (*
 	turn, err := o.do(ctx, body, h)
 	var he *llm.HTTPError
 	if errors.As(err, &he) && he.Status == 400 {
-		// Some endpoints/models reject optional fields: retry once with a minimal request.
+		// Some endpoints/models reject optional fields: retry once with a minimal request, and
+		// remember what this model rejected so later requests don't pay for a failure first.
 		low := strings.ToLower(he.Body)
+		_, hadEffort := body["reasoning_effort"]
+		_, hadTools := body["tools"]
+		dropTools := hadTools && strings.Contains(low, "tool")
 		delete(body, "reasoning_effort")
 		delete(body, "stream_options")
 		delete(body, "prompt_cache_key")
 		delete(body, "usage")
-		if strings.Contains(low, "tool") {
+		if dropTools {
 			delete(body, "tools")
 		}
 		turn, err = o.do(ctx, body, h)
+		if err == nil {
+			o.remember(req.Model, dropTools, hadEffort && strings.Contains(low, "reasoning"))
+			if dropTools {
+				turn.Note = req.Model + " can't use tools, so it answered without reading or changing files; pick a tool-capable model with /model for coding work"
+			}
+		}
 	}
 	return turn, err
+}
+
+// rejected reports what this model refused earlier this session.
+func (o *Client) rejected(model string) (tools, effort bool) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	return o.noTools[model], o.noEffort[model]
+}
+
+func (o *Client) remember(model string, tools, effort bool) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.noTools == nil {
+		o.noTools, o.noEffort = map[string]bool{}, map[string]bool{}
+	}
+	if tools {
+		o.noTools[model] = true
+	}
+	if effort {
+		o.noEffort[model] = true
+	}
 }
 
 func (o *Client) newReq(ctx context.Context, method, path string, body io.Reader) (*http.Request, error) {
@@ -147,7 +197,7 @@ func (o *Client) do(ctx context.Context, body map[string]any, h llm.Handlers) (*
 	if err != nil {
 		return nil, err
 	}
-	resp, err := http.DefaultClient.Do(r)
+	resp, err := httpClient.Do(r)
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +326,7 @@ func (o *Client) ListModels(ctx context.Context) ([]catalog.ModelInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := http.DefaultClient.Do(r)
+	resp, err := httpClient.Do(r)
 	if err != nil {
 		return nil, err
 	}
@@ -364,7 +414,7 @@ func OpenRouterCredits(ctx context.Context, key string) (float64, bool) {
 	if err != nil {
 		return 0, false
 	}
-	resp, err := http.DefaultClient.Do(r)
+	resp, err := httpClient.Do(r)
 	if err != nil {
 		return 0, false
 	}
