@@ -136,7 +136,7 @@ go build -o werkz ./cmd/werkz
    ❯ add pagination to the /users endpoint and update the tests
    ❯ why does `go test ./...` fail? fix it
    ```
-4. **Approve the risky steps.** werkz shows each edit as a diff and each command before running it. Choose
+4. **Approve the risky steps.** werkz shows each command, and a preview of each edit as a diff, before running it. Choose
    with **↑/↓** and **Enter**: yes, yes and don't ask again this session, or no (also **Esc**: no, and tell werkz what to do
    instead).
 
@@ -167,7 +167,7 @@ Add or change keys at any time with `/login` (or `werkz --login`). Keys are chec
 | Fable 5.2 | the longest, hardest tasks | $8 / $40 |
 | Opus 5.5 | complex projects, agents, coding (default) | $4 / $20 |
 | Sonnet 5.5 | everyday tasks, cost-efficient | $2 / $10 |
-| Haiku 5.5 | fastest, lowest cost | $0.10 / $0.50 |
+| Haiku 5.5 | fastest, lowest cost | $0.10 / $0.50 ($0.50 / $2.50 for prompts over 100K tokens) |
 
 For the other providers, `/model` lists the models your key can use.
 
@@ -279,7 +279,7 @@ werkz --version
 - **Fast mode** (Opus 5.5 and Fable 5.2) streams output up to about 2.5× faster, at double the price.
 
 Changing the model, effort or fast mode in the middle of a conversation invalidates the prompt cache, so
-werkz tells you what the next request will cost first.
+werkz warns you when you make the change, with what re-sending the conversation will cost.
 
 ## Fallback
 
@@ -327,7 +327,7 @@ OpenCode, Gemini CLI, Aider and others manage context.
 | **Idle warning** | If the cache has expired and the conversation is 150k+ tokens, werkz suggests `/compact` before re-sending everything. |
 | **Compaction** | `/compact` (or automatically at 300k tokens) replaces the conversation with a structured summary plus the git state. It waits while a test is failing so the error isn't summarized away. |
 | **Quiet test output** | Passing tests and progress lines from `go test`, vitest, jest, npm test, pytest and `cargo test` are hidden; failures are kept. |
-| **Big output to a file** | Command output over 30k characters is cut to its start and end, and the full output is saved to a file the model can search. |
+| **Big output to a file** | Command output over 30k characters is cut to its start and end, and the full, untrimmed output is saved to a file the model can search (kept 7 days in `~/.cache/werkz/outputs`). |
 | **Capped reads and searches** | Read returns at most 2,000 lines and asks for a range on files over 256 KB. Grep returns file names by default. |
 | **Cheap sub-agent** | Broad exploration runs in a separate context on your current provider (Claude Haiku 5.5 at low effort when you're on Claude) and returns only a short report. |
 | **Loop guard** | Five identical tool calls in a row stop the turn. |
