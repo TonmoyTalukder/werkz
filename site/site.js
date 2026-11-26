@@ -26,30 +26,33 @@
         const c = document.createElement("span");
         c.className = "tw-char";
         c.textContent = ch;
+        // every typed letter lands a little differently: tilt, baseline and ink weight
+        c.style.setProperty("--r", (Math.random() * 3 - 1.5).toFixed(2) + "deg");
+        c.style.setProperty("--y", (Math.random() * 0.05 - 0.025).toFixed(3) + "em");
+        c.style.setProperty("--ink", (0.84 + Math.random() * 0.16).toFixed(2));
         w.append(c);
         chars.push(c);
       }
       typed.append(w);
     });
-    const caret = document.createElement("span");
-    caret.className = "tw-caret";
-    caret.setAttribute("aria-hidden", "true");
     typed.classList.add("typing");
     let i = 0;
     const step = () => {
       if (i < chars.length) {
-        chars[i].classList.add("on");
-        chars[i].after(caret);
+        chars[i - 1]?.classList.remove("cur");
+        chars[i].classList.add("on", "cur");
         // a short pause after each word and a longer one at the comma, like real typing
         const c = chars[i++];
         const endOfWord = !c.nextSibling;
-        setTimeout(step, c.textContent === "," ? 260 : endOfWord ? 90 : 34 + Math.random() * 30);
+        setTimeout(step, c.textContent === "," ? 300 : endOfWord ? 110 : 45 + Math.random() * 45);
       } else {
         typed.classList.add("typed");
-        setTimeout(() => caret.classList.add("gone"), 2600);
+        setTimeout(() => typed.classList.add("caret-gone"), 2600);
       }
     };
-    setTimeout(step, 250);
+    // start once the typewriter face has loaded, so letters never strike in a fallback font
+    Promise.race([document.fonts?.load('1em "Special Elite"') ?? Promise.resolve(), new Promise((r) => setTimeout(r, 1500))])
+      .then(() => setTimeout(step, 250));
   }
 
   // Tabs (WAI-ARIA: click, arrow keys, Home/End).
