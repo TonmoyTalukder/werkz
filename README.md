@@ -10,9 +10,15 @@
 </p>
 
 <p align="center">
+  <a href="https://tonmoytalukder.github.io/werkz/"><b>Website</b></a> ·
+  <a href="https://tonmoytalukder.github.io/werkz/docs/">Documentation</a> ·
+  <a href="https://tonmoytalukder.github.io/werkz/docs/releases.html">Release notes</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+</p>
+
+<p align="center">
   <b>An agentic coding tool for your terminal.</b><br>
-  Use a paid API key (Claude, GPT, Grok) when you want the best models, or free models
-  (Gemini, OpenRouter, Groq, local Ollama) when you don't.
+  Use an API key (Claude, GPT, Grok), your ChatGPT or Claude subscription when you want the best models, or a free tier (Gemini, OpenRouter, Groq), or a model on your own machine (local Ollama).
 </p>
 
 ---
@@ -45,8 +51,9 @@ changes and checks its work, asking before it does anything risky.
   it, and is never saved.
 - **No surprise spending:** fallback to another model is off unless you choose it, and paid models are always
   labelled.
-- **Built to save tokens:** prompt caching with keep-alive, automatic compaction and trimmed tool output;
-  follow-up requests read 97–99% of their input from the cache.
+- **Built to save tokens:** prompt caching with keep-alive, automatic compaction, trimmed tool output and a
+  context window you can cap yourself (`/context window 350k`); follow-up requests read 97–99% of their input
+  from the cache.
 - **Several repos at once** with optional workspaces, and a full-screen terminal UI that adapts to any size.
 
 ## Install
@@ -78,22 +85,24 @@ cd ~/code/my-app
 werkz
 ```
 
-On first run, paste any API keys you have (or press **Esc** to use local [Ollama](https://ollama.com/download)),
-then describe what you want done. werkz shows each command and edit before running it; choose with
+On first run, paste any API keys you have, or press **Esc** to start with a local
+[Ollama](https://ollama.com/download) model. To use a subscription instead, type `/login chatgpt` for your
+ChatGPT plan, or pick a "(Claude Code)" model in `/model` for your Claude subscription. Then describe what you
+want done. werkz shows each command and edit before running it; choose with
 **↑/↓** and **Enter**. Type `/help` for all commands, or see [Getting started](docs/getting-started.md).
 
 ## Documentation
 
 | | |
 |---|---|
-| [Installation](docs/installation.md) | Installer, downloads, `go install`, updating, uninstalling |
+| [Installation](docs/installation.md) | Installer, Homebrew, apt, dnf, downloads, updating, uninstalling |
 | [Getting started](docs/getting-started.md) | First run and your first task |
 | [Usage](docs/usage.md) | Commands, keyboard shortcuts, command-line flags, tools |
-| [Providers and models](docs/providers-and-models.md) | Where to get keys, model prices, effort and fast mode |
-| [Safety and privacy](docs/safety.md) | Permission modes and the rules that always apply |
+| [Providers and models](docs/providers-and-models.md) | API keys, ChatGPT and Claude subscriptions, free and local models, prices, effort |
+| [Safety and privacy](docs/safety.md) | Permission modes (including Bypass) and the rules that always apply |
 | [Fallback](docs/fallback.md) | What happens when a model fails |
 | [Workspaces](docs/workspaces.md) | Working across several repositories |
-| [Saving tokens and money](docs/saving-tokens.md) | Caching, compaction, cost and balance tracking |
+| [Saving tokens and money](docs/saving-tokens.md) | Caching, compaction, context window, cost and usage limits |
 | [Configuration](docs/configuration.md) | Config file, environment variables |
 | [Troubleshooting](docs/troubleshooting.md) | Common problems and fixes |
 | [Development](docs/development.md) | Building, testing, releasing, project layout |
