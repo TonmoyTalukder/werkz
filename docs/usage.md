@@ -93,6 +93,35 @@ file. werkz copies with your system's clipboard tool (`wl-copy`, `xclip`, `xsel`
 WSL), inside tmux into tmux's buffer, and over SSH with the OSC 52 terminal sequence. If your terminal doesn't
 support that, press **Ctrl+S** and select with the terminal itself.
 
+## Web access
+
+werkz can read pages and search the web, so it can look up current documentation, an error message or a
+library's latest version.
+
+- **WebFetch** reads any public `http(s)` page as Markdown, with scripts, menus and page furniture removed.
+  Long pages are read in parts. It needs no setup and doesn't ask: it only reads.
+- **Pages on your local network ask first**: `localhost`, private addresses (`10.x`, `192.168.x`, …) and
+  cloud metadata addresses. Choose "don't ask again" to allow one host (say, your dev server) for the session.
+  The check is made when connecting, so a public address that redirects or resolves to a local one asks too.
+- **WebSearch** uses the search built into your model's provider when it has one: Claude (on your Claude
+  model; Anthropic charges $10 per 1,000 searches plus tokens), OpenAI, and Gemini (Google Search). Other
+  models use a search service you set up with `/search`:
+
+  ```text
+  /search brave <key>       # Brave (free tier)
+  /search tavily <key>      # Tavily (free tier)
+  /search searxng <url>     # your SearXNG, no key
+  /search                   # what's used now
+  /search off               # no web search
+  ```
+
+  `/search provider` uses only the model's own search; `/search auto` (the default) prefers it and falls back
+  to a service. Keys can also come from `BRAVE_API_KEY`, `TAVILY_API_KEY` and `SEARXNG_URL`.
+
+Everything read from the web reaches the model marked as untrusted: it is told to use it as information and
+never to follow instructions in it. In Claude Code mode, Claude Code's own web tools are used, with the same
+rule for local pages.
+
 ## Saved conversations
 
 Every conversation is saved as you go, so you can come back to it. `/resume` lists the ones from this
@@ -118,6 +147,8 @@ werkz gives the model a small set of tools and runs them on your machine:
 | `Bash` | Runs a shell command in your project: tests, builds, git, package managers |
 | `Grep` / `Glob` / `LS` | Searches code and finds files |
 | `Task` | Hands a research question to a read-only sub-agent and gets a short report back |
+| `WebFetch` | Reads a web page as Markdown: docs, issues, changelogs, or your local dev server (see [Web access](#web-access)) |
+| `WebSearch` | Searches the web for current information |
 
 Because `Bash` runs your real shell, werkz works with whatever your project uses: `git`, `go`, `npm`,
 `pytest`, `cargo`, `make`, `docker` and so on. If a folder has an **`AGENTS.md`** or **`CLAUDE.md`**, werkz

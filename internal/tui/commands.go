@@ -39,6 +39,7 @@ var commands = []struct{ Name, Desc string }{
 	{"/copy", "Copy the latest response (or a code block) · /copy 2 · /copy prompt · /copy all"},
 	{"/export", "Save the conversation as markdown · /export <file>"},
 	{"/clear", "Start a new conversation (this one stays in /resume)"},
+	{"/search", "Web search for the model · /search brave|tavily <key> · /search searxng <url> · /search off"},
 	{"/docs", "Open the werkz documentation in your browser"},
 	{"/help", "Show help"},
 	{"/exit", "Quit"},
@@ -74,6 +75,8 @@ func (m *model) command(line string) tea.Cmd {
 		return m.copyCommand(args)
 	case "/export":
 		return m.exportCommand(args)
+	case "/search":
+		return m.searchCommand(args)
 	case "/docs":
 		if err := openBrowser(docsURL); err != nil {
 			return p(renderNotice("info", "Couldn't open a browser here ("+err.Error()+"). The documentation is at "+docsURL))

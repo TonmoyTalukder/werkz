@@ -41,6 +41,8 @@ type Engine struct {
 	turnPin        *attempt                                         // model switched to this turn after a failure (nil = use the chain)
 	autoCompactOff bool                                             // auto-compaction failed this session; don't retry every turn
 	reads          *tools.ReadTracker
+	pages          pageCache            // fetched pages, for reading long ones in parts
+	localOK        sync.Map             // WebFetch calls approved to reach the local network (by call ID)
 	attached       map[string]time.Time // files attached with @ (path:range -> mtime), to skip unchanged repeats
 	sessionID      string               // prompt_cache_key for OpenAI (routes requests to the same cache)
 	lastProvider   string               // provider of the latest request
@@ -322,9 +324,15 @@ func (e *Engine) execTool(ctx context.Context, tc llm.ToolCall) tools.Result {
 		return res
 	}
 	var res tools.Result
-	if tc.Name == "Task" {
+	switch tc.Name {
+	case "Task":
 		res = e.runTask(ctx, tc)
-	} else {
+	case "WebFetch":
+		_, local := e.localOK.LoadAndDelete(tc.ID) // permit approved a local-network page
+		res = e.webFetch(ctx, tc, local)
+	case "WebSearch":
+		res = e.webSearch(ctx, tc)
+	default:
 		res = tools.Run(ctx, tc, e.toolEnv())
 	}
 	e.trackCheck(tc, res)
@@ -383,6 +391,15 @@ func (e *Engine) permit(ctx context.Context, tc llm.ToolCall, summary string) (t
 	key, always := allowKey(tc)
 	if outside {
 		key, always = "", ""
+	}
+	// A page on the local network asks in every mode but Bypass; "don't ask again" covers the host.
+	if local, host := localFetch(ctx, tc); local {
+		if e.mode() != config.ModeBypass {
+			need, kind = true, "ask"
+			key, always = "WebFetch@"+host, "Yes, and don't ask again for "+host+" this session"
+			summary = localAskSummary(summary, host)
+		}
+		e.localOK.Store(tc.ID, true)
 	}
 	if need && (key == "" || !e.allow[key]) {
 		if kind == "plan" {

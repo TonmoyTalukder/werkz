@@ -109,6 +109,8 @@ type Config struct {
 	OpenRouterPaid  bool            `json:"openrouter_paid,omitempty"`   // also offer paid OpenRouter models (default: free only)
 	NoAutoUpdate    bool            `json:"auto_update_off,omitempty"`   // don\'t install new releases automatically
 	NoHistory       bool            `json:"history_off,omitempty"`       // don't save conversations for /resume
+	WebSearch       string          `json:"web_search,omitempty"`        // "" (auto) | provider | brave | tavily | searxng | off
+	SearXNGURL      string          `json:"searxng_url,omitempty"`       // a SearXNG instance for WebSearch
 	UpdateCheckedAt time.Time       `json:"update_checked_at,omitempty"` // last time werkz looked for a new release
 	UpdateLatest    string          `json:"update_latest,omitempty"`     // newest release seen by that check
 	CacheTTL        string          `json:"cache_ttl,omitempty"`         // 5m (default) | 1h
@@ -344,6 +346,23 @@ func (c *Config) Key(id string) string {
 		return strings.TrimSpace(os.Getenv(p.EnvVar))
 	}
 	return ""
+}
+
+// SearchKey returns the key of a web search service (brave, tavily): saved, or from its
+// environment variable (BRAVE_API_KEY, TAVILY_API_KEY).
+func (c *Config) SearchKey(id string) string {
+	if k := strings.TrimSpace(c.Keys[id]); k != "" {
+		return k
+	}
+	return strings.TrimSpace(os.Getenv(strings.ToUpper(id) + "_API_KEY"))
+}
+
+// SearXNG returns the SearXNG instance for web search ("" = none), also from SEARXNG_URL.
+func (c *Config) SearXNG() string {
+	if u := strings.TrimSpace(c.SearXNGURL); u != "" {
+		return u
+	}
+	return strings.TrimSpace(os.Getenv("SEARXNG_URL"))
 }
 
 // Configured reports whether a provider can be tried at all.

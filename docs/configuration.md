@@ -19,6 +19,7 @@ can be changed from inside werkz, so you rarely need to edit it by hand.
 | `WERKZ_TERMINAL` | Terminal used by the Linux desktop icon (`kitty`, `alacritty`, `gnome-terminal`, …) |
 | `NO_TRIM=1` | In a command, disables test-output trimming for that run |
 | `WERKZ_NO_UPDATE=1` | Don't check for or install updates this session (see [Updating](installation.md#updating)) |
+| `BRAVE_API_KEY`, `TAVILY_API_KEY`, `SEARXNG_URL` | A web search service for models without their own search (see [Web access](usage.md#web-access)) |
 | `WERKZ_NO_MOUSE=1` | Start with werkz's mouse handling off (the terminal's own selection; **Ctrl+S** turns it on) |
 | `WERKZ_CLAUDE_BIN` | Path of the `claude` command for Claude Code mode (`off` hides Claude Code) |
 
