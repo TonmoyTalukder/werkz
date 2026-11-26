@@ -8,6 +8,8 @@
 | `/effort` | Set the thinking effort; `f` toggles fast mode in the same dialog |
 | `/fast` | Turn fast mode on or off (Opus 5.5 and Fable 5.2) |
 | `/login` | Add, change or verify API keys |
+| `/login chatgpt` · `/logout chatgpt` | Sign in with ChatGPT to use your ChatGPT plan · sign out (see [Providers](providers-and-models.md#using-a-subscription-instead-of-an-api-key)) |
+| `/login claudecode` | Check that Claude Code is installed, to use your Claude subscription through it |
 | `/fallback` | Choose the fallback mode and models (`/fallback models`, `/fallback status`, `/fallback gemini,ollama` sets the order) |
 | `/workspace` | Open, create or leave a workspace (`/workspace new`, `/workspace <name>`, `/workspace none`) |
 | `/add-dir <path>` | Add a working folder; `/dirs` lists them |

@@ -32,6 +32,10 @@ Press **Shift+Tab** (or type `/mode`) to cycle through the modes:
 - Project instruction files (`AGENTS.md`, `CLAUDE.md`) are passed to the model as repository content, not as
   werkz's own instructions, so they can't override these rules.
 
+In **Claude Code mode**, Claude Code runs its own tools. werkz shows them and answers every permission
+question Claude Code asks with the rules above, but actions Claude Code's own settings already allow (such
+as reading files in the project) don't reach werkz.
+
 ## Where your data goes
 
 - **Your code goes only to the provider you're using.** werkz has no server, telemetry or analytics. Prompts

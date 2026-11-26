@@ -19,12 +19,14 @@ can be changed from inside werkz, so you rarely need to edit it by hand.
 | `WERKZ_TERMINAL` | Terminal used by the Linux desktop icon (`kitty`, `alacritty`, `gnome-terminal`, …) |
 | `NO_TRIM=1` | In a command, disables test-output trimming for that run |
 | `WERKZ_NO_UPDATE=1` | Don't check for or install updates this session (see [Updating](installation.md#updating)) |
+| `WERKZ_CLAUDE_BIN` | Path of the `claude` command for Claude Code mode (`off` hides Claude Code) |
 
 ## Files werkz writes
 
 | Path | What |
 |---|---|
 | `~/.config/werkz/config.json` | Settings, API keys, workspaces, fallback list |
+| `~/.config/werkz/chatgpt.json` | ChatGPT plan sign-in (mode 0600); `/logout chatgpt` removes its tokens |
 | `~/.cache/werkz/outputs/` | Oversized command output, kept for 7 days |
 | `~/.local/bin/werkz` | The command (installer) |
 | `~/.local/share/applications/werkz.desktop`, `~/.local/share/icons/hicolor/…` | Linux app entry and icons |
