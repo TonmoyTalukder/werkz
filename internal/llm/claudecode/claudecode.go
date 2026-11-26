@@ -193,10 +193,30 @@ func (c *Client) run(ctx context.Context, req llm.Request, h llm.Handlers, id st
 	defer ln.Close()
 	runCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	go serveApprovals(runCtx, ln, h)
+	hosted := map[string]bool{}
+	bridgeArgs := []string{BridgeArg, sock}
+	if h.RunTool != nil && len(req.HostTools) > 0 {
+		var defs []llm.ToolDef
+		for _, d := range req.HostTools {
+			if len(toolPrefix+d.Name) <= 64 { // the API's limit on tool names
+				hosted[d.Name] = true
+				defs = append(defs, d)
+			}
+		}
+		list, err := json.Marshal(hostedTools(defs))
+		if err != nil {
+			return nil, err
+		}
+		toolsFile := filepath.Join(tmp, "tools.json")
+		if err := os.WriteFile(toolsFile, list, 0o600); err != nil {
+			return nil, err
+		}
+		bridgeArgs = append(bridgeArgs, toolsFile)
+	}
+	go serveApprovals(runCtx, ln, h, hosted)
 
 	mcp, _ := json.Marshal(map[string]any{"mcpServers": map[string]any{
-		"werkz": map[string]any{"type": "stdio", "command": c.Exe, "args": []string{BridgeArg, sock}},
+		"werkz": map[string]any{"type": "stdio", "command": c.Exe, "args": bridgeArgs},
 	}})
 	mcpFile := filepath.Join(tmp, "mcp.json")
 	if err := os.WriteFile(mcpFile, mcp, 0o600); err != nil {
@@ -206,6 +226,9 @@ func (c *Client) run(ctx context.Context, req llm.Request, h llm.Handlers, id st
 	args := []string{"-p", "--output-format", "stream-json", "--verbose", "--include-partial-messages",
 		"--permission-mode", permissionMode(req.Mode),
 		"--permission-prompt-tool", "mcp__werkz__approve", "--mcp-config", mcpFile}
+	if len(hosted) > 0 {
+		args = append(args, "--append-system-prompt", hostedPrompt)
+	}
 	if resume {
 		args = append(args, "--resume", id)
 	} else {
@@ -242,7 +265,7 @@ func (c *Client) run(ctx context.Context, req llm.Request, h llm.Handlers, id st
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("can't start Claude Code: %w", err)
 	}
-	turn, perr := parse(out, h)
+	turn, perr := parse(out, h, hosted)
 	werr := cmd.Wait()
 	if ctx.Err() != nil {
 		return nil, ctx.Err()
@@ -366,7 +389,20 @@ type streamEvent struct {
 	} `json:"delta"`
 }
 
-func parse(r io.Reader, h llm.Handlers) (*llm.Turn, error) {
+// hostedPrompt tells Claude Code about werkz's own tools.
+const hostedPrompt = "You are running inside werkz, a terminal coding tool. Its tools named mcp__werkz__… (other than approve) " +
+	"belong to werkz: Browse, ReadPage, Click, Type, Act, Find, PageText, FormInput, Eval, Tabs, Resize, Batch, " +
+	"Screenshot, Console and Network drive werkz's browser, which the user can watch, and they may be connected to " +
+	"the user's own Chrome; DevServer starts and watches a dev server; mcp__werkz__mcp__… tools come from the " +
+	"user's MCP servers. For any task on a web page (opening, reading, clicking, typing, scrolling, screenshots) use " +
+	"werkz's browser tools; don't start a browser of your own or script one through Bash."
+
+// parse reads Claude Code's event stream. Calls of werkz's own tools (hosted) are shown by
+// werkz as it runs them, so they are not reported again here.
+func parse(r io.Reader, h llm.Handlers, hosted map[string]bool) (*llm.Turn, error) {
+	own := func(name string) bool {
+		return strings.HasPrefix(name, toolPrefix) && hosted[strings.TrimPrefix(name, toolPrefix)]
+	}
 	var text strings.Builder
 	streamed := false // text arrived as deltas for the current message
 	names := map[string]string{}
@@ -391,7 +427,7 @@ func parse(r io.Reader, h llm.Handlers) (*llm.Turn, error) {
 				switch se.ContentBlock.Type {
 				case "tool_use":
 					if h.OnToolStart != nil {
-						h.OnToolStart(se.ContentBlock.Name)
+						h.OnToolStart(strings.TrimPrefix(se.ContentBlock.Name, toolPrefix))
 					}
 				case "text":
 					if s := text.String(); s != "" && !strings.HasSuffix(s, "\n\n") {
@@ -435,6 +471,9 @@ func parse(r io.Reader, h llm.Handlers) (*llm.Turn, error) {
 					}
 				case "tool_use":
 					names[b.ID] = b.Name
+					if own(b.Name) {
+						continue
+					}
 					if h.OnExternalTool != nil {
 						h.OnExternalTool(llm.ToolCall{ID: b.ID, Name: b.Name, Args: NormalizeArgs(b.Input)})
 					}
@@ -449,7 +488,7 @@ func parse(r io.Reader, h llm.Handlers) (*llm.Turn, error) {
 				continue
 			}
 			for _, b := range ev.Message.Content {
-				if b.Type == "tool_result" && h.OnExternalToolResult != nil {
+				if b.Type == "tool_result" && h.OnExternalToolResult != nil && !own(names[b.ToolUseID]) {
 					h.OnExternalToolResult(b.ToolUseID, names[b.ToolUseID], b.IsError, resultText(b.Content))
 				}
 			}

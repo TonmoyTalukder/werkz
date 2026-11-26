@@ -164,6 +164,32 @@ func (e *Engine) toolDefs() []llm.ToolDef {
 	return e.defs
 }
 
+// hostToolDefs are werkz's tools that Claude Code doesn't have (it brings its own file, shell and
+// web tools): DevServer, the browser and the MCP servers' tools.
+func (e *Engine) hostToolDefs() []llm.ToolDef {
+	var out []llm.ToolDef
+	for _, d := range e.toolDefs() {
+		if d.Name == devServerDef.Name || isMCPTool(d.Name) || isBrowserDef(d.Name) {
+			out = append(out, d)
+		}
+	}
+	return out
+}
+
+func isBrowserDef(name string) bool {
+	for _, d := range browserDefs {
+		if d.Name == name {
+			return true
+		}
+	}
+	for _, d := range actDefs {
+		if d.Name == name {
+			return true
+		}
+	}
+	return false
+}
+
 // loopbackHost reports whether host is this machine: localhost, *.localhost or a loopback IP.
 func loopbackHost(host string) bool {
 	h := strings.TrimSuffix(strings.ToLower(host), ".")

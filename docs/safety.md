@@ -51,7 +51,8 @@ it. Credential locations stay blocked even in bypass.
 
 In **Claude Code mode**, Claude Code runs its own tools. werkz shows them and answers every permission
 question Claude Code asks with the rules above, but actions Claude Code's own settings already allow (such
-as reading files in the project) don't reach werkz.
+as reading files in the project) don't reach werkz. The tools werkz lends Claude Code (its browser,
+DevServer, your MCP servers) are run by werkz itself, with the same rules as for every other model.
 
 ## Where your data goes
 

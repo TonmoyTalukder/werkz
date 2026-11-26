@@ -72,6 +72,9 @@ type Handlers struct {
 	OnExternalTool       func(tc ToolCall)
 	OnExternalToolResult func(id, name string, isError bool, output string)
 	Approve              func(ctx context.Context, tc ToolCall) (allow bool, reason string)
+	// RunTool runs one of werkz's own tools (Request.HostTools) for a backend that offers them
+	// to its model: Claude Code reaches werkz's browser this way. image is a picture's path or "".
+	RunTool func(ctx context.Context, tc ToolCall) (output string, isError bool, image string)
 	// OnPlanLimits receives a subscription's usage limits when the backend reports them.
 	OnPlanLimits func(PlanLimits)
 }
@@ -92,6 +95,9 @@ type Request struct {
 	// Window is the user's context window limit in tokens (0 = the model's full window); Claude
 	// Code receives it as its auto-compact window.
 	Window int
+	// HostTools are werkz's own tools that a backend running its own tools lacks (the browser,
+	// DevServer, MCP servers' tools); it offers them to its model and runs them through RunTool.
+	HostTools []ToolDef
 }
 
 type Provider interface {

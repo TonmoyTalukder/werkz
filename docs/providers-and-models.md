@@ -62,6 +62,10 @@ How it differs from the other providers:
 - **Claude Code does the work with its own tools**, and werkz shows each step. When Claude Code needs
   permission, werkz asks you with its usual dialog and rules (plan mode, folders, credential locations).
   Actions Claude Code's own settings already allow don't ask.
+- **werkz lends Claude Code the tools it doesn't have**: werkz's browser (open, read, click, type, scroll,
+  screenshots, also in your own Chrome after `/browser connect`), DevServer and your MCP servers' tools.
+  werkz runs these itself, so you watch the browser with `/browser view` and each call goes through werkz's
+  own permission rules, as with any other model.
 - Claude Code keeps the conversation and compacts it itself; werkz's `/compact` and caching settings don't
   apply. Switching to Claude Code mid-conversation passes the conversation so far along.
 - werkz removes `ANTHROPIC_API_KEY` from Claude Code's environment, so it uses your subscription rather than

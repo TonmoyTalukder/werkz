@@ -45,8 +45,12 @@ func init() {
 
 func main() {
 	// Claude Code starts werkz this way to ask permission questions (see internal/llm/claudecode).
-	if len(os.Args) == 3 && os.Args[1] == claudecode.BridgeArg {
-		if err := claudecode.Bridge(os.Args[2], os.Stdin, os.Stdout); err != nil {
+	if (len(os.Args) == 3 || len(os.Args) == 4) && os.Args[1] == claudecode.BridgeArg {
+		toolsFile := ""
+		if len(os.Args) == 4 {
+			toolsFile = os.Args[3]
+		}
+		if err := claudecode.Bridge(os.Args[2], toolsFile, os.Stdin, os.Stdout); err != nil {
 			os.Exit(1)
 		}
 		return

@@ -271,6 +271,9 @@ func (e *Engine) attemptOnce(ctx context.Context, sys string, a attempt) (*llm.T
 	fast := e.cfg.Fast && a.provider == e.cfg.Provider && a.model == e.cfg.Model
 	req := llm.Request{Model: a.model, System: sys, History: e.history, Tools: e.toolDefs(), Effort: effort,
 		Fast: fast, TTL1h: e.cfg.TTL1h(), CacheKey: e.sessionID, Dirs: e.dirs(), Mode: e.mode(), Window: e.cfg.ContextWindow}
+	if a.provider == "claudecode" {
+		req.HostTools = e.hostToolDefs()
+	}
 	e.lastProvider = a.provider
 	reqStart := time.Now()
 	e.send(StreamStartMsg{Provider: a.provider, Model: a.model})
@@ -298,6 +301,11 @@ func (e *Engine) attemptOnce(ctx context.Context, sys string, a attempt) (*llm.T
 			e.send(ToolResultMsg{ID: id, Name: name, Summary: externalSummary(output, isError), IsError: isError})
 		},
 		Approve: e.approveExternal,
+		// ...and offers it werkz's own tools it lacks, run here like any other tool call.
+		RunTool: func(ctx context.Context, tc llm.ToolCall) (string, bool, string) {
+			res := e.execTool(ctx, tc)
+			return res.Output, res.IsError, res.Image
+		},
 		OnPlanLimits: func(l llm.PlanLimits) {
 			e.send(PlanLimitsMsg(l))
 		},

@@ -134,17 +134,33 @@ func TestBridgeAsksWerkz(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer ln.Close()
-	var asked []llm.ToolCall
+	var asked, ran []llm.ToolCall
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go serveApprovals(ctx, ln, llm.Handlers{Approve: func(_ context.Context, tc llm.ToolCall) (bool, string) {
-		asked = append(asked, tc)
-		return tc.Name != "Bash", "The user denied this action."
-	}})
+	shot := filepath.Join(t.TempDir(), "shot.png")
+	if err := os.WriteFile(shot, []byte("\x89PNG fake"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	go serveApprovals(ctx, ln, llm.Handlers{
+		Approve: func(_ context.Context, tc llm.ToolCall) (bool, string) {
+			asked = append(asked, tc)
+			return tc.Name != "Bash", "The user denied this action."
+		},
+		RunTool: func(_ context.Context, tc llm.ToolCall) (string, bool, string) {
+			ran = append(ran, tc)
+			return "Example Domain", false, shot
+		},
+	}, map[string]bool{"Browse": true})
+	toolsFile := filepath.Join(t.TempDir(), "tools.json")
+	list, _ := json.Marshal(hostedTools([]llm.ToolDef{{Name: "Browse", Description: "Open a page",
+		Properties: map[string]any{"url": map[string]any{"type": "string"}}, Required: []string{"url"}}}))
+	if err := os.WriteFile(toolsFile, list, 0o600); err != nil {
+		t.Fatal(err)
+	}
 
 	inR, inW := io.Pipe()
 	outR, outW := io.Pipe()
-	go Bridge(sock, inR, outW) //nolint:errcheck
+	go Bridge(sock, toolsFile, inR, outW) //nolint:errcheck
 	send := func(v any) {
 		b, _ := json.Marshal(v)
 		_, _ = inW.Write(append(b, '\n'))
@@ -172,7 +188,8 @@ func TestBridgeAsksWerkz(t *testing.T) {
 	}
 	send(map[string]any{"jsonrpc": "2.0", "method": "notifications/initialized"})
 	send(map[string]any{"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
-	if r := recv(); !strings.Contains(mustJSON(r), `"name":"approve"`) {
+	if r := mustJSON(recv()); !strings.Contains(r, `"name":"approve"`) || !strings.Contains(r, `"name":"Browse"`) ||
+		!strings.Contains(r, `"required":["url"]`) {
 		t.Fatalf("tools/list: %v", r)
 	}
 	call := func(id int, tool string, input map[string]any) map[string]any {
@@ -191,8 +208,25 @@ func TestBridgeAsksWerkz(t *testing.T) {
 	if d := call(4, "Bash", map[string]any{"command": "rm -rf /"}); d["behavior"] != "deny" || d["message"] == "" {
 		t.Fatalf("Bash decision: %v", d)
 	}
+	// werkz's own tools are allowed here: werkz applies its rules when it runs them
+	if d := call(5, "mcp__werkz__Browse", map[string]any{"url": "https://example.com"}); d["behavior"] != "allow" {
+		t.Fatalf("Browse decision: %v", d)
+	}
 	if len(asked) != 2 || !strings.Contains(asked[0].Args, `"path":"/w/a.go"`) {
 		t.Fatalf("werkz was asked: %+v", asked)
+	}
+	// ...and run in werkz, picture included
+	send(map[string]any{"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": map[string]any{
+		"name": "Browse", "arguments": map[string]any{"url": "https://example.com"}}})
+	r := mustJSON(recv())
+	if !strings.Contains(r, `"text":"Example Domain"`) || !strings.Contains(r, `"type":"image"`) || !strings.Contains(r, `"mimeType":"image/png"`) ||
+		len(ran) != 1 || ran[0].Name != "Browse" || !strings.Contains(ran[0].Args, "example.com") {
+		t.Fatalf("Browse call: %s, ran %+v", r, ran)
+	}
+	// a tool werkz doesn't offer is refused without running anything
+	send(map[string]any{"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": map[string]any{"name": "Bash", "arguments": map[string]any{}}})
+	if r := mustJSON(recv()); !strings.Contains(r, `"isError":true`) || len(ran) != 1 {
+		t.Fatalf("unknown tool: %s", r)
 	}
 	inW.Close()
 }
@@ -231,5 +265,24 @@ func TestRateLimitEventReportsPlanWindows(t *testing.T) {
 	}
 	if w := got.Windows[0]; w.Used != 0.23 || w.ResetsAt.Unix() != 1795678800 {
 		t.Fatalf("5-hour window: %+v", w)
+	}
+}
+
+// werkz shows its own tools itself as it runs them; the stream doesn't report them again.
+func TestHostedToolsNotShownTwice(t *testing.T) {
+	r := strings.NewReader(`{"type":"assistant","message":{"content":[{"type":"tool_use","id":"a","name":"mcp__werkz__Browse","input":{"url":"https://x"}},{"type":"tool_use","id":"b","name":"Bash","input":{"command":"ls"}}]}}
+{"type":"user","message":{"content":[{"type":"tool_result","tool_use_id":"a","content":"page"},{"type":"tool_result","tool_use_id":"b","content":"files"}]}}
+{"type":"result","subtype":"success","result":"done"}
+`)
+	var shown, results []string
+	_, err := parse(r, llm.Handlers{
+		OnExternalTool:       func(tc llm.ToolCall) { shown = append(shown, tc.Name) },
+		OnExternalToolResult: func(_, name string, _ bool, _ string) { results = append(results, name) },
+	}, map[string]bool{"Browse": true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(shown) != 1 || shown[0] != "Bash" || len(results) != 1 || results[0] != "Bash" {
+		t.Fatalf("shown %v, results %v", shown, results)
 	}
 }
