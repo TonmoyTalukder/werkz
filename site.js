@@ -127,7 +127,9 @@
       '<svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span>';
     return b;
   };
-  for (const pre of document.querySelectorAll(".doc > pre")) {
+  // every code block in the docs, also those inside lists and tables, gets the frame and copy button
+  for (const pre of document.querySelectorAll(".doc pre")) {
+    if (pre.closest(".cmd")) continue;
     const wrap = document.createElement("div");
     wrap.className = "cmd";
     pre.replaceWith(wrap);
@@ -183,6 +185,112 @@
   nav?.addEventListener("click", (e) => {
     if (e.target.closest("a")) { nav.classList.remove("open"); menu?.setAttribute("aria-expanded", false); }
   });
+
+  // Feature tour: each feature plays as it looks in werkz. Frames show one after another; within a
+  // frame, typed lines appear letter by letter and the rest line by line. While the tour is on
+  // screen and nobody has picked a feature, it moves on by itself. Reduced motion shows the last
+  // frame of the chosen feature, still.
+  const tour = document.querySelector("[data-tour]");
+  if (tour) {
+    const tabs = [...tour.querySelectorAll(".tour-tab")];
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let cur = 0, auto = !still, visible = false, timers = [], anims = [], progress = null;
+
+    const clear = () => {
+      timers.forEach(clearTimeout); timers = [];
+      anims.forEach((a) => a.cancel()); anims = [];
+      progress?.cancel(); progress = null;
+    };
+    const later = (fn, ms) => timers.push(setTimeout(fn, ms));
+
+    // play one frame's lines; returns how long they take (ms)
+    const playFrame = (frame) => {
+      let t = 120;
+      for (const line of frame.children) {
+        const how = line.dataset.a || line.querySelector("[data-a]")?.dataset.a;
+        if (!how) continue;
+        const el = line.dataset.a ? line : line.querySelector("[data-a]");
+        if (how === "type") {
+          const n = Math.max(el.textContent.length, 1);
+          anims.push(el.animate([{ clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0 0 0)" }],
+            { duration: n * 34, delay: t, easing: `steps(${n})`, fill: "backwards" }));
+          t += n * 34 + 260;
+        } else if (how === "sweep") {
+          anims.push(el.animate([{ backgroundSize: "0% 100%" }, { backgroundSize: "100% 100%" }],
+            { duration: 700, delay: t + 300, easing: "cubic-bezier(0.65, 0, 0.35, 1)", fill: "backwards" }));
+          t += 1100;
+        } else {
+          anims.push(el.animate([{ opacity: 0, transform: "translateY(5px)" }, { opacity: 1, transform: "none" }],
+            { duration: 320, delay: t, easing: "cubic-bezier(0.16, 1, 0.3, 1)", fill: "backwards" }));
+          t += 150;
+        }
+      }
+      return t + 200;
+    };
+
+    const show = (i, fromUser) => {
+      clear();
+      cur = (i + tabs.length) % tabs.length;
+      tabs.forEach((tab, k) => {
+        const on = k === cur;
+        tab.setAttribute("aria-selected", on);
+        tab.tabIndex = on ? 0 : -1;
+        document.getElementById(tab.getAttribute("aria-controls")).hidden = !on;
+        tab.closest(".tour-item").style.removeProperty("--p");
+      });
+      if (fromUser) auto = false;
+      const scene = document.getElementById(tabs[cur].getAttribute("aria-controls"));
+      const frames = [...scene.querySelectorAll(".frame")];
+      if (still || !visible) {
+        frames.forEach((f, k) => (f.hidden = k !== frames.length - 1));
+        return;
+      }
+      let at = 0;
+      frames.forEach((f, k) => {
+        f.hidden = k !== 0;
+        later(() => {
+          frames.forEach((g, j) => (g.hidden = j !== k));
+          const took = playFrame(f);
+          if (k === frames.length - 1 && auto) {
+            const hold = took + 2600;
+            const item = tabs[cur].closest(".tour-item");
+            progress = item.animate([{ "--p": 0 }, { "--p": 1 }], { duration: hold, easing: "linear", fill: "forwards" });
+            later(() => auto && show(cur + 1), hold);
+          }
+        }, at);
+        if (k < frames.length - 1) at += estimate(f) + 1300;
+      });
+    };
+    // how long a frame plays, without playing it (to schedule the next one)
+    const estimate = (frame) => {
+      let t = 120;
+      for (const line of frame.children) {
+        const el = line.dataset.a ? line : line.querySelector("[data-a]");
+        if (!el) continue;
+        const how = el.dataset.a;
+        t += how === "type" ? Math.max(el.textContent.length, 1) * 34 + 260 : how === "sweep" ? 1100 : 150;
+      }
+      return t + 200;
+    };
+
+    tabs.forEach((tab, k) => tab.addEventListener("click", () => show(k, true)));
+    tour.querySelector(".tour-list").addEventListener("keydown", (e) => {
+      const k = { ArrowDown: cur + 1, ArrowUp: cur - 1, Home: 0, End: tabs.length - 1 }[e.key];
+      if (k === undefined) return;
+      e.preventDefault();
+      show(k, true);
+      tabs[cur].focus();
+    });
+    // CSS can't interpolate a custom property without @property; register it where supported
+    try { CSS.registerProperty({ name: "--p", syntax: "<number>", inherits: false, initialValue: "0" }); } catch {}
+    new IntersectionObserver(([en]) => {
+      const was = visible;
+      visible = en.isIntersecting;
+      if (visible && !was) show(cur);
+      if (!visible) clear();
+    }, { threshold: 0.35 }).observe(tour);
+    show(0);
+  }
 
   // Docs: mark the section in view in the table of contents.
   const links = [...document.querySelectorAll(".toc a")];

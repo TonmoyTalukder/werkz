@@ -24,8 +24,9 @@
 </svg>
 <header class="top">
   <div class="top-inner">
-    <a class="brand" href="../" aria-label="werkz home"><img src="../assets/werkz.png" alt="" width="28" height="28">werkz</a>
+    <a class="brand" href="../" aria-label="werkz home"><img class="logo-tile" src="../assets/werkz.png" alt="" width="28" height="28"><svg class="logo-mark" viewBox="0 0 100 100" width="28" height="28" aria-hidden="true"><defs><linearGradient id="wg-head" gradientUnits="userSpaceOnUse" x1="20" y1="45" x2="80" y2="56"><stop offset="0" stop-color="#ff9933"/><stop offset="0.5" stop-color="#e8344e"/><stop offset="1" stop-color="#3b6cf6"/></linearGradient></defs><polyline points="20,30 33.5,68 50,40 66.5,68 80,30" fill="none" stroke="url(#wg-head)" stroke-width="10.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="43" y="77.5" width="14" height="4" rx="2" fill="#ff9933"/></svg>werkz</a>
     <nav id="topnav" aria-label="Main">
+      <a href="../#features">Features</a>
       <a href="./" aria-current="page">Docs</a>
       <a href="../#install">Install</a>
       <a href="../#subscriptions">Subscriptions</a>
@@ -129,9 +130,13 @@ commands when you quit.</li>
 <li><strong>Web pages on your local network</strong> (<code>localhost</code>, private and cloud-metadata addresses) are fetched only
 after you approve, checked again when connecting, so redirects and DNS tricks can't reach them. Public pages
 and searches don't ask; their content is marked as untrusted for the model.</li>
-<li><strong>werkz's browser</strong> uses its own profile, never yours. Sites other than this machine ask first; form
-submits, uploads and downloads ask in every mode, including bypass; password and payment fields are never
-typed into. See <a href="usage.html#the-browser">The browser</a>.</li>
+<li><strong>werkz's browser</strong> uses its own profile, never yours. Sites other than this machine ask first. Sending a
+form that posts data, uploads and downloads ask in every mode, including bypass (search-style GET forms open
+like links, under the site rules, and are reported); password and payment fields are never typed into, and
+JavaScript asks on any page that has one. Connecting it to your own Chrome (<code>/browser connect</code>) is opt-in
+per session, shows a red banner, and uses only the tab werkz opens. See <a href="usage.html#the-browser">The browser</a>.</li>
+<li><strong>MCP servers</strong> from a project's <code>.werkz/mcp.json</code> start only after you approve them (again if their command
+changes); each MCP tool asks the first time it runs, and its results are marked as untrusted.</li>
 <li>Text from models, tools and files is cleaned of terminal escape sequences before it's displayed.</li>
 <li>Project instruction files (<code>AGENTS.md</code>, <code>CLAUDE.md</code>) are passed to the model as repository content, not as
 werkz's own instructions, so they can't override these rules.</li>

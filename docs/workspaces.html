@@ -24,8 +24,9 @@
 </svg>
 <header class="top">
   <div class="top-inner">
-    <a class="brand" href="../" aria-label="werkz home"><img src="../assets/werkz.png" alt="" width="28" height="28">werkz</a>
+    <a class="brand" href="../" aria-label="werkz home"><img class="logo-tile" src="../assets/werkz.png" alt="" width="28" height="28"><svg class="logo-mark" viewBox="0 0 100 100" width="28" height="28" aria-hidden="true"><defs><linearGradient id="wg-head" gradientUnits="userSpaceOnUse" x1="20" y1="45" x2="80" y2="56"><stop offset="0" stop-color="#ff9933"/><stop offset="0.5" stop-color="#e8344e"/><stop offset="1" stop-color="#3b6cf6"/></linearGradient></defs><polyline points="20,30 33.5,68 50,40 66.5,68 80,30" fill="none" stroke="url(#wg-head)" stroke-width="10.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="43" y="77.5" width="14" height="4" rx="2" fill="#ff9933"/></svg>werkz</a>
     <nav id="topnav" aria-label="Main">
+      <a href="../#features">Features</a>
       <a href="./" aria-current="page">Docs</a>
       <a href="../#install">Install</a>
       <a href="../#subscriptions">Subscriptions</a>
@@ -78,6 +79,10 @@ and any environment variables, such as <code>APP_ENV=dev</code>.</li>
 them. Shell commands run in the main folder with the workspace's variables. The status bar shows the
 workspace, for example <code>▸ my-app (2)</code>. Anything outside the workspace folders still asks first
 (see <a href="safety.html">Safety and privacy</a>).</p>
+<p>To attach a file from one of the folders, start the mention with the folder's name: <code>@api/src/main.go</code>,
+<code>@web/src/App.tsx</code>. Typing <code>@</code> lists every folder of the workspace (see <a href="usage.html#mentioning-files">Mentioning files</a>).
+A workspace's folders also decide which MCP servers start: a project's <code>.werkz/mcp.json</code> is read from the main
+folder (see <a href="usage.html#mcp-servers">MCP servers</a>).</p>
 
     <nav class="doc-foot" aria-label="Previous and next">
       <a href="fallback.html"><small class="caps">Previous</small>Fallback</a>

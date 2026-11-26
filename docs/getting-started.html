@@ -24,8 +24,9 @@
 </svg>
 <header class="top">
   <div class="top-inner">
-    <a class="brand" href="../" aria-label="werkz home"><img src="../assets/werkz.png" alt="" width="28" height="28">werkz</a>
+    <a class="brand" href="../" aria-label="werkz home"><img class="logo-tile" src="../assets/werkz.png" alt="" width="28" height="28"><svg class="logo-mark" viewBox="0 0 100 100" width="28" height="28" aria-hidden="true"><defs><linearGradient id="wg-head" gradientUnits="userSpaceOnUse" x1="20" y1="45" x2="80" y2="56"><stop offset="0" stop-color="#ff9933"/><stop offset="0.5" stop-color="#e8344e"/><stop offset="1" stop-color="#3b6cf6"/></linearGradient></defs><polyline points="20,30 33.5,68 50,40 66.5,68 80,30" fill="none" stroke="url(#wg-head)" stroke-width="10.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="43" y="77.5" width="14" height="4" rx="2" fill="#ff9933"/></svg>werkz</a>
     <nav id="topnav" aria-label="Main">
+      <a href="../#features">Features</a>
       <a href="./" aria-current="page">Docs</a>
       <a href="../#install">Install</a>
       <a href="../#subscriptions">Subscriptions</a>
@@ -100,6 +101,14 @@ running it. Choose with <strong>↑/↓</strong> and <strong>Enter</strong>: yes
   ⎿  exit 0
 ⏺ Empty and whitespace-only passwords are now rejected before the API call, with a test covering both.
 </code></pre>
+<h2 id="make-the-most-of-it">Make the most of it<a class="anchor" href="#make-the-most-of-it" aria-label="Link to this section">#</a></h2>
+<ul>
+<li>Type <strong><code>@</code></strong> to attach a file or folder to your message: <a href="usage.html#mentioning-files">Mentioning files</a></li>
+<li><strong>Drag</strong> over any text in the conversation to copy it: <a href="usage.html#copying-text">Copying text</a></li>
+<li><code>/resume</code> (or <code>werkz -c</code>) continues an earlier conversation: <a href="usage.html#saved-conversations">Saved conversations</a></li>
+<li>Ask werkz to check web UI it changed: it starts your dev server and uses Chrome: <a href="usage.html#the-browser">The browser</a></li>
+<li>Add your MCP servers to use their tools: <a href="usage.html#mcp-servers">MCP servers</a></li>
+</ul>
 <h2 id="next-steps">Next steps<a class="anchor" href="#next-steps" aria-label="Link to this section">#</a></h2>
 <ul>
 <li><code>/model</code> to switch models, <code>/effort</code> to set how hard the model thinks: <a href="providers-and-models.html">Providers and models</a></li>
@@ -116,6 +125,7 @@ running it. Choose with <strong>↑/↓</strong> and <strong>Enter</strong>: yes
   </article>
   <aside class="toc" aria-label="On this page"><p class="caps">On this page</p><ol>
     <li><a href="#what-a-session-looks-like">What a session looks like</a></li>
+    <li><a href="#make-the-most-of-it">Make the most of it</a></li>
     <li><a href="#next-steps">Next steps</a></li>
   </ol></aside>
 </div>

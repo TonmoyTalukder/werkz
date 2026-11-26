@@ -24,8 +24,9 @@
 </svg>
 <header class="top">
   <div class="top-inner">
-    <a class="brand" href="../" aria-label="werkz home"><img src="../assets/werkz.png" alt="" width="28" height="28">werkz</a>
+    <a class="brand" href="../" aria-label="werkz home"><img class="logo-tile" src="../assets/werkz.png" alt="" width="28" height="28"><svg class="logo-mark" viewBox="0 0 100 100" width="28" height="28" aria-hidden="true"><defs><linearGradient id="wg-head" gradientUnits="userSpaceOnUse" x1="20" y1="45" x2="80" y2="56"><stop offset="0" stop-color="#ff9933"/><stop offset="0.5" stop-color="#e8344e"/><stop offset="1" stop-color="#3b6cf6"/></linearGradient></defs><polyline points="20,30 33.5,68 50,40 66.5,68 80,30" fill="none" stroke="url(#wg-head)" stroke-width="10.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="43" y="77.5" width="14" height="4" rx="2" fill="#ff9933"/></svg>werkz</a>
     <nav id="topnav" aria-label="Main">
+      <a href="../#features">Features</a>
       <a href="./" aria-current="page">Docs</a>
       <a href="../#install">Install</a>
       <a href="../#subscriptions">Subscriptions</a>
@@ -108,6 +109,14 @@ and doesn't overwrite it until you fix it.</li>
 <td>A web search service for models without their own search (see <a href="usage.html#web-access">Web access</a>)</td>
 </tr>
 <tr>
+<td><code>MCP_TIMEOUT</code></td>
+<td>How long an MCP server may take to start, in milliseconds (default 30000)</td>
+</tr>
+<tr>
+<td><code>WERKZ_IMAGES</code></td>
+<td>How to show screenshots: <code>kitty</code>, <code>iterm2</code>, <code>sixel</code> or <code>off</code> (default: asks the terminal)</td>
+</tr>
+<tr>
 <td><code>WERKZ_BROWSER</code></td>
 <td>The Chrome, Chromium or Edge executable for werkz's browser (default: the first one found)</td>
 </tr>
@@ -137,6 +146,14 @@ and doesn't overwrite it until you fix it.</li>
 <tr>
 <td><code>~/.config/werkz/chatgpt.json</code></td>
 <td>ChatGPT plan sign-in (mode 0600); <code>/logout chatgpt</code> removes its tokens</td>
+</tr>
+<tr>
+<td><code>~/.config/werkz/mcp.json</code>, <code>.werkz/mcp.json</code> in a project</td>
+<td>MCP servers (see <a href="usage.html#mcp-servers">MCP servers</a>)</td>
+</tr>
+<tr>
+<td><code>~/.config/werkz/mcp-auth.json</code></td>
+<td>Sign-ins to remote MCP servers (mode 0600); <code>/mcp logout</code> removes one</td>
 </tr>
 <tr>
 <td><code>~/.config/werkz/sessions/</code></td>

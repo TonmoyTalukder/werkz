@@ -50,8 +50,9 @@
 
 <header class="top">
   <div class="top-inner">
-    <a class="brand" href="./" aria-label="werkz home"><img src="assets/werkz.png" alt="" width="28" height="28">werkz</a>
+    <a class="brand" href="./" aria-label="werkz home"><img class="logo-tile" src="assets/werkz.png" alt="" width="28" height="28"><svg class="logo-mark" viewBox="0 0 100 100" width="28" height="28" aria-hidden="true"><defs><linearGradient id="wg-head" gradientUnits="userSpaceOnUse" x1="20" y1="45" x2="80" y2="56"><stop offset="0" stop-color="#ff9933"/><stop offset="0.5" stop-color="#e8344e"/><stop offset="1" stop-color="#3b6cf6"/></linearGradient></defs><polyline points="20,30 33.5,68 50,40 66.5,68 80,30" fill="none" stroke="url(#wg-head)" stroke-width="10.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="43" y="77.5" width="14" height="4" rx="2" fill="#ff9933"/></svg>werkz</a>
     <nav id="topnav" aria-label="Main">
+      <a href="#features">Features</a>
       <a href="docs/">Docs</a>
       <a href="#install">Install</a>
       <a href="#subscriptions">Subscriptions</a>
@@ -71,7 +72,8 @@
 <main id="main">
 
 <section class="hero" aria-labelledby="hero-title">
-  <div class="wrap">
+  <div class="hero-grid">
+  <div class="wrap hero-text">
     <h1 id="hero-title" data-type>The coding agent for your terminal, on the models you already have</h1>
     <p class="lede">werkz reads your codebase, edits files and runs commands, asking before anything risky. Use an API key, your ChatGPT or Claude subscription, a free tier, or a model on your own machine.</p>
 
@@ -116,11 +118,10 @@ sudo dnf install werkz</code></pre><button class="copy" type="button"><svg class
       <picture><source media="(max-width: 600px)" srcset="assets/werkz-session-mobile.png" width="1400" height="616"><img src="assets/werkz-session.png" width="1777" height="1243" alt="The werkz terminal app: it searched the code, read src/auth/login.js, and now shows the one-line edit it wants to make, asking “Do you want to proceed?” with Yes selected."></picture>
       <div class="term" aria-hidden="true"></div>
     </div>
-    <figcaption>A real werkz session with a local model (scripted example): werkz shows each edit and asks before making it.</figcaption>
+    <figcaption>A real werkz session (scripted, local model): it shows each edit and asks first.</figcaption>
   </figure>
-</section>
-
-<section class="works" aria-label="Works with">
+  </div>
+  <div class="works" role="region" aria-label="Works with">
   <div class="wrap">
     <p>Works with the model access you already have</p>
     <ul>
@@ -128,24 +129,95 @@ sudo dnf install werkz</code></pre><button class="copy" type="button"><svg class
       <li class="plan">ChatGPT plan</li><li class="plan">Claude Code</li>
     </ul>
   </div>
+</div>
 </section>
+
+
 
 <section class="section" id="features" aria-labelledby="features-title">
   <div class="wrap">
-    <div class="section-head center">
-      <h2 id="features-title">Everything a coding agent needs. Nothing you didn't choose.</h2>
-      <p>Describe a task in plain words. werkz plans it, searches and reads your code, makes the change and checks it with your own tests and tools.</p>
+    <div class="section-head">
+      <h2 id="features-title">See what werkz does</h2>
+      <p>Describe a task in plain words. werkz plans it, works through your code, your browser and your tools, and checks the result. Pick a feature to watch it.</p>
     </div>
-    <div class="features">
-      <article class="feature t-saffron"><h3><svg aria-hidden="true"><use href="#i-plug"/></svg>Bring your own model</h3><p>Claude, OpenAI, Grok, Gemini, OpenRouter, Groq, or fully offline with Ollama. Switch with <code>/model</code> and keep the conversation.</p></article>
-      <article class="feature t-red"><h3><svg aria-hidden="true"><use href="#i-card"/></svg>Use your subscription</h3><p>Sign in with ChatGPT to use your plan, or run your own Claude Code on your Claude subscription. <code>/usage</code> shows your limits.</p></article>
-      <article class="feature t-blue"><h3><svg aria-hidden="true"><use href="#i-shield"/></svg>You stay in control</h3><p>Edits and commands ask first. Anything outside your project or on your local network asks, and credential files are never opened.</p></article>
-      <article class="feature t-blue"><h3><svg aria-hidden="true"><use href="#i-gauge"/></svg>Built to save tokens</h3><p>Prompt caching with keep-alive, automatic compaction, trimmed tool output, and a context window you can set yourself.</p></article>
-      <article class="feature t-saffron"><h3><svg aria-hidden="true"><use href="#i-folders"/></svg>Several repos at once</h3><p>Optional workspaces group folders and their environment variables, so one task can span a frontend and its API.</p></article>
-      <article class="feature t-red"><h3><svg aria-hidden="true"><use href="#i-browser"/></svg>Checks its own web UI</h3><p>Starts your dev server, opens the page in your Chrome (a separate profile), clicks through it, and reads console errors, failed requests and before-and-after screenshots.</p></article>
-      <article class="feature t-blue"><h3><svg aria-hidden="true"><use href="#i-at"/></svg>Files and the web, in context</h3><p>Type <code>@</code> to attach a file or folder (across repos: <code>@api/main.go</code>). werkz also reads web pages and searches the web for current docs.</p></article>
-      <article class="feature t-saffron"><h3><svg aria-hidden="true"><use href="#i-copy"/></svg>Select and copy</h3><p>Drag over any text in the conversation to copy it, or copy a response's markdown or a single code block exactly.</p></article>
-      <article class="feature t-red"><h3><svg aria-hidden="true"><use href="#i-history"/></svg>Pick up where you left off</h3><p>Conversations are saved on your machine. Search them with <code>/resume</code>, or run <code>werkz -c</code> to continue the latest.</p></article>
+    <div class="tour" data-tour>
+      <div class="tour-list" role="tablist" aria-label="Features" aria-orientation="vertical">
+        <div class="tour-item t-saffron">
+          <button class="tour-tab" role="tab" id="tt-mentions" aria-controls="ts-mentions" aria-selected="true" tabindex="0"><svg aria-hidden="true"><use href="#i-at"/></svg><span><b>Point at files with @</b><em>Type <code>@</code> and pick a file or folder, searched as you type, across every repo you have open. Its contents go with your message.</em></span></button>
+          <a class="tour-more" href="docs/usage.html#mentioning-files">How mentions work</a>
+        </div>
+        <div class="tour-item t-red">
+          <button class="tour-tab" role="tab" id="tt-browser" aria-controls="ts-browser" aria-selected="false" tabindex="-1"><svg aria-hidden="true"><use href="#i-browser"/></svg><span><b>Checks its own web UI</b><em>Starts your dev server, opens the page in Chrome, clicks and types through it, reads console errors and failed requests, and compares screenshots.</em></span></button>
+          <a class="tour-more" href="docs/usage.html#the-browser">The browser</a>
+        </div>
+        <div class="tour-item t-blue">
+          <button class="tour-tab" role="tab" id="tt-chrome" aria-controls="ts-chrome" aria-selected="false" tabindex="-1"><svg aria-hidden="true"><use href="#i-plug"/></svg><span><b>Works in your own Chrome</b><em>Opt in for a session and werkz works on sites where you're signed in, in a window of its own. It never touches your other tabs.</em></span></button>
+          <a class="tour-more" href="docs/usage.html#using-your-own-chrome">Using your own Chrome</a>
+        </div>
+        <div class="tour-item t-saffron">
+          <button class="tour-tab" role="tab" id="tt-web" aria-controls="ts-web" aria-selected="false" tabindex="-1"><svg aria-hidden="true"><use href="#i-gauge"/></svg><span><b>Reads and searches the web</b><em>Current docs, changelogs and error messages, with your model's own search or Brave, Tavily or SearXNG. Pages on your network ask first.</em></span></button>
+          <a class="tour-more" href="docs/usage.html#web-access">Web access</a>
+        </div>
+        <div class="tour-item t-red">
+          <button class="tour-tab" role="tab" id="tt-mcp" aria-controls="ts-mcp" aria-selected="false" tabindex="-1"><svg aria-hidden="true"><use href="#i-folders"/></svg><span><b>Uses your MCP tools</b><em>GitHub, databases, issue trackers: any MCP server, configured as in Claude Code. A project's servers start only once you approve them.</em></span></button>
+          <a class="tour-more" href="docs/usage.html#mcp-servers">MCP servers</a>
+        </div>
+        <div class="tour-item t-blue">
+          <button class="tour-tab" role="tab" id="tt-safety" aria-controls="ts-safety" aria-selected="false" tabindex="-1"><svg aria-hidden="true"><use href="#i-shield"/></svg><span><b>Asks before anything risky</b><em>Edits and commands ask first, with the exact change shown. Choose how much it may do on its own with <code>shift+tab</code>.</em></span></button>
+          <a class="tour-more" href="#safety">Permission modes</a>
+        </div>
+        <div class="tour-item t-saffron">
+          <button class="tour-tab" role="tab" id="tt-resume" aria-controls="ts-resume" aria-selected="false" tabindex="-1"><svg aria-hidden="true"><use href="#i-history"/></svg><span><b>Picks up where you left off</b><em>Every conversation is saved on your machine. Search them with <code>/resume</code>, or run <code>werkz -c</code> to continue the latest.</em></span></button>
+          <a class="tour-more" href="docs/usage.html#saved-conversations">Saved conversations</a>
+        </div>
+        <div class="tour-item t-red">
+          <button class="tour-tab" role="tab" id="tt-copy" aria-controls="ts-copy" aria-selected="false" tabindex="-1"><svg aria-hidden="true"><use href="#i-copy"/></svg><span><b>Select anything to copy it</b><em>Drag over any text and it's on your clipboard, or copy a whole answer or one code block exactly as written.</em></span></button>
+          <a class="tour-more" href="docs/usage.html#copying-text">Copying text</a>
+        </div>
+        <div class="tour-item t-blue">
+          <button class="tour-tab" role="tab" id="tt-repos" aria-controls="ts-repos" aria-selected="false" tabindex="-1"><svg aria-hidden="true"><use href="#i-check-shield"/></svg><span><b>Several repos at once</b><em>A workspace groups a frontend, its API and their settings, so one request can change both. Mentions name the repo: <code>@api/…</code>.</em></span></button>
+          <a class="tour-more" href="docs/workspaces.html">Workspaces</a>
+        </div>
+      </div>
+      <div class="tour-stage">
+        <div class="window tour-window">
+          <div class="window-bar"><i class="d1"></i><i class="d2"></i><i class="d3"></i><span>~/code/my-app — werkz</span></div>
+          <div class="tour-screen">
+<div class="scene" id="ts-mentions" role="tabpanel" aria-labelledby="tt-mentions">
+<pre class="frame"><div data-a="type"><i class="p">❯ </i>fix the login bug in @src/au</div><div> </div><div data-a="in">  <i class="p">❯ src/auth/</i><i class="p b">login.ts</i></div><div data-a="in">    <i class="f">src/auth/</i>logout.ts</div><div data-a="in">    <i class="f">src/auth/</i>session.ts</div><div data-a="in">  <i class="f">↑↓ move · enter choose · tab open folder</i></div></pre>
+<pre class="frame"><div><i class="p">❯ </i>fix the login bug in <i class="m">@src/auth/login.ts</i></div><div data-a="in"><i class="d">  ⎿  attached </i><i class="m">src/auth/login.ts (84 lines)</i></div><div> </div><div data-a="in"><i class="v">⏺</i> The form posts before it checks the password.</div><div data-a="in">  I'll check it first and add a test.</div><div data-a="in"><i class="g">⏺</i> <i class="b">Edit</i><i class="d">(src/auth/login.ts)</i></div><div data-a="in"><i class="d">  ⎿  </i><i class="g">+6</i> <i class="r">−1</i><i class="d"> lines</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">Bash</i><i class="d">(npm test -- login)</i></div><div data-a="in"><i class="d">  ⎿  12 passed</i></div></pre>
+</div>
+<div class="scene" id="ts-browser" role="tabpanel" aria-labelledby="tt-browser" hidden>
+<pre class="frame"><div><i class="p">❯ </i>the signup button does nothing, fix it and check</div><div data-a="in"><i class="g">⏺</i> <i class="b">DevServer</i><i class="d">(npm run dev)</i></div><div data-a="in"><i class="d">  ⎿  #1 serving http://localhost:5173/</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">Browse</i><i class="d">(localhost:5173/signup)</i></div><div data-a="in"><i class="d">  ⎿  Sign up · </i><i class="r">1 console error</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">Console</i></div><div data-a="in"><i class="d">  ⎿  </i><i class="r">TypeError: onSubmit is not a function</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">Edit</i><i class="d">(src/pages/Signup.tsx)</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">Click</i><i class="d">(Create account)</i></div><div data-a="in"><i class="d">  ⎿  </i><i class="g">Welcome, Ada · no console errors</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">Screenshot</i><i class="d">(compare)</i></div><div data-a="in"><i class="d">     ┌──────────────────────────┐</i></div><div data-a="in"><i class="d">     │</i> <i class="shot">▇▇▇</i>  <i class="b">Welcome, Ada</i>        <i class="d">│</i></div><div data-a="in"><i class="d">     └──────────────────────────┘  4.2% changed</i></div></pre>
+</div>
+<div class="scene" id="ts-chrome" role="tabpanel" aria-labelledby="tt-chrome" hidden>
+<pre class="frame"><div data-a="type"><i class="p">❯ </i>/browser connect</div><div data-a="in"><i class="rd">╭───────────────────────────────────────────────╮</i></div><div data-a="in"><i class="rd">│</i> <i class="r b">Connect werkz to your own Chrome?</i>             <i class="rd">│</i></div><div data-a="in"><i class="rd">│</i> werkz opens a window of its own there and     <i class="rd">│</i></div><div data-a="in"><i class="rd">│</i> uses only its tabs, never your other tabs.    <i class="rd">│</i></div><div data-a="in"><i class="rd">│</i>   <i class="f">No (esc)</i>                                    <i class="rd">│</i></div><div data-a="in"><i class="rd">│</i> <i class="p">❯ Yes, connect to my Chrome for this session</i>  <i class="rd">│</i></div><div data-a="in"><i class="rd">╰───────────────────────────────────────────────╯</i></div></pre>
+<pre class="frame"><div><i class="s">✦ </i>Connected to your Chrome at 127.0.0.1:9222.</div><div data-a="type"><i class="p">❯ </i>export last week's report from the admin</div><div data-a="in"><i class="g">⏺</i> <i class="b">Browse</i><i class="d">(admin.staging.acme.dev/reports)</i></div><div data-a="in"><i class="d">  ⎿  Reports · signed in as ada</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">Click</i><i class="d">(Export CSV)</i><i class="y">  ⚠ downloads a file: asked</i></div><div data-a="in"><i class="d">  ⎿  report-2026-W47.csv saved by Chrome</i></div><div> </div><div> </div><div> </div><div class="banner"><i class="r b">● werkz is connected to your Chrome</i><i class="d"> · /browser disconnect</i></div></pre>
+</div>
+<div class="scene" id="ts-web" role="tabpanel" aria-labelledby="tt-web" hidden>
+<pre class="frame"><div data-a="type"><i class="p">❯ </i>how do I add an MCP server to werkz? check the docs</div><div data-a="in"><i class="g">⏺</i> <i class="b">WebSearch</i><i class="d">(werkz MCP servers setup)</i></div><div data-a="in"><i class="d">  ⎿  6 results · Claude web search</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">WebFetch</i><i class="d">(tonmoytalukder.github.io/werkz/docs/…)</i></div><div data-a="in"><i class="d">  ⎿  Usage · werkz · 18 KB</i></div><div data-a="in"><i class="v">⏺</i> Add it to <i class="cd">~/.config/werkz/mcp.json</i>, in the same</div><div data-a="in">  format as Claude Code, then run <i class="cd">/mcp</i> to see it</div><div data-a="in">  start. A project's servers go in <i class="cd">.werkz/mcp.json</i>.</div></pre>
+</div>
+<div class="scene" id="ts-mcp" role="tabpanel" aria-labelledby="tt-mcp" hidden>
+<pre class="frame"><div data-a="type"><i class="p">❯ </i>/mcp</div><div data-a="in"><i class="sd">╭───────────────────────────────────────────────╮</i></div><div data-a="in"><i class="sd">│</i> <i class="gr">MCP servers</i>                                   <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i>   github    <i class="d">user</i>     <i class="g">✓ connected · 38 tools</i>   <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i>   postgres  <i class="d">project</i>  <i class="y">needs your approval</i>      <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i>     <i class="f">npx -y @modelcontextprotocol/server-pg…</i>   <i class="sd">│</i></div><div data-a="in"><i class="sd">╰───────────────────────────────────────────────╯</i></div></pre>
+<pre class="frame"><div data-a="type"><i class="p">❯ </i>label the open issues about checkout</div><div data-a="in"><i class="g">⏺</i> <i class="b">github · search_issues</i><i class="d">(checkout is:open)</i></div><div data-a="in"><i class="d">  ⎿  2 issues: #412, #418</i></div><div data-a="in"><i class="y">⏺</i> <i class="b">github · add_labels</i><i class="d">(#412 #418 → checkout)</i></div><div data-a="in">  <i class="sd">Do you want to proceed?</i></div><div data-a="in">  <i class="p">❯ Yes, and don't ask again for github's add_labels</i></div><div data-a="in"><i class="v">⏺</i> Labelled #412 and #418 as checkout.</div></pre>
+</div>
+<div class="scene" id="ts-safety" role="tabpanel" aria-labelledby="tt-safety" hidden>
+<pre class="frame"><div><i class="p">❯ </i>clean the build and rebuild</div><div data-a="in"><i class="y">⏺</i> <i class="b">Bash</i><i class="d">(rm -rf dist &amp;&amp; npm run build)</i></div><div data-a="in"><i class="sd">╭───────────────────────────────────────────────╮</i></div><div data-a="in"><i class="sd">│</i> <i class="b">Bash</i> rm -rf dist &amp;&amp; npm run build             <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i>                                               <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i> Do you want to proceed?                       <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i>   Yes                                         <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i> <i class="p">❯ No, and tell werkz what to do differently</i>   <i class="sd">│</i></div><div data-a="in"><i class="sd">╰───────────────────────────────────────────────╯</i></div><div> </div><div data-a="in"><i class="sk">⏵⏵ accept edits on</i><i class="d"> (shift+tab to cycle)</i></div></pre>
+</div>
+<div class="scene" id="ts-resume" role="tabpanel" aria-labelledby="tt-resume" hidden>
+<pre class="frame"><div data-a="type"><i class="p">❯ </i>/resume login</div><div data-a="in"><i class="sd">╭───────────────────────────────────────────────╮</i></div><div data-a="in"><i class="sd">│</i> <i class="gr">Resume a conversation</i><i class="d">  ·  2 in this folder</i>    <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i> <i class="p">⌕ </i>login                                       <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i> <i class="p b">❯ fix the login form and add a test</i>           <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i>     <i class="d">2h ago · 4 requests</i>                       <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i>   why does login redirect twice?              <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i>     <i class="d">yesterday · 2 requests</i>                    <i class="sd">│</i></div><div data-a="in"><i class="sd">╰───────────────────────────────────────────────╯</i></div></pre>
+<pre class="frame"><div><i class="s">✦ </i>Resumed “fix the login form and add a test”</div><div><i class="d">  · 4 requests · last active 2h ago</i></div><div> </div><div><i class="p">❯ </i>fix the login form and add a test</div><div><i class="g">⏺</i> <i class="b">Edit</i><i class="d">(src/auth/login.ts)</i></div><div><i class="v">⏺</i> Empty passwords are rejected, with a test.</div><div data-a="type"><i class="p">❯ </i>now the same for the signup form</div><div data-a="in"><i class="g">⏺</i> <i class="b">Read</i><i class="d">(src/auth/signup.ts)</i></div></pre>
+</div>
+<div class="scene" id="ts-copy" role="tabpanel" aria-labelledby="tt-copy" hidden>
+<pre class="frame"><div><i class="v">⏺</i> Run the migration on staging first:</div><div> </div><div>  <i class="hl" data-a="sweep">go run ./cmd/migrate --env staging</i></div><div> </div><div>  then restart the API so it picks up the new</div><div>  columns.</div><div> </div><div> </div><div> </div><div> </div><div data-a="in" class="status"><i class="g">✓ Copied the selection · 34 characters via wl-copy</i></div></pre>
+</div>
+<div class="scene" id="ts-repos" role="tabpanel" aria-labelledby="tt-repos" hidden>
+<pre class="frame"><div data-a="type"><i class="p">❯ </i>/workspace shop</div><div data-a="in"><i class="s">✦ </i>Workspace shop · 2 folders · main: ~/code/shop-web</div><div data-a="type"><i class="p">❯ </i>prices come in cents: fix <i class="m">@web/src/Price.tsx</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">Grep</i><i class="d">(price_cents in api)</i></div><div data-a="in"><i class="d">  ⎿  3 files</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">Edit</i><i class="d">(web/src/Price.tsx)</i></div><div data-a="in"><i class="d">  ⎿  </i><i class="g">+3</i> <i class="r">−1</i><i class="d"> lines</i></div><div data-a="in"><i class="v">⏺</i> Prices now show as dollars, from the API's cents.</div></pre>
+</div>
+          </div>
+          <div class="tour-status"><b>Opus 5.5</b> <i>[medium]</i> <span>│ anthropic │ 4% of 1M │ $0.03</span></div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
@@ -186,7 +258,7 @@ sudo dnf install werkz</code></pre><button class="copy" type="button"><svg class
     <div>
       <div class="section-head">
         <h2 id="safety-title">Nothing risky without asking</h2>
-        <p>Press <kbd>Shift</kbd>+<kbd>Tab</kbd> to choose how much werkz may do on its own. Faster modes last only for the current session.</p>
+        <p>Press <kbd>Shift</kbd>+<kbd>Tab</kbd> to choose how much werkz may do on its own. Bypass, the one that asks for nothing, lasts only for the current session.</p>
       </div>
       <ul class="rules">
         <li><svg aria-hidden="true"><use href="#i-check-shield"/></svg><span>Anything outside your working folders asks first, in every mode except Bypass.</span></li>
@@ -224,11 +296,87 @@ sudo dnf install werkz</code></pre><button class="copy" type="button"><svg class
   </div>
 </section>
 
-<section class="section" id="install" aria-labelledby="install-title">
+<section class="section" id="releases" aria-labelledby="releases-title">
+  <div class="wrap split">
+    <div class="section-head">
+      <h2 id="releases-title">What's new</h2>
+      <p>The latest releases, newest first. Installed copies pick them up on their own.</p>
+      <p><a class="arrow-link" href="docs/releases.html">All release notes <svg class="icon" viewBox="0 0 22 12" aria-hidden="true"><use href="#i-arrow"/></svg></a></p>
+    </div>
+    <ol class="releases">
+  <li class="release"><details open><summary><span class="ver">v0.1.9</span><span class="latest caps">Latest</span><time datetime="2026-11-26">2026-11-26</time></summary><div class="rgroup"><h3>New</h3><ul><li>See werkz&#39;s browser inside your terminal</li><li>Connect werkz to your own Chrome, and drive pages with mouse and keyboard</li><li>Use tools from MCP servers</li></ul></div><div class="rgroup"><h3>Fixed</h3><ul><li>Harden web access and werkz&#39;s browser after review</li><li>Copying works on Linux desktops without a clipboard tool</li><li>Close the gaps found in review (plan mode, downloads, approvals, MCP approval, untrusted text, signals)</li><li>History moves, downloads in your own Chrome&#39;s tabs, MCP approval dialog and wording, after re-review</li><li>Block downloads while werkz opens pages in your own Chrome; show hidden characters in MCP approvals</li><li>Say when a page started a download after werkz&#39;s action finished; watching the live view leaves your downloads alone</li></ul></div><a class="rlink" href="https://github.com/TonmoyTalukder/werkz/releases/tag/v0.1.9">Downloads for v0.1.9</a></details></li>
+  <li class="release"><details><summary><span class="ver">v0.1.8</span><time datetime="2026-11-26">2026-11-26</time></summary><div class="rgroup"><h3>New</h3><ul><li>WebFetch and WebSearch let the model read pages and search the web</li><li>Werkz checks its own web UI in your installed Chrome</li></ul></div><a class="rlink" href="https://github.com/TonmoyTalukder/werkz/releases/tag/v0.1.8">Downloads for v0.1.8</a></details></li>
+  <li class="release"><details><summary><span class="ver">v0.1.7</span><time datetime="2026-11-26">2026-11-26</time></summary><div class="rgroup"><h3>New</h3><ul><li>@file mentions, drag-to-copy, and <code>/resume</code> to continue saved conversations</li></ul></div><a class="rlink" href="https://github.com/TonmoyTalukder/werkz/releases/tag/v0.1.7">Downloads for v0.1.7</a></details></li>
+  <li class="release"><details><summary><span class="ver">v0.1.6</span><time datetime="2026-11-26">2026-11-26</time></summary><div class="rgroup"><h3>New</h3><ul><li>Choose your own context window (<code>/context</code> window 350k)</li><li>Say when an update is available and how to get it for each install method</li><li>Show subscription usage limits (<code>/usage</code>, status bar, warnings)</li><li>New website with docs, install methods and release notes</li><li>Bypass permissions mode (confirmed, never saved), and edit previews that show only what changes</li><li>Professional redesign in the logo&#39;s colours, light and dark themes, real product shot, contributing guide</li><li class="quiet">and 3 more</li></ul></div><div class="rgroup"><h3>Fixed</h3><ul><li>Sign in over SSH, without a desktop, and on WSL</li></ul></div><div class="rgroup"><h3>Packaging</h3><ul><li>Goldmark is a direct dependency (used by the site generator)</li></ul></div><a class="rlink" href="https://github.com/TonmoyTalukder/werkz/releases/tag/v0.1.6">Downloads for v0.1.6</a></details></li>
+  <li class="release"><details><summary><span class="ver">v0.1.5</span><time datetime="2026-11-26">2026-11-26</time></summary><div class="rgroup"><h3>Fixed</h3><ul><li>Find Claude Code outside PATH, and make subscriptions easy to find</li></ul></div><a class="rlink" href="https://github.com/TonmoyTalukder/werkz/releases/tag/v0.1.5">Downloads for v0.1.5</a></details></li>
+</ol>
+  </div>
+</section>
+
+<section class="section soft" id="docs" aria-labelledby="docs-title">
   <div class="wrap">
     <div class="section-head">
-      <h2 id="install-title">Install werkz</h2>
-      <p>Linux (x86-64, ARM64) and macOS (Apple Silicon, Intel). Every release is signed and checksummed.</p>
+      <h2 id="docs-title">Documentation</h2>
+      <p>Everything about installing, using and configuring werkz, kept in step with each release.</p>
+    </div>
+    <ul class="doclist">
+      
+      <li><a href="docs/installation.html"><span><b>Installation</b><span>Installer, Homebrew, apt, dnf, package files, updating, uninstalling</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
+      <li><a href="docs/getting-started.html"><span><b>Getting started</b><span>First run and your first task</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
+      <li><a href="docs/usage.html"><span><b>Usage</b><span>Commands, @ mentions, copying, saved conversations, web access, the browser, MCP</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
+      <li><a href="docs/providers-and-models.html"><span><b>Providers and models</b><span>API keys, subscriptions, free and local models, effort</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
+      <li><a href="docs/safety.html"><span><b>Safety and privacy</b><span>Permission modes and the rules that always apply</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
+      <li><a href="docs/fallback.html"><span><b>Fallback</b><span>What happens when a model fails</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
+      <li><a href="docs/workspaces.html"><span><b>Workspaces</b><span>Working across several repositories</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
+      <li><a href="docs/saving-tokens.html"><span><b>Saving tokens and money</b><span>Caching, compaction, context window, cost</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
+      <li><a href="docs/configuration.html"><span><b>Configuration</b><span>Config files and environment variables</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
+      <li><a href="docs/troubleshooting.html"><span><b>Troubleshooting</b><span>Common problems and fixes</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
+      <li><a href="docs/development.html"><span><b>Development</b><span>Building, testing, releasing, project layout</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
+      <li><a href="docs/contributing.html"><span><b>Contributing</b><span>Report a bug, set up, and send a change</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
+    
+    </ul>
+  </div>
+</section>
+
+<section class="section" id="contribute" aria-labelledby="contribute-title">
+  <div class="wrap">
+    <div class="section-head">
+      <h2 id="contribute-title">Help build werkz</h2>
+      <p>werkz is open source under the Apache 2.0 license. Bug reports, docs fixes and code are all welcome.</p>
+    </div>
+    <ol class="contribute">
+      <li>
+        <h3>Get the code</h3>
+        <p>Fork the repository on GitHub, then clone your fork. The right Go toolchain downloads itself.</p>
+        <div class="cmd"><pre><code>git clone https://github.com/&lt;you&gt;/werkz.git
+cd werkz &amp;&amp; go build ./cmd/werkz</code></pre><button class="copy" type="button"><svg class="icon copy-icon" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button></div>
+      </li>
+      <li>
+        <h3>Make the change, check it</h3>
+        <p>Tests use fake model servers, so they never call a paid API. Lint before you push.</p>
+        <div class="cmd"><pre><code>go test -race ./...
+golangci-lint run ./...</code></pre><button class="copy" type="button"><svg class="icon copy-icon" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button></div>
+      </li>
+      <li>
+        <h3>Open a pull request</h3>
+        <p>Use a short <code>feat:</code>, <code>fix:</code> or <code>docs:</code> title; it becomes the release note. Describe what changed and how you tested it.</p>
+        <div class="cmd"><pre><code>git commit -m "fix: handle empty passwords"
+git push origin my-branch</code></pre><button class="copy" type="button"><svg class="icon copy-icon" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button></div>
+      </li>
+    </ol>
+    <div class="btn-row contribute-links">
+      <a class="btn btn-primary" href="docs/contributing.html">Contributing guide <svg class="icon" viewBox="0 0 22 12" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      <a class="btn btn-secondary" href="https://github.com/TonmoyTalukder/werkz/issues/new">Report a bug</a>
+      <a class="btn btn-secondary" href="https://github.com/TonmoyTalukder/werkz/issues">Open issues</a>
+    </div>
+  </div>
+</section>
+
+<section class="section soft closing" id="install" aria-labelledby="install-title">
+  <div class="wrap">
+    <div class="section-head">
+      <h2 id="install-title">Start in a minute</h2>
+      <p>Install werkz, open a project folder and type <code>werkz</code>. Paste any key you have, sign in with ChatGPT, or press Esc to use a local model. It runs on Linux (x86-64, ARM64) and macOS (Apple Silicon, Intel), and every release is signed and checksummed.</p>
     </div>
 
     <div class="methods" data-tabs>
@@ -293,95 +441,9 @@ sudo dnf install werkz</code></pre><button class="copy" type="button"><svg class
         <tr><th scope="row">Package files</th><td>werkz shows the command with the download link for the new package.</td></tr>
       </tbody>
     </table>
-  </div>
-</section>
-
-<section class="section soft" id="releases" aria-labelledby="releases-title">
-  <div class="wrap split">
-    <div class="section-head">
-      <h2 id="releases-title">What's new</h2>
-      <p>The latest releases, newest first. Installed copies pick them up on their own.</p>
-      <p><a class="arrow-link" href="docs/releases.html">All release notes <svg class="icon" viewBox="0 0 22 12" aria-hidden="true"><use href="#i-arrow"/></svg></a></p>
-    </div>
-    <ol class="releases">
-  <li class="release"><details open><summary><span class="ver">v0.1.8</span><span class="latest caps">Latest</span><time datetime="2026-11-26">2026-11-26</time></summary><div class="rgroup"><h3>New</h3><ul><li>WebFetch and WebSearch let the model read pages and search the web</li><li>Werkz checks its own web UI in your installed Chrome</li></ul></div><a class="rlink" href="https://github.com/TonmoyTalukder/werkz/releases/tag/v0.1.8">Downloads for v0.1.8</a></details></li>
-  <li class="release"><details><summary><span class="ver">v0.1.7</span><time datetime="2026-11-26">2026-11-26</time></summary><div class="rgroup"><h3>New</h3><ul><li>@file mentions, drag-to-copy, and <code>/resume</code> to continue saved conversations</li></ul></div><a class="rlink" href="https://github.com/TonmoyTalukder/werkz/releases/tag/v0.1.7">Downloads for v0.1.7</a></details></li>
-  <li class="release"><details><summary><span class="ver">v0.1.6</span><time datetime="2026-11-26">2026-11-26</time></summary><div class="rgroup"><h3>New</h3><ul><li>Choose your own context window (<code>/context</code> window 350k)</li><li>Say when an update is available and how to get it for each install method</li><li>Show subscription usage limits (<code>/usage</code>, status bar, warnings)</li><li>New website with docs, install methods and release notes</li><li>Bypass permissions mode (confirmed, never saved), and edit previews that show only what changes</li><li>Professional redesign in the logo&#39;s colours, light and dark themes, real product shot, contributing guide</li><li class="quiet">and 3 more</li></ul></div><div class="rgroup"><h3>Fixed</h3><ul><li>Sign in over SSH, without a desktop, and on WSL</li></ul></div><div class="rgroup"><h3>Packaging</h3><ul><li>Goldmark is a direct dependency (used by the site generator)</li></ul></div><a class="rlink" href="https://github.com/TonmoyTalukder/werkz/releases/tag/v0.1.6">Downloads for v0.1.6</a></details></li>
-  <li class="release"><details><summary><span class="ver">v0.1.5</span><time datetime="2026-11-26">2026-11-26</time></summary><div class="rgroup"><h3>Fixed</h3><ul><li>Find Claude Code outside PATH, and make subscriptions easy to find</li></ul></div><a class="rlink" href="https://github.com/TonmoyTalukder/werkz/releases/tag/v0.1.5">Downloads for v0.1.5</a></details></li>
-  <li class="release"><details><summary><span class="ver">v0.1.4</span><time datetime="2026-11-26">2026-11-26</time></summary><div class="rgroup"><h3>New</h3><ul><li>Sign in with ChatGPT and a Responses API client for plan usage</li><li>Run the installed Claude Code as a backend, with werkz answering its permission prompts</li><li>Use a ChatGPT plan or Claude subscription alongside API keys</li></ul></div><div class="rgroup"><h3>Fixed</h3><ul><li>Rebuild the icon cache on uninstall</li></ul></div><a class="rlink" href="https://github.com/TonmoyTalukder/werkz/releases/tag/v0.1.4">Downloads for v0.1.4</a></details></li>
-</ol>
-  </div>
-</section>
-
-<section class="section" id="docs" aria-labelledby="docs-title">
-  <div class="wrap">
-    <div class="section-head">
-      <h2 id="docs-title">Documentation</h2>
-      <p>Everything about installing, using and configuring werkz, kept in step with each release.</p>
-    </div>
-    <ul class="doclist">
-      
-      <li><a href="docs/installation.html"><span><b>Installation</b><span>Installer, Homebrew, apt, dnf, package files, updating, uninstalling</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
-      <li><a href="docs/getting-started.html"><span><b>Getting started</b><span>First run and your first task</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
-      <li><a href="docs/usage.html"><span><b>Usage</b><span>Commands, keyboard shortcuts, command-line flags, tools</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
-      <li><a href="docs/providers-and-models.html"><span><b>Providers and models</b><span>API keys, subscriptions, free and local models, effort</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
-      <li><a href="docs/safety.html"><span><b>Safety and privacy</b><span>Permission modes and the rules that always apply</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
-      <li><a href="docs/fallback.html"><span><b>Fallback</b><span>What happens when a model fails</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
-      <li><a href="docs/workspaces.html"><span><b>Workspaces</b><span>Working across several repositories</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
-      <li><a href="docs/saving-tokens.html"><span><b>Saving tokens and money</b><span>Caching, compaction, context window, cost</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
-      <li><a href="docs/configuration.html"><span><b>Configuration</b><span>Config files and environment variables</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
-      <li><a href="docs/troubleshooting.html"><span><b>Troubleshooting</b><span>Common problems and fixes</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
-      <li><a href="docs/development.html"><span><b>Development</b><span>Building, testing, releasing, project layout</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
-      <li><a href="docs/contributing.html"><span><b>Contributing</b><span>Report a bug, set up, and send a change</span></span><svg aria-hidden="true" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></svg></a></li>
-    
-    </ul>
-  </div>
-</section>
-
-<section class="section soft" id="contribute" aria-labelledby="contribute-title">
-  <div class="wrap">
-    <div class="section-head">
-      <h2 id="contribute-title">Help build werkz</h2>
-      <p>werkz is open source under the Apache 2.0 license. Bug reports, docs fixes and code are all welcome.</p>
-    </div>
-    <ol class="contribute">
-      <li>
-        <h3>Get the code</h3>
-        <p>Fork the repository on GitHub, then clone your fork. The right Go toolchain downloads itself.</p>
-        <div class="cmd"><pre><code>git clone https://github.com/&lt;you&gt;/werkz.git
-cd werkz &amp;&amp; go build ./cmd/werkz</code></pre><button class="copy" type="button"><svg class="icon copy-icon" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button></div>
-      </li>
-      <li>
-        <h3>Make the change, check it</h3>
-        <p>Tests use fake model servers, so they never call a paid API. Lint before you push.</p>
-        <div class="cmd"><pre><code>go test -race ./...
-golangci-lint run ./...</code></pre><button class="copy" type="button"><svg class="icon copy-icon" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button></div>
-      </li>
-      <li>
-        <h3>Open a pull request</h3>
-        <p>Use a short <code>feat:</code>, <code>fix:</code> or <code>docs:</code> title; it becomes the release note. Describe what changed and how you tested it.</p>
-        <div class="cmd"><pre><code>git commit -m "fix: handle empty passwords"
-git push origin my-branch</code></pre><button class="copy" type="button"><svg class="icon copy-icon" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button></div>
-      </li>
-    </ol>
-    <div class="btn-row contribute-links">
-      <a class="btn btn-primary" href="docs/contributing.html">Contributing guide <svg class="icon" viewBox="0 0 22 12" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-      <a class="btn btn-secondary" href="https://github.com/TonmoyTalukder/werkz/issues/new">Report a bug</a>
-      <a class="btn btn-secondary" href="https://github.com/TonmoyTalukder/werkz/issues">Open issues</a>
-    </div>
-  </div>
-</section>
-
-<section class="section" aria-labelledby="cta-title">
-  <div class="wrap">
-    <div class="cta">
-      <h2 id="cta-title">Start in a minute</h2>
-      <p>Install, open a project folder and type <code>werkz</code>. Paste any key you have, sign in with ChatGPT, or press Esc to use a local model.</p>
-      <div class="cmd"><pre><code>curl -fsSL https://raw.githubusercontent.com/TonmoyTalukder/werkz/main/install.sh | sh</code></pre><button class="copy" type="button"><svg class="icon copy-icon" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button></div>
-      <div class="btn-row">
-        <a class="btn btn-primary" href="docs/getting-started.html">Getting started</a>
-        <a class="btn btn-secondary" href="https://github.com/TonmoyTalukder/werkz"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>Star on GitHub</a>
-      </div>
+    <div class="btn-row install-next">
+      <a class="btn btn-primary" href="docs/getting-started.html">Getting started <svg class="icon" viewBox="0 0 22 12" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      <a class="btn btn-secondary" href="https://github.com/TonmoyTalukder/werkz"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>Star on GitHub</a>
     </div>
   </div>
 </section>
@@ -391,7 +453,7 @@ git push origin my-branch</code></pre><button class="copy" type="button"><svg cl
 <footer class="foot">
   <div class="foot-inner">
     <div class="foot-brand">
-      <a class="brand" href="./"><img src="assets/werkz.png" alt="" width="28" height="28">werkz</a>
+      <a class="brand" href="./"><img class="logo-tile" src="assets/werkz.png" alt="" width="28" height="28"><svg class="logo-mark" viewBox="0 0 100 100" width="28" height="28" aria-hidden="true"><defs><linearGradient id="wg-foot" gradientUnits="userSpaceOnUse" x1="20" y1="45" x2="80" y2="56"><stop offset="0" stop-color="#ff9933"/><stop offset="0.5" stop-color="#e8344e"/><stop offset="1" stop-color="#3b6cf6"/></linearGradient></defs><polyline points="20,30 33.5,68 50,40 66.5,68 80,30" fill="none" stroke="url(#wg-foot)" stroke-width="10.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="43" y="77.5" width="14" height="4" rx="2" fill="#ff9933"/></svg>werkz</a>
       <p>The open-source coding agent for your terminal, on the models you already have.</p>
     </div>
     <div><h2>Product</h2><ul><li><a href="#install">Install</a></li><li><a href="docs/">Documentation</a></li><li><a href="docs/releases.html">Release notes</a></li><li><a href="https://github.com/TonmoyTalukder/werkz/releases">Downloads</a></li></ul></div>

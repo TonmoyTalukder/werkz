@@ -24,8 +24,9 @@
 </svg>
 <header class="top">
   <div class="top-inner">
-    <a class="brand" href="../" aria-label="werkz home"><img src="../assets/werkz.png" alt="" width="28" height="28">werkz</a>
+    <a class="brand" href="../" aria-label="werkz home"><img class="logo-tile" src="../assets/werkz.png" alt="" width="28" height="28"><svg class="logo-mark" viewBox="0 0 100 100" width="28" height="28" aria-hidden="true"><defs><linearGradient id="wg-head" gradientUnits="userSpaceOnUse" x1="20" y1="45" x2="80" y2="56"><stop offset="0" stop-color="#ff9933"/><stop offset="0.5" stop-color="#e8344e"/><stop offset="1" stop-color="#3b6cf6"/></linearGradient></defs><polyline points="20,30 33.5,68 50,40 66.5,68 80,30" fill="none" stroke="url(#wg-head)" stroke-width="10.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="43" y="77.5" width="14" height="4" rx="2" fill="#ff9933"/></svg>werkz</a>
     <nav id="topnav" aria-label="Main">
+      <a href="../#features">Features</a>
       <a href="./" aria-current="page">Docs</a>
       <a href="../#install">Install</a>
       <a href="../#subscriptions">Subscriptions</a>
@@ -115,7 +116,27 @@
 </tr>
 <tr>
 <td>Selected text isn't copied</td>
-<td>werkz copies with <code>wl-copy</code>, <code>xclip</code> or <code>xsel</code> on Linux: install one. Over SSH it uses OSC 52, which some terminals (GNOME Terminal, older xterm) ignore; press <strong>Ctrl+S</strong> and select with the terminal, or use <code>/copy</code> and press <strong>w</strong> to write a file</td>
+<td>On Linux werkz uses <code>wl-copy</code>, <code>xclip</code> or <code>xsel</code> when installed, and otherwise serves the clipboard itself on any desktop with X11 (including GNOME and KDE on Wayland), so it works with nothing installed. Over SSH it uses OSC 52, which some terminals (GNOME Terminal, older xterm) ignore: press <strong>Ctrl+S</strong> and select with the terminal, or use <code>/copy</code> and press <strong>w</strong> to write a file</td>
+</tr>
+<tr>
+<td>The browser tools aren't offered, or <em>&quot;no browser found&quot;</em></td>
+<td>werkz uses an installed Chrome, Chromium or Edge and never downloads one. Install one, or point <code>WERKZ_BROWSER</code> at its executable</td>
+</tr>
+<tr>
+<td><code>/browser connect</code> can't connect</td>
+<td>Chrome must be started with a debugging port and its own profile (Chrome ignores the port on your default profile). Run the command <code>/browser connect</code> shows (it's also copied to your clipboard), then connect again</td>
+</tr>
+<tr>
+<td>Screenshots show as links, not pictures</td>
+<td>Your terminal can't show images (or werkz runs in tmux). Use kitty, Ghostty, iTerm2, WezTerm or a Sixel terminal, or set <code>WERKZ_IMAGES</code> (see <a href="usage.html#seeing-the-page-in-your-terminal">The browser</a>)</td>
+</tr>
+<tr>
+<td>An MCP server <em>&quot;didn't start&quot;</em></td>
+<td><code>/mcp</code> shows the error, including the last lines the server printed. Check its command runs in a terminal; a project's server first needs <code>/mcp approve &lt;name&gt;</code></td>
+</tr>
+<tr>
+<td>An MCP server <em>&quot;needs you to sign in&quot;</em></td>
+<td>Run <code>/mcp login &lt;name&gt;</code>: your browser opens to sign in, then werkz connects</td>
 </tr>
 <tr>
 <td><code>werkz: command not found</code> after installing</td>

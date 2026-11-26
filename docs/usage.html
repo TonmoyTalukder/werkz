@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Usage · werkz</title>
-<meta name="description" content="Commands, keyboard shortcuts, command-line flags, tools">
+<meta name="description" content="Commands, @ mentions, copying, saved conversations, web access, the browser, MCP">
 <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0c0d14" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="../assets/favicon.png">
@@ -24,8 +24,9 @@
 </svg>
 <header class="top">
   <div class="top-inner">
-    <a class="brand" href="../" aria-label="werkz home"><img src="../assets/werkz.png" alt="" width="28" height="28">werkz</a>
+    <a class="brand" href="../" aria-label="werkz home"><img class="logo-tile" src="../assets/werkz.png" alt="" width="28" height="28"><svg class="logo-mark" viewBox="0 0 100 100" width="28" height="28" aria-hidden="true"><defs><linearGradient id="wg-head" gradientUnits="userSpaceOnUse" x1="20" y1="45" x2="80" y2="56"><stop offset="0" stop-color="#ff9933"/><stop offset="0.5" stop-color="#e8344e"/><stop offset="1" stop-color="#3b6cf6"/></linearGradient></defs><polyline points="20,30 33.5,68 50,40 66.5,68 80,30" fill="none" stroke="url(#wg-head)" stroke-width="10.5" stroke-linecap="round" stroke-linejoin="round"/><rect x="43" y="77.5" width="14" height="4" rx="2" fill="#ff9933"/></svg>werkz</a>
     <nav id="topnav" aria-label="Main">
+      <a href="../#features">Features</a>
       <a href="./" aria-current="page">Docs</a>
       <a href="../#install">Install</a>
       <a href="../#subscriptions">Subscriptions</a>
@@ -159,8 +160,12 @@
 <td>Web search for the model: <code>/search brave|tavily &lt;key&gt;</code>, <code>/search searxng &lt;url&gt;</code>, <code>/search off</code> (see <a href="#web-access">Web access</a>)</td>
 </tr>
 <tr>
+<td><code>/mcp</code></td>
+<td>MCP servers and their tools: <code>/mcp tools</code>, <code>/mcp approve</code>, <code>/mcp connect</code>, <code>/mcp disconnect</code>, <code>/mcp login</code>, <code>/mcp reload</code> (see <a href="#mcp-servers">MCP servers</a>)</td>
+</tr>
+<tr>
 <td><code>/browser</code></td>
-<td>werkz's browser: <code>/browser show</code> to watch it, <code>/browser hide</code>, <code>/browser close</code></td>
+<td>werkz's browser: <code>/browser view</code> to see the page in the terminal, <code>/browser connect</code> to use your own Chrome, <code>/browser show</code> to open its window, <code>/browser hide</code>, <code>/browser close</code></td>
 </tr>
 <tr>
 <td><code>/docs</code></td>
@@ -269,7 +274,9 @@ repository (so ignored files don't show up), or a capped scan of a folder that i
 it. To copy exactly what was written (markdown, or a code block without the frame around it), use <strong>Alt+↑</strong>
 to pick a message, or <code>/copy</code>. A response with code blocks lets you choose one, or press <strong>w</strong> to save it to a
 file. werkz copies with your system's clipboard tool (<code>wl-copy</code>, <code>xclip</code>, <code>xsel</code>, <code>pbcopy</code>, PowerShell on
-WSL), inside tmux into tmux's buffer, and over SSH with the OSC 52 terminal sequence. If your terminal doesn't
+WSL) or, on a Linux desktop without one, with its own small clipboard helper (it keeps your copy pasteable
+after werkz quits, until you copy something else); inside tmux into tmux's buffer, and over SSH with the OSC 52
+terminal sequence. If your terminal doesn't
 support that, press <strong>Ctrl+S</strong> and select with the terminal itself.</p>
 <h2 id="web-access">Web access<a class="anchor" href="#web-access" aria-label="Link to this section">#</a></h2>
 <p>werkz can read pages and search the web, so it can look up current documentation, an error message or a
@@ -294,7 +301,7 @@ models use a search service you set up with <code>/search</code>:</p>
 /search                   # what's used now
 /search off               # no web search
 </code></pre>
-<p><code>/search provider</code> uses only the model's own search; <code>/search auto</code> (the default) prefers it and falls back
+<p>Search is allowed in plan mode too: it only reads. <code>/search provider</code> uses only the model's own search; <code>/search auto</code> (the default) prefers it and falls back
 to a service. Keys can also come from <code>BRAVE_API_KEY</code>, <code>TAVILY_API_KEY</code> and <code>SEARXNG_URL</code>.</p>
 </li>
 </ul>
@@ -314,9 +321,63 @@ goes back, <code>/browser close</code> closes it. <code>/browser</code> shows it
 <li>The model reads pages through their accessibility tree (the structure screen readers use), with ids it
 clicks and types by. Screenshots are saved under <code>~/.cache/werkz/screenshots/</code>; comparing two says how much
 of the page changed and where.</li>
-<li>Dev servers keep running in the background until stopped, and werkz stops them when you quit. At most four
-run at once.</li>
+<li>Dev servers keep running in the background until stopped, and werkz stops them when you quit or close the
+terminal. At most four run at once.</li>
+<li>Links that open a new tab or window open in werkz's tab instead (if the site is allowed). Two werkz windows
+can each use a browser at the same time. If Chrome crashes or you close its window, werkz starts it again
+when needed.</li>
 </ul>
+<h3 id="using-your-own-chrome">Using your own Chrome<a class="anchor" href="#using-your-own-chrome" aria-label="Link to this section">#</a></h3>
+<p>By default werkz uses its own browser profile, signed in to nothing. To let it work on sites where you are
+signed in (a staging admin, a dashboard), connect it to your own Chrome for the session:</p>
+<ol>
+<li>
+<p>Start Chrome with a debugging port. <code>/browser connect</code> shows the exact command for your system, for example:</p>
+<pre><code class="language-bash">google-chrome --remote-debugging-port=9222 --user-data-dir=&quot;$HOME/.config/werkz/chrome-connect&quot;
+</code></pre>
+<p>Chrome only allows this with a profile of its own (not your default one), so this is a separate profile: sign
+in there once to the sites werkz should use, and it remembers them.</p>
+</li>
+<li>
+<p>In werkz, run <code>/browser connect</code> (or <code>/browser connect 9333</code> for another port) and confirm.</p>
+</li>
+</ol>
+<p>While connected, a red <strong>connected to your Chrome</strong> line shows at the bottom. werkz opens one tab of its own and
+uses only that tab and the popups it opens: it never reads or touches your other tabs, and it never closes
+Chrome. Sites other than this machine ask first even in bypass; sending forms, uploads and downloads always ask;
+password and payment fields are never typed into. Downloads it's allowed go where your Chrome saves them.
+<code>/browser disconnect</code> (or quitting werkz) closes werkz's tab. One limit: Chrome's download setting covers
+your whole profile, so werkz turns downloads off only while it is acting and for about 1.5 seconds after (your
+own tabs can't download during that time; watching with <code>/browser view</code> doesn't count as acting); a page werkz opened that starts a download on its own later can save it to your
+Downloads folder, as any page you open can. Connecting is never saved: each session starts
+with werkz's own browser.</p>
+<h3 id="seeing-the-page-in-your-terminal">Seeing the page in your terminal<a class="anchor" href="#seeing-the-page-in-your-terminal" aria-label="Link to this section">#</a></h3>
+<p>werkz shows its browser inside the terminal when the terminal can draw pictures:</p>
+<table>
+<thead>
+<tr>
+<th>Terminal</th>
+<th>What you see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>kitty, Ghostty</td>
+<td>Screenshots right in the conversation, sized to the window; they scroll and resize with the text. <code>/browser view</code> shows the live page full screen</td>
+</tr>
+<tr>
+<td>iTerm2, WezTerm, terminals with Sixel (foot, Konsole, xterm with Sixel, recent GNOME Terminal builds)</td>
+<td><code>/browser view</code> shows the live page full screen; screenshots in the conversation are links</td>
+</tr>
+<tr>
+<td>Others, and inside tmux</td>
+<td>Screenshots are links to the files (Ctrl+click or ⌘+click in most terminals)</td>
+</tr>
+</tbody>
+</table>
+<p><code>/browser view</code> refreshes every 1.5 seconds while werkz works; <strong>r</strong> refreshes now and <strong>Esc</strong> goes back. werkz
+asks the terminal what it supports when it starts; set <code>WERKZ_IMAGES=kitty</code>, <code>iterm2</code>, <code>sixel</code> or <code>off</code> to choose
+yourself (inside tmux, that also needs <code>set -g allow-passthrough on</code>).</p>
 <p>What asks first:</p>
 <table>
 <thead>
@@ -332,15 +393,19 @@ run at once.</li>
 </tr>
 <tr>
 <td>Opening any other site</td>
-<td>Yes, with &quot;don't ask again&quot; for that domain. The page can't move itself to a site you haven't approved</td>
+<td>Yes (not in bypass), with &quot;don't ask again&quot; for that domain. The page can't move itself, open a popup or load a frame from a site you haven't approved</td>
 </tr>
 <tr>
-<td>Clicking and typing</td>
-<td>No, except as below. Blocked in plan mode</td>
+<td>Clicking, typing, keys, dragging, setting form values</td>
+<td>No, except as below. Blocked in plan mode (scrolling, hovering, reading and screenshots aren't)</td>
 </tr>
 <tr>
-<td>Submitting a form (submit button, or Enter in a form)</td>
-<td>Always, in every mode</td>
+<td>Running JavaScript (<code>Eval</code>)</td>
+<td>On this machine, no; elsewhere it asks (in your own Chrome, every time). On a page with a password or payment field it always asks, since a script can read what a page shows. Blocked in plan mode</td>
+</tr>
+<tr>
+<td>Sending a form (one that posts data: a submit button, a click at its position, Enter or space in a form, or the page's own script)</td>
+<td>Always, in every mode. werkz checks the element actually under the pointer or focus, and any post it wasn't approved for is stopped before it leaves the browser. Search-style forms (GET) open like links, under the site rules</td>
 </tr>
 <tr>
 <td>Uploading a file (only files in your working folders)</td>
@@ -348,10 +413,10 @@ run at once.</li>
 </tr>
 <tr>
 <td>Downloading a file</td>
-<td>Always</td>
+<td>Always; it's saved in <code>~/Downloads</code></td>
 </tr>
 <tr>
-<td>Typing into a password or payment field</td>
+<td>Typing into a password or payment field (by typing, keys or form values)</td>
 <td>Never done</td>
 </tr>
 <tr>
@@ -360,6 +425,33 @@ run at once.</li>
 </tr>
 </tbody>
 </table>
+<h2 id="mcp-servers">MCP servers<a class="anchor" href="#mcp-servers" aria-label="Link to this section">#</a></h2>
+<p>werkz can use tools from <a href="https://modelcontextprotocol.io">MCP</a> servers: databases, issue trackers, design
+tools, internal APIs. Add servers in the format Claude Code and Claude Desktop use, either in
+<code>~/.config/werkz/mcp.json</code> (yours, in every project) or in <code>.werkz/mcp.json</code> in a project (shared with the
+team):</p>
+<pre><code class="language-json">{
+  &quot;mcpServers&quot;: {
+    &quot;github&quot;: { &quot;type&quot;: &quot;http&quot;, &quot;url&quot;: &quot;https://api.githubcopilot.com/mcp/&quot; },
+    &quot;postgres&quot;: { &quot;command&quot;: &quot;npx&quot;, &quot;args&quot;: [&quot;-y&quot;, &quot;@modelcontextprotocol/server-postgres&quot;, &quot;${DATABASE_URL}&quot;] },
+    &quot;files&quot;: { &quot;command&quot;: &quot;my-mcp-server&quot;, &quot;env&quot;: { &quot;API_KEY&quot;: &quot;${MY_API_KEY}&quot; } }
+  }
+}
+</code></pre>
+<p>A server with <code>command</code> runs on your machine (stdio); one with <code>url</code> is remote (HTTP). <code>${VAR}</code> and
+<code>${VAR:-default}</code> take values from your environment, so keys stay out of the file.</p>
+<ul>
+<li><strong>Your servers start with werkz.</strong> <code>/mcp</code> shows each one's state and number of tools, <code>/mcp tools</code> lists the
+tools, <code>/mcp disconnect</code> and <code>/mcp connect</code> stop and restart one, and <code>/mcp reload</code> re-reads the files.</li>
+<li><strong>A project's servers need your approval first.</strong> werkz tells you when a project has servers and <code>/mcp</code> shows
+exactly what each one runs; <code>/mcp approve &lt;name&gt;</code> starts it. The approval is remembered for that project and
+asked again if the server's command or address changes.</li>
+<li><strong>Remote servers that need a sign-in</strong> say so: <code>/mcp login &lt;name&gt;</code> opens your browser (OAuth), and werkz keeps
+the tokens in <code>~/.config/werkz/mcp-auth.json</code>, readable only by you. <code>/mcp logout &lt;name&gt;</code> forgets them.</li>
+<li><strong>Each tool asks the first time it runs</strong>, with &quot;don't ask again&quot; for that tool this session; in auto and bypass
+mode they don't ask, and in plan mode only tools the server marks read-only run. What a tool returns reaches
+the model marked as untrusted. The model sees them as <code>mcp__&lt;server&gt;__&lt;tool&gt;</code>.</li>
+</ul>
 <h2 id="saved-conversations">Saved conversations<a class="anchor" href="#saved-conversations" aria-label="Link to this section">#</a></h2>
 <p>Every conversation is saved as you go, so you can come back to it. <code>/resume</code> lists the ones from this
 folder (Tab shows all folders), newest first; type to search what was asked and answered, <strong>Enter</strong>
@@ -424,6 +516,18 @@ until you delete them).</p>
 <td><code>Screenshot</code> · <code>Console</code> · <code>Network</code></td>
 <td>Captures and compares screenshots; reads console errors and failed requests</td>
 </tr>
+<tr>
+<td><code>Act</code></td>
+<td>Mouse and keyboard: clicks (also right, double, triple, with modifiers, at an element or a point), typing into the focused field, hover, scroll, keys and shortcuts, drag and drop, wait, and a zoomed screenshot of a region</td>
+</tr>
+<tr>
+<td><code>Find</code> · <code>PageText</code> · <code>FormInput</code></td>
+<td>Finds elements by text or role; reads a page's main text; sets selects, checkboxes, radios, sliders and text</td>
+</tr>
+<tr>
+<td><code>Eval</code> · <code>Tabs</code> · <code>Resize</code> · <code>Batch</code></td>
+<td>Runs JavaScript to inspect a page; werkz's own tabs; mobile, tablet or desktop sizes; several steps in one call</td>
+</tr>
 </tbody>
 </table>
 <p>Because <code>Bash</code> runs your real shell, werkz works with whatever your project uses: <code>git</code>, <code>go</code>, <code>npm</code>,
@@ -445,6 +549,7 @@ asking depends on the <a href="safety.html">permission mode</a>.</p>
     <li><a href="#copying-text">Copying text</a></li>
     <li><a href="#web-access">Web access</a></li>
     <li><a href="#the-browser">The browser</a></li>
+    <li><a href="#mcp-servers">MCP servers</a></li>
     <li><a href="#saved-conversations">Saved conversations</a></li>
     <li><a href="#the-tools-werkz-uses">The tools werkz uses</a></li>
   </ol></aside>
