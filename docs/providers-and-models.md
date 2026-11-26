@@ -40,6 +40,10 @@ says **Using ChatGPT plan** while one of these models is selected.
   automatically. `/logout chatgpt` revokes it.
 - When the plan's limit is reached, werkz says so and links to the usage page; with [fallback](fallback.md)
   on, another model can take over.
+- **Limits:** OpenAI doesn't share plan usage with apps, so werkz can't always show it. `/usage` shows the
+  5-hour and weekly readings when ChatGPT's responses include them (the same readings Codex shows; this isn't
+  documented by OpenAI), says clearly when the limit is reached, and otherwise links to
+  [chatgpt.com/settings/usage](https://chatgpt.com/settings/usage).
 - Over SSH or on a machine without a desktop, werkz shows the sign-in link instead of opening a browser.
   Open it on your computer; if werkz runs on another machine, first forward the port werkz names (for
   example `ssh -L 1455:127.0.0.1:1455 your-server`) so the sign-in can return to werkz.
@@ -62,6 +66,10 @@ How it differs from the other providers:
   apply. Switching to Claude Code mid-conversation passes the conversation so far along.
 - werkz removes `ANTHROPIC_API_KEY` from Claude Code's environment, so it uses your subscription rather than
   billing that key.
+- **Limits:** Claude Code reports your plan's usage windows with every request: the 5-hour window, the weekly
+  window, and a model's own weekly window (such as Fable) when your plan has one. The status bar shows them
+  (for example `5h 23% · weekly 24%`), `/usage` lists each with its reset time, and werkz warns once as a
+  window passes 80% and 90%.
 - This mode relies on Claude Code's documented headless mode; Anthropic's terms don't say whether running it
   from another app is allowed, so check them if that matters to you.
 

@@ -38,7 +38,8 @@ changes and checks its work, asking before it does anything risky.
 - **Bring your own model:** Claude (Fable 5.2, Opus 5.5, Sonnet 5.5, Haiku 5.5), OpenAI, Grok, Gemini,
   OpenRouter (free and paid models), Groq, or fully offline with Ollama.
 - **Or use your subscription:** sign in with ChatGPT to use your ChatGPT plan, or run your installed Claude
-  Code on your Claude subscription, alongside your API keys.
+  Code on your Claude subscription, alongside your API keys. `/usage` shows your plan's 5-hour and weekly
+  limits. See [Using a subscription](docs/providers-and-models.md#using-a-subscription-instead-of-an-api-key).
 - **You stay in control:** edits and commands ask first by default, anything outside your project always asks,
   and credential files are never opened.
 - **No surprise spending:** fallback to another model is off unless you choose it, and paid models are always

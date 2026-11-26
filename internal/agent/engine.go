@@ -282,6 +282,9 @@ func (e *Engine) attemptOnce(ctx context.Context, sys string, a attempt) (*llm.T
 			e.send(ToolResultMsg{ID: id, Name: name, Summary: externalSummary(output, isError), IsError: isError})
 		},
 		Approve: e.approveExternal,
+		OnPlanLimits: func(l llm.PlanLimits) {
+			e.send(PlanLimitsMsg(l))
+		},
 	})
 	if err != nil {
 		return nil, err

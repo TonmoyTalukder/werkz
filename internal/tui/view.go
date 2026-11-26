@@ -200,10 +200,10 @@ func (m *model) statusBar() string {
 	}
 	folder := sSky.Render(m.folderLabel())
 	prov := providerBadge(m.cfg.Provider)
-	if plan := planStatus(m.cfg.Provider, false); plan != "" {
+	if plan := m.planStatus(m.cfg.Provider, false); plan != "" {
 		// subscriptions don't cost per request: say what is used instead of a dollar amount
 		money = plan
-		moneyFull = planStatus(m.cfg.Provider, true)
+		moneyFull = m.planStatus(m.cfg.Provider, true)
 		if m.stats.cost > 0 {
 			moneyFull += sDim.Render(fmt.Sprintf(" · $%.2f on other models", m.stats.cost))
 		}

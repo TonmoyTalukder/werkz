@@ -12,6 +12,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -91,6 +92,10 @@ func (c *Client) Stream(ctx context.Context, req llm.Request, h llm.Handlers) (*
 		case ae.code == "subscription_sharing_unsupported_capability" && c.drop(body, ae.param):
 			// retry without the field this account doesn't accept
 		default:
+			if ae.code == "subscription_sharing_usage_limit_exceeded" && h.OnPlanLimits != nil {
+				h.OnPlanLimits(llm.PlanLimits{Provider: "chatgpt", At: time.Now(), Source: "ChatGPT reported the limit",
+					Windows: []llm.PlanWindow{{Name: "plan_limit", Used: -1, Status: "rejected"}}})
+			}
 			return nil, ae.httpError()
 		}
 	}
@@ -207,11 +212,46 @@ func (c *Client) do(ctx context.Context, body map[string]any, h llm.Handlers) (*
 		return nil, err
 	}
 	defer resp.Body.Close()
+	if l, ok := headerLimits(resp.Header); ok && h.OnPlanLimits != nil {
+		h.OnPlanLimits(l)
+	}
 	if resp.StatusCode >= 300 {
 		eb, _ := io.ReadAll(io.LimitReader(resp.Body, 8192))
 		return nil, parseError(resp.StatusCode, eb)
 	}
 	return readStream(resp.Body, h)
+}
+
+// headerLimits reads plan usage from the response headers Codex uses for its limit display, when
+// the service sends them. OpenAI doesn't document these for Sign in with ChatGPT, so their absence
+// is normal: werkz then points to chatgpt.com/settings/usage instead.
+func headerLimits(hd http.Header) (llm.PlanLimits, bool) {
+	l := llm.PlanLimits{Provider: "chatgpt", At: time.Now(), Source: "from ChatGPT's response headers (not officially documented)"}
+	for _, slot := range []string{"primary", "secondary"} {
+		pct := hd.Get("x-codex-" + slot + "-used-percent")
+		if pct == "" {
+			continue
+		}
+		used, err := strconv.ParseFloat(pct, 64)
+		if err != nil {
+			continue
+		}
+		w := llm.PlanWindow{Name: slot, Used: used / 100}
+		switch mins, _ := strconv.Atoi(hd.Get("x-codex-" + slot + "-window-minutes")); {
+		case mins == 300:
+			w.Name = "five_hour"
+		case mins >= 7*24*60-60 && mins <= 7*24*60+60:
+			w.Name = "seven_day"
+		}
+		if secs, err := strconv.Atoi(hd.Get("x-codex-" + slot + "-reset-after-seconds")); err == nil && secs > 0 {
+			w.ResetsAt = time.Now().Add(time.Duration(secs) * time.Second)
+		}
+		if w.Used >= 1 {
+			w.Status = "rejected"
+		}
+		l.Windows = append(l.Windows, w)
+	}
+	return l, len(l.Windows) > 0
 }
 
 // event is one server-sent event of a streamed response (only the fields werkz reads).

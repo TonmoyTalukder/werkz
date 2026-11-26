@@ -72,6 +72,8 @@ type Handlers struct {
 	OnExternalTool       func(tc ToolCall)
 	OnExternalToolResult func(id, name string, isError bool, output string)
 	Approve              func(ctx context.Context, tc ToolCall) (allow bool, reason string)
+	// OnPlanLimits receives a subscription's usage limits when the backend reports them.
+	OnPlanLimits func(PlanLimits)
 }
 
 type Request struct {

@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -284,11 +285,53 @@ type ccEvent struct {
 		Content []block `json:"content"`
 		Usage   *usage  `json:"usage"`
 	} `json:"message"`
-	IsError bool    `json:"is_error"`
-	Result  string  `json:"result"`
-	Usage   *usage  `json:"usage"`
-	Errors  []any   `json:"errors"`
-	Cost    float64 `json:"total_cost_usd"`
+	RateLimit *rateLimitInfo `json:"rate_limit_info"`
+	IsError   bool           `json:"is_error"`
+	Result    string         `json:"result"`
+	Usage     *usage         `json:"usage"`
+	Errors    []any          `json:"errors"`
+	Cost      float64        `json:"total_cost_usd"`
+}
+
+// rateLimitInfo is Claude Code's report on the subscription's usage windows.
+type rateLimitInfo struct {
+	Status         string  `json:"status"`
+	ResetsAt       float64 `json:"resetsAt"`
+	RateLimitType  string  `json:"rateLimitType"`
+	UnifiedWindows map[string]struct {
+		Utilization *float64 `json:"utilization"`
+		ResetsAt    float64  `json:"resetsAt"`
+		Status      string   `json:"status"`
+	} `json:"unifiedWindows"`
+}
+
+// limits converts the report, shortest window first (5-hour, then weekly ones).
+func (r *rateLimitInfo) limits() llm.PlanLimits {
+	l := llm.PlanLimits{Provider: "claudecode", At: time.Now(), Source: "reported by Claude Code"}
+	unix := func(s float64) time.Time {
+		if s <= 0 {
+			return time.Time{}
+		}
+		return time.Unix(int64(s), 0)
+	}
+	for name, w := range r.UnifiedWindows {
+		pw := llm.PlanWindow{Name: name, Used: -1, ResetsAt: unix(w.ResetsAt), Status: w.Status}
+		if w.Utilization != nil {
+			pw.Used = *w.Utilization
+		}
+		l.Windows = append(l.Windows, pw)
+	}
+	if len(l.Windows) == 0 && r.RateLimitType != "" {
+		l.Windows = append(l.Windows, llm.PlanWindow{Name: r.RateLimitType, Used: -1, ResetsAt: unix(r.ResetsAt), Status: r.Status})
+	}
+	sort.Slice(l.Windows, func(i, j int) bool {
+		a, b := l.Windows[i].Name, l.Windows[j].Name
+		if (a == "five_hour") != (b == "five_hour") {
+			return a == "five_hour"
+		}
+		return a < b
+	})
+	return l
 }
 
 type usage struct {
@@ -396,6 +439,10 @@ func parse(r io.Reader, h llm.Handlers) (*llm.Turn, error) {
 						h.OnExternalTool(llm.ToolCall{ID: b.ID, Name: b.Name, Args: NormalizeArgs(b.Input)})
 					}
 				}
+			}
+		case "rate_limit_event":
+			if ev.RateLimit != nil && h.OnPlanLimits != nil {
+				h.OnPlanLimits(ev.RateLimit.limits())
 			}
 		case "user":
 			if ev.Message == nil {

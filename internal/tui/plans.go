@@ -3,6 +3,7 @@ package tui
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/url"
 	"os"
 	"os/exec"
@@ -14,6 +15,7 @@ import (
 	"github.com/TonmoyTalukder/werkz/internal/catalog"
 	"github.com/TonmoyTalukder/werkz/internal/chatgpt"
 	"github.com/TonmoyTalukder/werkz/internal/config"
+	"github.com/TonmoyTalukder/werkz/internal/llm"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -221,17 +223,140 @@ func (m *model) noticeView() string {
 }
 
 // planStatus is the status-bar text for subscription providers ("" for others).
-func planStatus(provider string, wide bool) string {
+func (m *model) planStatus(provider string, wide bool) string {
+	var s string
 	switch provider {
 	case "chatgpt":
-		if wide {
-			return sGreen.Render("Using ChatGPT plan") + sDim.Render(" · Manage usage: "+chatgpt.ManageUsageURL)
-		}
-		return sGreen.Render("Using ChatGPT plan")
+		s = sGreen.Render("Using ChatGPT plan")
 	case "claudecode":
-		return sGreen.Render("Claude subscription") + sDim.Render(" via Claude Code")
+		s = sGreen.Render("Claude subscription")
+		if wide {
+			s += sDim.Render(" via Claude Code")
+		}
+	default:
+		return ""
 	}
-	return ""
+	if l, ok := m.planLimits[provider]; ok && len(l.Windows) > 0 {
+		var parts []string
+		for _, w := range l.Windows {
+			parts = append(parts, shortWindow(w))
+		}
+		s += sDim.Render(" · ") + strings.Join(parts, sDim.Render(" · "))
+	} else if provider == "chatgpt" && wide {
+		s += sDim.Render(" · Manage usage: " + chatgpt.ManageUsageURL)
+	}
+	return s
+}
+
+// shortWindow is a compact status-bar reading, e.g. "5h 23%" or "weekly Fable 61%".
+func shortWindow(w llm.PlanWindow) string {
+	label := strings.Replace(w.Label(), "5-hour", "5h", 1)
+	switch {
+	case w.Limited():
+		return sRed.Render(label + " limit reached")
+	case w.Used < 0:
+		return sDim.Render(label + " ok")
+	}
+	pct := fmt.Sprintf("%s %d%%", label, int(w.Used*100+0.5))
+	switch {
+	case w.Used >= 0.9:
+		return sRed.Render(pct)
+	case w.Used >= 0.75:
+		return sYellow.Render(pct)
+	}
+	return sDim.Render(pct)
+}
+
+// handlePlanLimits stores a subscription's latest limits and warns once as a window fills up.
+func (m *model) handlePlanLimits(l llm.PlanLimits) tea.Cmd {
+	if m.planLimits == nil {
+		m.planLimits, m.planWarned = map[string]llm.PlanLimits{}, map[string]bool{}
+	}
+	m.planLimits[l.Provider] = l
+	var cmds []tea.Cmd
+	for _, w := range l.Windows {
+		level := ""
+		switch {
+		case w.Limited():
+			level = "limit"
+		case w.Used >= 0.9:
+			level = "90"
+		case w.Used >= 0.8:
+			level = "80"
+		}
+		key := l.Provider + "/" + w.Name + "/" + level + "/" + w.ResetsAt.Format(time.RFC3339)
+		if level == "" || m.planWarned[key] {
+			continue
+		}
+		m.planWarned[key] = true
+		who := map[string]string{"claudecode": "Claude", "chatgpt": "ChatGPT"}[l.Provider]
+		msg := fmt.Sprintf("Your %s %s limit is %d%% used%s.", who, w.Label(), int(w.Used*100+0.5), resetText(w.ResetsAt, " and resets "))
+		if level == "limit" {
+			msg = fmt.Sprintf("Your %s %s limit is used up%s.", who, w.Label(), resetText(w.ResetsAt, "; it resets "))
+		}
+		cmds = append(cmds, m.printS(renderNotice("warn", msg+" /usage shows all limits.")))
+	}
+	return tea.Batch(cmds...)
+}
+
+// resetText says when a window resets ("" when unknown), with a lead-in such as " and resets ".
+func resetText(t time.Time, lead string) string {
+	if t.IsZero() {
+		return ""
+	}
+	d := time.Until(t).Round(time.Minute)
+	switch {
+	case d <= 0:
+		return lead + "now"
+	case d < 24*time.Hour:
+		return lead + "in " + strings.TrimSuffix(d.String(), "0s")
+	}
+	return lead + t.Local().Format("Mon Jan 2 15:04")
+}
+
+// usageText is the /usage panel: each subscription's limits, as far as it reports them.
+func (m *model) usageText() string {
+	var b strings.Builder
+	b.WriteString(gradient("Subscription usage", 0) + "\n")
+	shown := false
+	for _, p := range []string{"claudecode", "chatgpt"} {
+		name := map[string]string{"claudecode": "Claude subscription (Claude Code)", "chatgpt": "ChatGPT plan"}[p]
+		l, ok := m.planLimits[p]
+		if !ok || len(l.Windows) == 0 {
+			if m.cfg.Configured(p) {
+				shown = true
+				b.WriteString("\n" + sText.Render(name) + "\n")
+				if p == "claudecode" {
+					b.WriteString(sDim.Render("  Claude Code reports its limits with each request; they appear here after your first one.") + "\n")
+				} else {
+					b.WriteString(sDim.Render("  OpenAI doesn't share plan usage with apps. See it at "+chatgpt.ManageUsageURL+".") + "\n")
+				}
+			}
+			continue
+		}
+		shown = true
+		b.WriteString("\n" + sText.Render(name) + sDim.Render("  · "+l.Source+", "+l.At.Format("15:04")) + "\n")
+		for _, w := range l.Windows {
+			line := "  " + padRight(w.Label(), 16)
+			switch {
+			case w.Used >= 0:
+				line += ctxBar(int(w.Used*1000), 1000) + fmt.Sprintf(" %3d%%", int(w.Used*100+0.5))
+			case w.Limited():
+				line += sRed.Render("used up")
+			default:
+				line += sDim.Render("within limit")
+			}
+			line += sDim.Render(resetText(w.ResetsAt, "  · resets "))
+			b.WriteString(line + "\n")
+		}
+		if p == "chatgpt" {
+			b.WriteString(sDim.Render("  Details and caps per app: "+chatgpt.ManageUsageURL) + "\n")
+		}
+	}
+	if !shown {
+		b.WriteString(sDim.Render("No subscription in use. Use /login chatgpt or a \"(Claude Code)\" model to use one.") + "\n")
+	}
+	return box(strings.TrimRight(b.String(), "\n"), cSky, m.w)
 }
 
 // subscriptionTip points new users at the subscription options they can use but aren't using.

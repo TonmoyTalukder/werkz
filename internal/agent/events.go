@@ -36,6 +36,9 @@ type KeepAliveMsg struct {
 	Until time.Time // cache stays warm at least until then
 }
 
+// PlanLimitsMsg carries a subscription's usage limits (Claude Code, ChatGPT plan).
+type PlanLimitsMsg llm.PlanLimits
+
 type NoticeMsg struct {
 	Level string // info | warn | error
 	Text  string

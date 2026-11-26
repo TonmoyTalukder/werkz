@@ -209,3 +209,27 @@ func TestExpiredClaudeCodeSignIn(t *testing.T) {
 		t.Fatalf("expected a sign-in error, got %#v", err)
 	}
 }
+
+// Claude Code reports the subscription's usage windows; werkz passes them on.
+func TestRateLimitEventReportsPlanWindows(t *testing.T) {
+	bin, _ := fakeClaude(t, `{"type":"rate_limit_event","rate_limit_info":{"status":"allowed","resetsAt":1795678800,"rateLimitType":"five_hour","unifiedWindows":{"seven_day":{"utilization":0.24,"resetsAt":1795773600,"status":"allowed"},"five_hour":{"utilization":0.23,"resetsAt":1795678800,"status":"allowed"},"seven_day_fable":{"utilization":0.91,"resetsAt":1795773600,"status":"allowed_warning"}}}}
+{"type":"result","subtype":"success","is_error":false,"result":"ok"}
+`)
+	var got llm.PlanLimits
+	c := &Client{Bin: bin}
+	_, err := c.Stream(context.Background(), llm.Request{Dirs: []string{t.TempDir()}, History: []llm.Msg{{Role: llm.RoleUser, Text: "hi"}}},
+		llm.Handlers{OnPlanLimits: func(l llm.PlanLimits) { got = l }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Provider != "claudecode" || len(got.Windows) != 3 {
+		t.Fatalf("limits: %+v", got)
+	}
+	labels := []string{got.Windows[0].Label(), got.Windows[1].Label(), got.Windows[2].Label()}
+	if labels[0] != "5-hour" || labels[1] != "weekly" || labels[2] != "weekly Fable" {
+		t.Fatalf("labels %v", labels)
+	}
+	if w := got.Windows[0]; w.Used != 0.23 || w.ResetsAt.Unix() != 1795678800 {
+		t.Fatalf("5-hour window: %+v", w)
+	}
+}

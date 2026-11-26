@@ -195,3 +195,37 @@ func asHTTP(err error, he **llm.HTTPError) bool {
 	}
 	return false
 }
+
+// Plan usage headers, when ChatGPT sends them, become limits; a used-up plan is reported too.
+func TestPlanLimitsFromHeadersAndErrors(t *testing.T) {
+	f := &fake{reply: func(n int, body map[string]any, w http.ResponseWriter) {
+		if n == 1 {
+			w.Header().Set("x-codex-primary-used-percent", "42")
+			w.Header().Set("x-codex-primary-window-minutes", "300")
+			w.Header().Set("x-codex-primary-reset-after-seconds", "3600")
+			w.Header().Set("x-codex-secondary-used-percent", "7.5")
+			w.Header().Set("x-codex-secondary-window-minutes", "10080")
+			sse(w, completed)
+			return
+		}
+		w.WriteHeader(429)
+		fmt.Fprint(w, `{"error":{"code":"subscription_sharing_usage_limit_exceeded","message":"limit"}}`)
+	}}
+	c := client(f.server(t).URL)
+	var got []llm.PlanLimits
+	h := llm.Handlers{OnPlanLimits: func(l llm.PlanLimits) { got = append(got, l) }}
+	req := llm.Request{Model: "m", History: []llm.Msg{{Role: llm.RoleUser, Text: "hi"}}}
+	if _, err := c.Stream(context.Background(), req, h); err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || len(got[0].Windows) != 2 || got[0].Windows[0].Label() != "5-hour" || got[0].Windows[0].Used != 0.42 ||
+		got[0].Windows[1].Label() != "weekly" || got[0].Windows[0].ResetsAt.IsZero() {
+		t.Fatalf("header limits: %+v", got)
+	}
+	if _, err := c.Stream(context.Background(), req, h); err == nil {
+		t.Fatal("expected the usage-limit error")
+	}
+	if len(got) != 2 || !got[1].Windows[0].Limited() {
+		t.Fatalf("a used-up plan should be reported: %+v", got)
+	}
+}

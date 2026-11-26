@@ -29,6 +29,7 @@ var commands = []struct{ Name, Desc string }{
 	{"/cache", "Prompt cache stats · /cache ttl 5m|1h · /cache keepalive on|off|30"},
 	{"/context", "Show context window usage · /context window 350k|full limits the window"},
 	{"/cost", "Show session usage and cost"},
+	{"/usage", "Your subscription limits (Claude Code: 5-hour, weekly; ChatGPT plan)"},
 	{"/balance", "Set starting Claude credit, e.g. /balance 100"},
 	{"/mode", "Cycle permission mode (or shift+tab)"},
 	{"/clear", "Clear conversation"},
@@ -284,6 +285,8 @@ func (m *model) command(line string) tea.Cmd {
 		return pp(m.contextText)
 	case "/cost":
 		return pp(m.costText)
+	case "/usage", "/limits":
+		return pp(m.usageText)
 	case "/balance":
 		if len(args) > 0 {
 			v, err := strconv.ParseFloat(strings.TrimPrefix(args[0], "$"), 64)

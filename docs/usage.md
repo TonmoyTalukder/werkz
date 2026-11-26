@@ -17,6 +17,7 @@
 | `/cache` | Prompt-cache stats; `/cache ttl 5m\|1h`, `/cache keepalive on\|off\|<minutes>` |
 | `/context` | How much of the context window is in use; `/context window 350k\|full` sets or removes your own window limit |
 | `/cost` | Session tokens, cost and cache savings |
+| `/usage` | Your subscription's limits: Claude's 5-hour, weekly and model weekly windows (through Claude Code), and the ChatGPT plan's limits when OpenAI reports them |
 | `/balance 100` | Track your remaining Claude credit |
 | `/update` | Check for a new werkz release and install it; `/update auto on\|off` |
 | `/openrouter paid\|free` | Show OpenRouter's paid models too, or only the free ones (default) |

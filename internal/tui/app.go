@@ -11,6 +11,7 @@ import (
 	"github.com/TonmoyTalukder/werkz/internal/agent"
 	"github.com/TonmoyTalukder/werkz/internal/catalog"
 	"github.com/TonmoyTalukder/werkz/internal/config"
+	"github.com/TonmoyTalukder/werkz/internal/llm"
 	"github.com/TonmoyTalukder/werkz/internal/llm/openai"
 	"github.com/TonmoyTalukder/werkz/internal/textutil"
 	"github.com/TonmoyTalukder/werkz/internal/update"
@@ -104,7 +105,9 @@ type model struct {
 	updated   string // a newer version was installed in the background (restart to use it)
 	available string // a newer version exists but isn't installed (see updateAdvice)
 
-	loginCancel context.CancelFunc // stops an unfinished ChatGPT browser sign-in
+	loginCancel context.CancelFunc        // stops an unfinished ChatGPT browser sign-in
+	planLimits  map[string]llm.PlanLimits // latest usage limits reported per subscription
+	planWarned  map[string]bool           // limit warnings already shown
 }
 
 // turnState is the request currently running (if any) and what it has streamed so far.
@@ -417,6 +420,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.stats.warmUntil = time.Time{}
 		return m, m.printS(sSky.Render("✻ ") + sText.Render(how) + sDim.Render(fmt.Sprintf(" · ~%s → ~%s tokens per request",
 			catalog.HumanTokens(int(msg.Before)), catalog.HumanTokens(int(msg.After)))))
+
+	case agent.PlanLimitsMsg:
+		return m, m.handlePlanLimits(llm.PlanLimits(msg))
 
 	case agent.KeepAliveMsg:
 		m.stats.kaPings++

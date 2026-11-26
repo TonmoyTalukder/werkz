@@ -612,3 +612,30 @@ func (m *model) transcript() string {
 	}
 	return strings.Join(strings.Fields(b.String()), " ")
 }
+
+// Subscription limits show in the status bar and /usage, and filling windows are announced once.
+func TestPlanLimitsDisplay(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	cfg := config.Load()
+	cfg.Onboarded = true
+	cfg.Keys["anthropic"] = "k"
+	m := New(cfg, agent.New(cfg, func(any) {}), Options{Version: "dev"}).(*model)
+	m.Update(tea.WindowSizeMsg{Width: 160, Height: 40})
+	m.cfg.Provider, m.cfg.Model = "claudecode", "claude-opus-5-5"
+	reset := time.Now().Add(2 * time.Hour)
+	l := llm.PlanLimits{Provider: "claudecode", At: time.Now(), Source: "reported by Claude Code", Windows: []llm.PlanWindow{
+		{Name: "five_hour", Used: 0.23, ResetsAt: reset}, {Name: "seven_day", Used: 0.5}, {Name: "seven_day_fable", Used: 0.85}}}
+	m.Update(agent.PlanLimitsMsg(l))
+	m.Update(agent.PlanLimitsMsg(l)) // the same reading again: no second warning
+	view := ansi.Strip(m.View())
+	if !strings.Contains(view, "5h 23%") || !strings.Contains(view, "weekly Fable 85%") {
+		t.Fatalf("status bar should show the limits:\n%s", view)
+	}
+	if n := strings.Count(m.transcript(), "weekly Fable limit is 85% used"); n != 1 {
+		t.Fatalf("expected one warning, got %d:\n%s", n, m.transcript())
+	}
+	panel := ansi.Strip(m.usageText())
+	if !strings.Contains(panel, "5-hour") || !strings.Contains(panel, "resets in 2h") || !strings.Contains(panel, "weekly Fable") {
+		t.Fatalf("/usage:\n%s", panel)
+	}
+}
