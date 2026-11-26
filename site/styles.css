@@ -200,6 +200,25 @@ kbd {
 .hero .install { margin: 26px auto 0; max-width: 720px; text-align: left; }
 
 .shot { position: relative; margin: clamp(32px, 4vw, 44px) auto 0; width: min(1120px, 100vw - 2 * var(--gutter)); }
+
+/* wide screens: one row, the words and install on the left, werkz itself on the right (it gets the larger
+   share: the replay is a 100-column terminal that scales with its width) */
+@media (min-width: 1240px) { /* below this the replay would get too small beside the text: stacked */
+  .hero { text-align: left; padding-top: clamp(40px, 4vw, 64px); }
+  .hero-grid {
+    display: grid; grid-template-columns: minmax(0, 0.84fr) minmax(0, 1.16fr); align-items: center;
+    gap: clamp(36px, 3.4vw, 56px); width: var(--page); margin: 0 auto; /* lines up with the header */
+  }
+  .hero-grid > .wrap { width: auto; max-width: none; margin: 0; padding: 0; }
+  .hero h1 { margin: 0; max-width: 17ch; font-size: clamp(2.1rem, 2.9vw, 3.1rem); text-wrap: balance; }
+  .hero .lede { margin: 16px 0 0; max-width: 48ch; font-size: 1.06rem; }
+  .hero .install { font-size: 0.97em; }
+  .hero .install .cmd pre { font-size: 0.8rem; }
+  .hero .install { margin: 26px 0 0; max-width: none; }
+  .hero .btn-row { justify-content: flex-start; }
+  .hero-grid > .shot { width: auto; margin: 0; }
+  .shot figcaption { margin-left: auto; margin-right: auto; }
+}
 .shot::before {
   content: ""; position: absolute; inset: -6% -5% -8%; z-index: 0;
   background: var(--brand); filter: blur(64px); opacity: var(--glow); border-radius: 40%;

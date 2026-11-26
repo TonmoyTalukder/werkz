@@ -331,6 +331,11 @@ This is the signature workhorse. It is a Code Wash panel (10px radius, Hairline 
 ### Product Window (signature)
 A dark window (Tile Deep body, 16px radius, 14% ink border, Window shadow) holds a real capture of the werkz TUI. It has a 40px Tile title bar with three 11px dots in saffron, red and blue and a centred `~/code/my-app — werkz` title. It sits over the One Glow and rises into place on load (0.9s, 18px translate and 0.985 scale, `cubic-bezier(0.16, 1, 0.3, 1)`, 0.15s delay). A full-round caption pill sits below it. The image is always a genuine capture with alt text describing what the session shows.
 
+
+On screens 1240px and wider the hero is one row aligned to the page grid: the headline, lede, install card and
+buttons on the left (0.84fr) and the product window on the right (1.16fr, the larger share because the replay is
+a 100-column terminal that scales with its width). Narrower screens stack them, the window full width. At
+1280×720 and 1366×768 everything in the hero, buttons included, is in the first screen.
 ### Feature Tour
 
 The features section is a tour, not a card grid: a list of features beside a sticky product window that plays
