@@ -104,6 +104,10 @@ and doesn't overwrite it until you fix it.</li>
 <td>Don't check for or install updates this session (see <a href="installation.html#updating">Updating</a>)</td>
 </tr>
 <tr>
+<td><code>WERKZ_NO_MOUSE=1</code></td>
+<td>Start with werkz's mouse handling off (the terminal's own selection; <strong>Ctrl+S</strong> turns it on)</td>
+</tr>
+<tr>
 <td><code>WERKZ_CLAUDE_BIN</code></td>
 <td>Path of the <code>claude</code> command for Claude Code mode (<code>off</code> hides Claude Code)</td>
 </tr>
@@ -125,6 +129,10 @@ and doesn't overwrite it until you fix it.</li>
 <tr>
 <td><code>~/.config/werkz/chatgpt.json</code></td>
 <td>ChatGPT plan sign-in (mode 0600); <code>/logout chatgpt</code> removes its tokens</td>
+</tr>
+<tr>
+<td><code>~/.config/werkz/sessions/</code></td>
+<td>Saved conversations for <code>/resume</code> (mode 0600, the latest 500); <code>history_off</code> in config.json, or <code>/resume off</code>, stops saving</td>
 </tr>
 <tr>
 <td><code>~/.cache/werkz/outputs/</code></td>

@@ -114,8 +114,8 @@
 <td>It's the unsigned-app quarantine: right-click → <strong>Open</strong>, or run <code>xattr -dr com.apple.quarantine /Applications/werkz.app</code></td>
 </tr>
 <tr>
-<td>Text can't be selected</td>
-<td>Hold <strong>Shift</strong> while dragging (the mouse is used for scrolling)</td>
+<td>Selected text isn't copied</td>
+<td>werkz copies with <code>wl-copy</code>, <code>xclip</code> or <code>xsel</code> on Linux: install one. Over SSH it uses OSC 52, which some terminals (GNOME Terminal, older xterm) ignore; press <strong>Ctrl+S</strong> and select with the terminal, or use <code>/copy</code> and press <strong>w</strong> to write a file</td>
 </tr>
 <tr>
 <td><code>werkz: command not found</code> after installing</td>

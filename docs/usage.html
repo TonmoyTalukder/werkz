@@ -143,8 +143,24 @@
 <td>Cycle the permission mode; <code>/mode default|accept|plan|auto|bypass</code> picks one (bypass asks to confirm)</td>
 </tr>
 <tr>
+<td><code>/resume [search]</code></td>
+<td>Find a saved conversation and continue it (see <a href="#saved-conversations">Conversations</a>); <code>/resume off|on</code> stops or restarts saving</td>
+</tr>
+<tr>
+<td><code>/copy</code></td>
+<td>Copy the latest response as markdown, or one of its code blocks exactly; <code>/copy 2</code> the one before, <code>/copy prompt</code> your last request, <code>/copy all</code> the whole conversation</td>
+</tr>
+<tr>
+<td><code>/export [file]</code></td>
+<td>Save the conversation as a markdown file</td>
+</tr>
+<tr>
+<td><code>/docs</code></td>
+<td>Open this documentation in your browser</td>
+</tr>
+<tr>
 <td><code>/clear</code></td>
-<td>Start a fresh conversation</td>
+<td>Start a new conversation (the previous one stays in <code>/resume</code>)</td>
 </tr>
 <tr>
 <td><code>/help</code> · <code>/exit</code></td>
@@ -182,12 +198,24 @@
 <td>Complete a slash command</td>
 </tr>
 <tr>
+<td><strong>@</strong></td>
+<td>Mention a file or folder (see <a href="#mentioning-files">Mentioning files</a>)</td>
+</tr>
+<tr>
 <td><strong>PgUp / PgDn</strong>, <strong>Ctrl+U / Ctrl+D</strong>, mouse wheel</td>
 <td>Scroll the conversation; <strong>Home / End</strong> jump to the top or bottom</td>
 </tr>
 <tr>
-<td><strong>Shift + drag</strong></td>
-<td>Select text</td>
+<td><strong>Drag</strong> with the mouse</td>
+<td>Select text in the conversation; releasing the button copies it (<strong>Ctrl+C</strong> or <strong>y</strong> copies again, <strong>Esc</strong> clears)</td>
+</tr>
+<tr>
+<td><strong>Alt+↑</strong> / <strong>Ctrl+O</strong></td>
+<td>Select a whole request or response with <strong>↑/↓</strong>, <strong>Enter</strong> copies it</td>
+</tr>
+<tr>
+<td><strong>Ctrl+S</strong></td>
+<td>Turn werkz's mouse handling off (and on again), so your terminal's own selection works</td>
 </tr>
 <tr>
 <td><strong>Ctrl+C</strong> twice</td>
@@ -204,9 +232,47 @@ werkz -w my-workspace              # open a saved workspace
 werkz --model claude-sonnet-5-5    # use a model for this session only (not saved)
 werkz --provider groq --model llama-3.3-70b-versatile   # name the provider when the id is ambiguous
 werkz --login                      # open the API key screen
+werkz -c                           # continue the latest conversation in this folder (--continue)
+werkz -r                           # choose a saved conversation to continue (--resume)
 werkz --update                     # install the latest release and exit
 werkz --version
 </code></pre>
+<h2 id="mentioning-files">Mentioning files<a class="anchor" href="#mentioning-files" aria-label="Link to this section">#</a></h2>
+<p>Type <strong>@</strong> to pick a file or folder; its contents go with your message, so the model doesn't need to read it
+first. The list follows what you type:</p>
+<ul>
+<li><code>@login</code> finds files by name, anywhere in your folders; <code>@src/au/log</code> matches folder by folder
+(<code>src/auth/login.ts</code>).</li>
+<li><code>@</code> alone lists the top level; <strong>Tab</strong> on a folder opens it (<code>@src/</code>), <strong>Enter</strong> chooses the highlighted
+file or folder, <strong>Esc</strong> closes the list. Enter never sends the message at the same time.</li>
+<li>In a workspace with several folders, paths start with the folder's name: <code>@api/main.go</code>,
+<code>@web/src/app.ts</code>. Two folders with the same name are told apart as <code>parent-name</code>.</li>
+<li>Add lines with <code>@main.go:10-40</code>, <code>@main.go:10</code> or <code>@main.go#L10-L40</code>; quote paths with spaces:
+<code>@&quot;My Docs/notes.md&quot;</code>.</li>
+</ul>
+<p>Mentions are shown as code-style chips in the input box and in the conversation, with a line underneath
+listing what was attached. Files are attached up to 2,000 lines (100 KB); longer files are cut, and the
+model can read the rest. A folder sends a two-level listing, and a binary file just its path. The usual
+rules apply: credential files are never attached, files outside your working folders aren't attached,
+and an <code>@</code> inside a word (<code>me@example.com</code>) is never a mention. The list uses git's view of the
+repository (so ignored files don't show up), or a capped scan of a folder that isn't a repository.</p>
+<h2 id="copying-text">Copying text<a class="anchor" href="#copying-text" aria-label="Link to this section">#</a></h2>
+<p><strong>Drag over the text you want</strong> in the conversation: it's highlighted, and releasing the mouse button copies
+it. To copy exactly what was written (markdown, or a code block without the frame around it), use <strong>Alt+↑</strong>
+to pick a message, or <code>/copy</code>. A response with code blocks lets you choose one, or press <strong>w</strong> to save it to a
+file. werkz copies with your system's clipboard tool (<code>wl-copy</code>, <code>xclip</code>, <code>xsel</code>, <code>pbcopy</code>, PowerShell on
+WSL), inside tmux into tmux's buffer, and over SSH with the OSC 52 terminal sequence. If your terminal doesn't
+support that, press <strong>Ctrl+S</strong> and select with the terminal itself.</p>
+<h2 id="saved-conversations">Saved conversations<a class="anchor" href="#saved-conversations" aria-label="Link to this section">#</a></h2>
+<p>Every conversation is saved as you go, so you can come back to it. <code>/resume</code> lists the ones from this
+folder (Tab shows all folders), newest first; type to search what was asked and answered, <strong>Enter</strong>
+continues one, <strong>Ctrl+X</strong> twice deletes one. Continuing a conversation brings back its folders, its model
+and the whole transcript, and the model picks up where it left off. Files it read before are read again
+before they're changed. From the command line, <code>werkz -c</code> continues the latest conversation in the current
+folder and <code>werkz -r</code> opens the list.</p>
+<p>werkz keeps the latest 500 conversations in <code>~/.config/werkz/sessions/</code>, readable only by you. They hold
+what you and the model wrote, including file contents it read. <code>/resume off</code> stops saving (saved ones stay
+until you delete them).</p>
 <h2 id="the-tools-werkz-uses">The tools werkz uses<a class="anchor" href="#the-tools-werkz-uses" aria-label="Link to this section">#</a></h2>
 <p>werkz gives the model a small set of tools and runs them on your machine:</p>
 <table>
@@ -258,6 +324,9 @@ asking depends on the <a href="safety.html">permission mode</a>.</p>
     <li><a href="#slash-commands">Slash commands</a></li>
     <li><a href="#keyboard-shortcuts">Keyboard shortcuts</a></li>
     <li><a href="#command-line">Command line</a></li>
+    <li><a href="#mentioning-files">Mentioning files</a></li>
+    <li><a href="#copying-text">Copying text</a></li>
+    <li><a href="#saved-conversations">Saved conversations</a></li>
     <li><a href="#the-tools-werkz-uses">The tools werkz uses</a></li>
   </ol></aside>
 </div>

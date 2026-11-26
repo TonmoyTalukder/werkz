@@ -138,6 +138,10 @@ as reading files in the project) don't reach werkz.</p>
 <li><strong>Your code goes only to the provider you're using.</strong> werkz has no server, telemetry or analytics. Prompts
 and the files the model reads are sent to the model provider you selected (or stay on your machine with
 Ollama). The <code>Task</code> sub-agent uses the same provider.</li>
+<li><strong>Saved conversations stay on your machine</strong>, in files only your user can read (see
+<a href="usage.html#saved-conversations">Saved conversations</a>); <code>/resume off</code> stops saving them.</li>
+<li><strong>@mentions follow the same rules as the Read tool:</strong> credential files are never attached and files
+outside your working folders aren't attached.</li>
 <li><strong>Keys stay on your machine</strong>, in a config file only your user can read (see <a href="configuration.html">Configuration</a>).</li>
 <li><strong>No surprise spending or sharing:</strong> fallback is off unless you turn it on (see <a href="fallback.html">Fallback</a>),
 Ask mode labels paid models, and model or effort changes that would re-send the conversation uncached warn
