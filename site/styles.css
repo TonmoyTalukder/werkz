@@ -114,7 +114,7 @@ kbd {
 .brand:hover { text-decoration: none; }
 .brand img { width: 28px; height: 28px; border-radius: 7px; }
 /* the mark alone on light pages; the app icon (its dark tile) on dark pages, where it belongs */
-.brand .logo-mark { display: block; width: 30px; height: 28px; flex: none; }
+.brand .logo-mark { display: block; width: 28px; height: 28px; flex: none; } /* the tile icon's frame: the w keeps its size and place in both themes */
 .brand .logo-tile { display: none; }
 :root[data-theme="dark"] .brand .logo-mark { display: none; }
 :root[data-theme="dark"] .brand .logo-tile { display: block; }
