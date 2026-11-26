@@ -204,7 +204,12 @@ kbd {
 /* wide screens: one row, the words and install on the left, werkz itself on the right (it gets the larger
    share: the replay is a 100-column terminal that scales with its width) */
 @media (min-width: 1240px) { /* below this the replay would get too small beside the text: stacked */
-  .hero { text-align: left; padding-top: clamp(40px, 4vw, 64px); }
+  /* the hero fills the screen under the sticky header (65px), its row centred vertically */
+  .hero {
+    text-align: left; display: flex; flex-direction: column; justify-content: center;
+    min-height: calc(100vh - 65px); padding: 32px 0 40px; box-sizing: border-box;
+  }
+  @media (max-height: 760px) { .hero { padding: 18px 0 20px; } } /* laptops: keep it to one screen */
   .hero-grid {
     display: grid; grid-template-columns: minmax(0, 0.84fr) minmax(0, 1.16fr); align-items: center;
     gap: clamp(36px, 3.4vw, 56px); width: var(--page); margin: 0 auto; /* lines up with the header */

@@ -335,7 +335,9 @@ A dark window (Tile Deep body, 16px radius, 14% ink border, Window shadow) holds
 On screens 1240px and wider the hero is one row aligned to the page grid: the headline, lede, install card and
 buttons on the left (0.84fr) and the product window on the right (1.16fr, the larger share because the replay is
 a 100-column terminal that scales with its width). Narrower screens stack them, the window full width. At
-1280×720 and 1366×768 everything in the hero, buttons included, is in the first screen.
+1280×720 and 1366×768 everything in the hero, buttons included, is in the first screen. On these large screens the hero fills
+exactly one screen under the sticky header (`100vh` minus 65px), its row centred vertically, so the next
+section starts at the fold.
 ### Feature Tour
 
 The features section is a tour, not a card grid: a list of features beside a sticky product window that plays
