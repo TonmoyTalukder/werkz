@@ -18,3 +18,8 @@ Inside a workspace, the model can read, search and edit in every folder, and `Gr
 them. Shell commands run in the main folder with the workspace's variables. The status bar shows the
 workspace, for example `▸ my-app (2)`. Anything outside the workspace folders still asks first
 (see [Safety and privacy](safety.md)).
+
+To attach a file from one of the folders, start the mention with the folder's name: `@api/src/main.go`,
+`@web/src/App.tsx`. Typing `@` lists every folder of the workspace (see [Mentioning files](usage.md#mentioning-files)).
+A workspace's folders also decide which MCP servers start: a project's `.werkz/mcp.json` is read from the main
+folder (see [MCP servers](usage.md#mcp-servers)).

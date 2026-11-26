@@ -91,7 +91,16 @@ werkz/
 │   ├── llm/            provider-neutral messages, tool calls, usage, Provider interface
 │   │   ├── claude/     Anthropic Messages API backend (streaming, thinking, caching)
 │   │   └── openai/     OpenAI-compatible backend (OpenAI, Grok, Gemini, OpenRouter, Groq, Ollama)
-│   ├── tools/          Read/Write/Edit/Bash/LS/Glob/Grep, output trimming, read/edit guards
+│   ├── tools/          Read/Write/Edit/Bash/LS/Glob/Grep, DevServer, output trimming, read/edit guards
+│   ├── web/            WebFetch (HTML to Markdown, local-network guard) and WebSearch backends
+│   ├── browser/        werkz's browser over Chrome DevTools: launch and connected mode, actions,
+│   │                   form-submit guard, tabs, screenshots
+│   ├── termimg/        pictures in the terminal: Kitty placeholders, iTerm2, Sixel, links
+│   ├── mcp/            MCP client: config files, stdio/HTTP/SSE servers, tools
+│   ├── mcpauth/        OAuth sign-in for remote MCP servers, token store
+│   ├── mention/        @ mentions: parsing, resolving, the file index and search
+│   ├── session/        saved conversations (/resume)
+│   ├── clipboard/      copying: clipboard tools, werkz's own X11 helper, OSC 52
 │   ├── tui/            Bubble Tea interface: transcript, input, dialogs, status bar, theme
 │   ├── update/         self-update from GitHub releases (checksum-verified, atomic)
 │   ├── textutil/       small shared text helpers

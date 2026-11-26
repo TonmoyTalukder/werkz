@@ -40,6 +40,14 @@
 ⏺ Empty and whitespace-only passwords are now rejected before the API call, with a test covering both.
 ```
 
+## Make the most of it
+
+- Type **`@`** to attach a file or folder to your message: [Mentioning files](usage.md#mentioning-files)
+- **Drag** over any text in the conversation to copy it: [Copying text](usage.md#copying-text)
+- `/resume` (or `werkz -c`) continues an earlier conversation: [Saved conversations](usage.md#saved-conversations)
+- Ask werkz to check web UI it changed: it starts your dev server and uses Chrome: [The browser](usage.md#the-browser)
+- Add your MCP servers to use their tools: [MCP servers](usage.md#mcp-servers)
+
 ## Next steps
 
 - `/model` to switch models, `/effort` to set how hard the model thinks: [Providers and models](providers-and-models.md)

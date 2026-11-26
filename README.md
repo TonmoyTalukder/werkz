@@ -107,7 +107,7 @@ want done. werkz shows each command and edit before running it; choose with
 |---|---|
 | [Installation](docs/installation.md) | Installer, Homebrew, apt, dnf, downloads, updating, uninstalling |
 | [Getting started](docs/getting-started.md) | First run and your first task |
-| [Usage](docs/usage.md) | Commands, keyboard shortcuts, command-line flags, tools |
+| [Usage](docs/usage.md) | Commands and shortcuts, `@` mentions, copying, `/resume`, web access, the browser, MCP servers |
 | [Providers and models](docs/providers-and-models.md) | API keys, ChatGPT and Claude subscriptions, free and local models, prices, effort |
 | [Safety and privacy](docs/safety.md) | Permission modes (including Bypass) and the rules that always apply |
 | [Fallback](docs/fallback.md) | What happens when a model fails |
