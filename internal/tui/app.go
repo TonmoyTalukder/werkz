@@ -94,14 +94,15 @@ type model struct {
 	mdCache map[int]*glamour.TermRenderer
 
 	// optional workspace (nil = default: just the launch folder)
-	ws       *config.Workspace
-	wsp      wsPicker
-	wsf      wsForm
-	startDir string
-	onStart  func() tea.Cmd // e.g. open a workspace given on the command line
-	version  string
-	updater  *update.Updater
-	updated  string // a newer version was installed in the background (restart to use it)
+	ws        *config.Workspace
+	wsp       wsPicker
+	wsf       wsForm
+	startDir  string
+	onStart   func() tea.Cmd // e.g. open a workspace given on the command line
+	version   string
+	updater   *update.Updater
+	updated   string // a newer version was installed in the background (restart to use it)
+	available string // a newer version exists but isn't installed (see updateAdvice)
 
 	loginCancel context.CancelFunc // stops an unfinished ChatGPT browser sign-in
 }
@@ -227,12 +228,15 @@ func (m *model) Init() tea.Cmd {
 	if m.cfg.Configured("openrouter") {
 		cmds = append(cmds, fetchModels(m.cfg, "openrouter")) // free models come and go: check ours
 	}
-	if m.autoUpdateDue() {
+	if m.updateCheckDue() {
 		cmds = append(cmds, m.checkUpdate(false))
 	}
 	if m.state == stateChat {
 		m.push(m.banner)
 		m.homeNotice()
+		if advice := m.rememberedUpdate(); advice != "" {
+			m.printS(renderNotice("info", advice))
+		}
 		if err := m.cfg.LoadErr(); err != nil {
 			m.printS(renderNotice("error", "Couldn't load your settings: "+err.Error()+
 				". werkz is running with defaults and won't overwrite the file this session."))

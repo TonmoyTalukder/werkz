@@ -55,7 +55,7 @@ curl -fsSL https://raw.githubusercontent.com/TonmoyTalukder/werkz/main/install.s
 
 This installs the latest [release](https://github.com/TonmoyTalukder/werkz/releases) for Linux (x86-64, ARM64)
 or macOS (Apple Silicon, Intel), including a clickable app icon. werkz then keeps itself up to date
-automatically.
+automatically. Every install method is on the [werkz website](https://tonmoytalukder.github.io/werkz/).
 
 With [Homebrew](https://brew.sh) (macOS or Linux):
 
@@ -65,8 +65,9 @@ brew install --cask ZenixBit/tap/werkz
 
 On Debian/Ubuntu and Fedora/RHEL you can also install with `sudo apt install werkz` or `sudo dnf install werkz`
 after adding the werkz repository ([two commands](docs/installation.md#apt-debian-ubuntu)), and each release has
-`.apk` and Arch Linux packages too. Homebrew and package installs update through their package manager. Prefer to download the files yourself, or use `go install`? See
-[Installation](docs/installation.md).
+`.apk` and Arch Linux packages too. Homebrew and package installs update through their package manager, and
+werkz shows the exact command when a new version is out. Prefer to download the files yourself, or use
+`go install`? See [Installation](docs/installation.md).
 
 ## Quick start
 

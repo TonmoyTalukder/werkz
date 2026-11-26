@@ -156,18 +156,74 @@ func TestReadOnlyInstallFolder(t *testing.T) {
 
 // Package-manager installs are never overwritten: the user is told how to update instead.
 func TestPackageManagedInstallsAreLeftAlone(t *testing.T) {
+	root := t.TempDir() // no package databases: /usr/bin/werkz from an unknown package manager
 	for exe, want := range map[string]string{
-		"/usr/bin/werkz": "your package manager (apt, dnf, apk or pacman)",
+		"/usr/bin/werkz": "update it with your package manager",
 		"/opt/homebrew/Caskroom/werkz/0.1.1/werkz":      "brew upgrade --cask werkz",
 		"/home/linuxbrew/.linuxbrew/Cellar/werkz/x/bin": "brew upgrade werkz",
 	} {
-		u := &Updater{Base: "http://127.0.0.1:1", Exe: exe}
+		u := &Updater{Base: "http://127.0.0.1:1", Exe: exe, Root: root, RPMQuery: func() bool { return false }}
 		var me *ManagedError
 		if err := u.Install(context.Background(), "9.9.9"); !errors.As(err, &me) || me.Command != want {
 			t.Errorf("%s: got %v, want ManagedError(%q)", exe, err, want)
 		}
 	}
-	if _, ok := (&Updater{Exe: filepath.Join(t.TempDir(), "werkz")}).Managed(); ok {
+	if _, ok := (&Updater{Exe: filepath.Join(t.TempDir(), "werkz")}).Managed("9.9.9"); ok {
 		t.Error("a user-installed copy must not count as package-managed")
+	}
+}
+
+// Each install method gets the command that updates it best.
+func TestInstallMethods(t *testing.T) {
+	write := func(root, p, content string) {
+		t.Helper()
+		full := filepath.Join(root, p)
+		if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(full, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	rel := "https://github.com/TonmoyTalukder/werkz/releases/download/v1.2.3/"
+	cases := []struct {
+		name  string
+		files map[string]string
+		rpm   bool
+		arch  string
+		want  Method
+	}{
+		{"apt repository", map[string]string{"/var/lib/dpkg/info/werkz.list": "", "/etc/apt/sources.list.d/werkz.list": ""}, false, "amd64",
+			Method{Kind: "apt", Command: "sudo apt update && sudo apt install --only-upgrade werkz"}},
+		{"apt with automatic updates", map[string]string{"/var/lib/dpkg/info/werkz.list": "", "/etc/apt/sources.list.d/werkz.list": "",
+			"/etc/apt/apt.conf.d/52werkz-unattended": `Unattended-Upgrade::Origins-Pattern { "origin=werkz"; };`}, false, "amd64",
+			Method{Kind: "apt", Command: "sudo apt update && sudo apt install --only-upgrade werkz", Auto: true,
+				Note: "your system installs it automatically, usually within a day"}},
+		{"downloaded .deb", map[string]string{"/var/lib/dpkg/info/werkz.list": ""}, false, "arm64",
+			Method{Kind: "apt", Command: "curl -fsSLO " + rel + "werkz_1.2.3_arm64.deb && sudo apt install ./werkz_1.2.3_arm64.deb",
+				Note: "add the werkz apt repository to get updates with apt (tonmoytalukder.github.io/werkz)"}},
+		{"dnf repository", map[string]string{"/etc/yum.repos.d/werkz.repo": ""}, true, "amd64",
+			Method{Kind: "dnf", Command: "sudo dnf upgrade werkz"}},
+		{"downloaded .rpm", nil, true, "arm64",
+			Method{Kind: "rpm", Command: "sudo dnf install " + rel + "werkz-1.2.3-1.aarch64.rpm",
+				Note: "add the werkz dnf repository to get updates with dnf (tonmoytalukder.github.io/werkz)"}},
+		{"pacman", map[string]string{"/var/lib/pacman/local/werkz-1.2.2-1/desc": ""}, false, "amd64",
+			Method{Kind: "pacman", Command: "sudo pacman -U " + rel + "werkz-1.2.3-1-x86_64.pkg.tar.zst"}},
+		{"apk", map[string]string{"/lib/apk/db/installed": "C:x\nP:busybox\n\nC:y\nP:werkz\nV:1.2.2\n"}, false, "amd64",
+			Method{Kind: "apk", Command: "sudo apk add --allow-untrusted " + rel + "werkz_1.2.3_x86_64.apk"}},
+	}
+	for _, c := range cases {
+		root := t.TempDir()
+		for p, content := range c.files {
+			write(root, p, strings.ReplaceAll(content, "\\n", "\n"))
+		}
+		rpm := c.rpm
+		u := &Updater{Exe: "/usr/bin/werkz", Root: root, GOARCH: c.arch, RPMQuery: func() bool { return rpm }}
+		if got := u.Method("1.2.3"); got != c.want {
+			t.Errorf("%s:\n got  %+v\n want %+v", c.name, got, c.want)
+		}
+	}
+	if m := (&Updater{Exe: filepath.Join(t.TempDir(), "werkz")}).Method("1.2.3"); m.Kind != "self" || !m.Auto {
+		t.Errorf("a copy in a folder werkz can write to updates itself: %+v", m)
 	}
 }

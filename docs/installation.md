@@ -135,23 +135,39 @@ To build the Linux and macOS packages yourself, see [Development](development.md
 
 ## Updating
 
-werkz **updates itself**. Once a day, in the background, it checks GitHub for a newer release. If there is
-one, it downloads the binary for your system, verifies it against the release's `SHA256SUMS`, and replaces
-itself. The new version is used the next time you start werkz, and the status bar says when a restart is
-needed.
+werkz checks GitHub for a new release once a day, in the background. What happens next depends on how you
+installed it, and werkz always tells you the best way for your installation:
 
-- `/update` checks and installs right away; `werkz --update` does the same from a terminal.
-- `/update auto off` turns automatic updates off (`/update auto on` turns them back on); setting
-  `WERKZ_NO_UPDATE=1` disables them for a session.
-- If werkz is installed somewhere it can't write to (for example system-wide), it tells you an update is
-  available instead; run the one-line installer again to update.
-- Builds made with `go build` without a version (shown as `dev`) never update themselves.
-- **Homebrew and Linux packages** (`.deb`, `.rpm`, `.apk`, Arch) are owned by the package manager, so werkz
-  never replaces them. It tells you a new version is out and how to update instead, for example
-  `brew upgrade --cask werkz`.
+| Installed with | What happens |
+|---|---|
+| One-line installer or a downloaded file | werkz downloads the new version, verifies it against `SHA256SUMS`, and replaces itself; restart to use it |
+| apt (werkz repository) | `sudo apt update && sudo apt install --only-upgrade werkz`; with [automatic updates](#automatic-updates-with-apt) on, Ubuntu installs it for you |
+| dnf (werkz repository) | `sudo dnf upgrade werkz` |
+| A `.deb`, `.rpm`, `.apk` or Arch package file | werkz shows the command with the download link for the new package |
+| Homebrew | `brew upgrade --cask werkz` |
+| A folder werkz can't write to | Run the one-line installer again |
 
-Only the `werkz` command is replaced; app icons and launchers stay as installed. Running the one-line installer
-again also updates everything and keeps your settings.
+While an update is waiting, the status bar shows **↑ werkz X available**, and werkz reminds you when it starts.
+Type `/update` to see the exact command (or, for copies that update themselves, to install it right away);
+`werkz --update` does the same from a terminal.
+
+- `/update auto off` stops automatic installs; werkz still tells you when a new version is out.
+  `/update auto on` turns them back on.
+- `WERKZ_NO_UPDATE=1` disables checks for a session. Builds made with `go build` without a version (shown as
+  `dev`) never check.
+- Only the `werkz` command is replaced; app icons and launchers stay as installed. Running the one-line
+  installer again also updates everything and keeps your settings.
+
+### Automatic updates with apt
+
+Ubuntu's background updater installs only Ubuntu's own security updates by default. To let it install new
+werkz versions too (usually within a day of a release):
+
+```bash
+echo 'Unattended-Upgrade::Origins-Pattern { "origin=werkz"; };' | sudo tee /etc/apt/apt.conf.d/52werkz-unattended
+```
+
+Remove that file to turn it off again.
 
 ## Uninstalling
 

@@ -109,6 +109,7 @@ type Config struct {
 	OpenRouterPaid  bool            `json:"openrouter_paid,omitempty"`   // also offer paid OpenRouter models (default: free only)
 	NoAutoUpdate    bool            `json:"auto_update_off,omitempty"`   // don\'t install new releases automatically
 	UpdateCheckedAt time.Time       `json:"update_checked_at,omitempty"` // last time werkz looked for a new release
+	UpdateLatest    string          `json:"update_latest,omitempty"`     // newest release seen by that check
 	CacheTTL        string          `json:"cache_ttl,omitempty"`         // 5m (default) | 1h
 	KeepAliveMin    int             `json:"cache_keepalive_minutes"`     // 0 = default (30)
 	NoKeepAlive     bool            `json:"cache_keepalive_off,omitempty"`

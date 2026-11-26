@@ -116,14 +116,17 @@ func selfUpdate() error {
 		fmt.Printf("werkz %s is up to date\n", version)
 		return nil
 	}
+	if how := u.Method(latest); how.Kind != "self" {
+		fmt.Printf("werkz %s is available (you have %s). Update with:\n  %s\n", latest, version, how.Command)
+		if how.Note != "" {
+			fmt.Println("(" + how.Note + ")")
+		}
+		return nil
+	}
 	fmt.Printf("Installing werkz %s (you have %s)…\n", latest, version)
 	if err := u.Install(ctx, latest); err != nil {
-		var managed *update.ManagedError
-		if errors.As(err, &managed) {
-			return fmt.Errorf("werkz %s is available; %w", latest, err)
-		}
 		if errors.Is(err, update.ErrNotWritable) {
-			return fmt.Errorf("%w; update with: curl -fsSL https://raw.githubusercontent.com/TonmoyTalukder/werkz/main/install.sh | sh", err)
+			return fmt.Errorf("%w; update with: %s", err, update.InstallScript)
 		}
 		return err
 	}

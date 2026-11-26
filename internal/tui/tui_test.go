@@ -26,6 +26,7 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/charmbracelet/x/ansi"
 )
 
 func TestViewsRender(t *testing.T) {
@@ -553,4 +554,61 @@ func TestAutoUpdate(t *testing.T) {
 	if dev.autoUpdateDue() {
 		t.Fatal("a development build must never update itself")
 	}
+}
+
+// With automatic installs off, or for a package-manager install, werkz still says an update is
+// available, how to get it, and keeps saying so (status bar, and again on the next start).
+func TestUpdateAvailableAdvice(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("WERKZ_NO_UPDATE", "")
+	srv := testutil.FakeReleases("0.2.0", map[string][]byte{})
+	defer srv.Close()
+
+	// 1. A copy werkz updates itself, with automatic updates off: nothing is installed.
+	exe := filepath.Join(t.TempDir(), "werkz")
+	must(t, os.WriteFile(exe, []byte("old werkz"), 0o755))
+	cfg := config.Load()
+	cfg.Onboarded, cfg.NoAutoUpdate = true, true
+	cfg.Keys["anthropic"] = "k"
+	m := New(cfg, agent.New(cfg, func(any) {}), Options{Version: "0.1.0",
+		Updater: &update.Updater{Base: srv.URL + "/releases", Exe: exe}}).(*model)
+	m.Update(tea.WindowSizeMsg{Width: 140, Height: 40})
+	if !m.updateCheckDue() {
+		t.Fatal("werkz should still look for updates with automatic installs off")
+	}
+	m.Update(m.checkUpdate(false)())
+	if got, _ := os.ReadFile(exe); string(got) != "old werkz" {
+		t.Fatal("nothing may be installed with automatic updates off")
+	}
+	if m.available != "0.2.0" || !strings.Contains(m.View(), "werkz 0.2.0 available") || !strings.Contains(m.transcript(), "/update to install") {
+		t.Fatalf("the update should be announced: available=%q\n%s", m.available, m.transcript())
+	}
+
+	// 2. A package-manager install: the exact command, remembered at the next start.
+	root := t.TempDir()
+	must(t, os.MkdirAll(filepath.Join(root, "var/lib/dpkg/info"), 0o755))
+	must(t, os.WriteFile(filepath.Join(root, "var/lib/dpkg/info/werkz.list"), nil, 0o644))
+	must(t, os.MkdirAll(filepath.Join(root, "etc/apt/sources.list.d"), 0o755))
+	must(t, os.WriteFile(filepath.Join(root, "etc/apt/sources.list.d/werkz.list"), nil, 0o644))
+	cfg = config.Load()
+	if cfg.UpdateLatest != "0.2.0" {
+		t.Fatalf("the newest release should be remembered: %q", cfg.UpdateLatest)
+	}
+	cfg.Keys["anthropic"] = "k"
+	m2 := New(cfg, agent.New(cfg, func(any) {}), Options{Version: "0.1.0",
+		Updater: &update.Updater{Base: srv.URL + "/releases", Exe: "/usr/bin/werkz", Root: root, RPMQuery: func() bool { return false }}}).(*model)
+	m2.Update(tea.WindowSizeMsg{Width: 140, Height: 40})
+	m2.Init()
+	if !strings.Contains(m2.transcript(), "sudo apt update && sudo apt install --only-upgrade werkz") {
+		t.Fatalf("the remembered update should show the apt command at start:\n%s", m2.transcript())
+	}
+}
+
+// transcript is the plain text of everything printed so far (for assertions).
+func (m *model) transcript() string {
+	var b strings.Builder
+	for _, e := range m.entries {
+		b.WriteString(ansi.Strip(e.render(200)) + "\n")
+	}
+	return strings.Join(strings.Fields(b.String()), " ")
 }
