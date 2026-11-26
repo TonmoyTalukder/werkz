@@ -215,10 +215,23 @@ kbd {
 .window-bar .d3 { background: var(--blue); }
 @media (prefers-reduced-motion: no-preference) {
   .window { animation: rise 0.9s var(--ease) 0.15s both; }
-  @keyframes rise { from { opacity: 0; transform: translateY(18px) scale(0.985); } }
+  @keyframes rise { from { transform: translateY(18px) scale(0.985); } } /* visible from frame one */
 }
 .window-bar span { margin: 0 auto; transform: translateX(-26px); }
 .window img { width: 100%; height: auto; }
+
+/* the live terminal: a recorded werkz session replayed as text (site.js); the image stays as the
+   fallback (no JavaScript, reduced motion, phones) */
+.window { container-type: inline-size; }
+.term { display: none; background: var(--tile-deep); }
+.window.live picture { display: none; }
+.window.live .term { display: block; }
+.term pre {
+  margin: 0; padding: 18px 22px; color: #e5e7eb; background: var(--tile-deep); text-align: left;
+  font-family: "Term Mono", "DejaVu Sans Mono", ui-monospace, monospace;
+  font-size: calc((100cqw - 44px) / 60.3); line-height: 1.18; white-space: pre; overflow: hidden;
+}
+.term pre > div { height: 1.18em; }
 .shot figcaption {
   position: relative; z-index: 1; display: table; margin: 16px auto 0; padding: 4px 12px; border-radius: 999px;
   background: var(--bg); color: var(--ink-2); font-size: 0.88rem;

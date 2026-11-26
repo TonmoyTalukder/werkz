@@ -270,6 +270,12 @@ On phones (≤640px), the permission table becomes one labelled block per mode w
 
 Depth is mostly tonal and drawn with lines: white cards on white or Mist, separated by 1px borders. Shadows are quiet and layered. The only dramatic depth on any page is the product window, which floats on a large soft shadow over the glow.
 
+**The live window.** On screens 700px and wider, the product window replays a recorded werkz session as
+text (`assets/session.json`: unique terminal lines plus timed frames, played by `site.js`), set in Term Mono,
+a DejaVu Sans Mono subset that carries every box and symbol glyph the TUI draws. It plays only while visible,
+holds the final answer, then loops. The still capture stays as the fallback for phones, reduced motion and
+no JavaScript. Re-record it whenever the TUI changes, so the window never shows an outdated werkz.
+
 ### Shadow Vocabulary
 - **Rest** (`0 1px 2px rgba(12,13,20,.05), 0 4px 10px -6px rgba(12,13,20,.12)`): the install card, plan cards, the modes table, the methods panel, open release entries and hovered doc cards.
 - **Window** (`0 2px 6px rgba(12,13,20,.06), 0 30px 60px -30px rgba(12,13,20,.35)`): the product window only.

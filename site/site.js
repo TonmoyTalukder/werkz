@@ -55,6 +55,41 @@
       .then(() => setTimeout(step, 250));
   }
 
+  // The hero window replays a recorded werkz session as live text: frames carry their real timing,
+  // the last frame holds, then it loops. It only plays while visible; phones and reduced motion
+  // keep the still image.
+  const win = document.querySelector(".window");
+  const term = win?.querySelector(".term");
+  if (term && matchMedia("(min-width: 700px)").matches && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    fetch(term.dataset.src || "assets/session.json")
+      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
+      .then((s) => {
+        const pre = document.createElement("pre");
+        const rows = Array.from({ length: s.rows }, () => pre.appendChild(document.createElement("div")));
+        term.append(pre);
+        const shown = new Array(s.rows).fill(-1);
+        const draw = (frame) => frame[1].forEach((li, r) => {
+          if (shown[r] !== li) { rows[r].innerHTML = s.lines[li] || " "; shown[r] = li; }
+        });
+        draw(s.frames[0]);
+        win.classList.add("live");
+        let i = 0, timer = null, visible = false;
+        const next = () => {
+          timer = null;
+          if (!visible) return;
+          i = (i + 1) % s.frames.length;
+          draw(s.frames[i]);
+          const wait = i === s.frames.length - 1 ? 5200 : i === 0 ? 1200 : s.frames[i + 1][0] - s.frames[i][0];
+          timer = setTimeout(next, Math.max(wait, 30));
+        };
+        new IntersectionObserver(([en]) => {
+          visible = en.isIntersecting;
+          if (visible && !timer) timer = setTimeout(next, 900);
+        }, { threshold: 0.25 }).observe(win);
+      })
+      .catch(() => {}); // the still image stays
+  }
+
   // Tabs (WAI-ARIA: click, arrow keys, Home/End).
   for (const group of document.querySelectorAll("[data-tabs]")) {
     const tabs = [...group.querySelectorAll('[role="tab"]')];
