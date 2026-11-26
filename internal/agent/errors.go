@@ -32,6 +32,9 @@ func Classify(provider string, err error) (string, bool) {
 	}
 	var he *llm.HTTPError
 	if errors.As(err, &he) {
+		if he.Reason != "" {
+			return he.Reason, he.Fatal
+		}
 		low := strings.ToLower(he.Body)
 		switch {
 		case he.Status == 401 || he.Status == 403:
