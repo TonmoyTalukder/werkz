@@ -58,6 +58,7 @@ func Connect(ctx context.Context, addr string, o Options) (*Browser, error) {
 		opts: o, connected: true, lastShots: map[string]string{}, guardKey: "__wz" + hex.EncodeToString(kb[:]),
 		pol: newFencePolicy(), wsURL: ws,
 	}
+	b.pol.download = b.connectedDownload
 	if err := b.attach(ctx); err != nil {
 		return nil, fmt.Errorf("%w (to start Chrome for werkz run: %s)", err, LaunchCommand())
 	}

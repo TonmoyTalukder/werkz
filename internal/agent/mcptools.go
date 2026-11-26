@@ -144,10 +144,11 @@ func (e *Engine) runMCP(ctx context.Context, tc llm.ToolCall) tools.Result {
 		args = json.RawMessage("{}")
 	}
 	res, err := e.mcp.Call(ctx, tc.Name, args)
-	if err != nil {
-		return tools.Fail("%v", err)
-	}
 	server, tool := splitMCPName(tc.Name)
+	if err != nil {
+		// a server's error text is as untrusted as its results
+		return tools.Result{Output: web.Untrusted("mcp", server+"/"+tool, "Error: "+err.Error()), Summary: "error", IsError: true}
+	}
 	out := tools.Result{Output: web.Untrusted("mcp", server+"/"+tool, res.Text), IsError: res.IsError}
 	lines := strings.Count(strings.TrimSpace(res.Text), "\n") + 1
 	if strings.TrimSpace(res.Text) == "" {

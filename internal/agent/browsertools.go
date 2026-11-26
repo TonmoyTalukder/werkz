@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/TonmoyTalukder/werkz/internal/browser"
@@ -109,6 +110,23 @@ type browserState struct {
 	hostMu sync.Mutex
 	site   string   // host of the last approved Browse: the page may move around that site
 	hosts  sync.Map // hosts approved for the session ("don't ask again")
+	// gen changes when werkz connects to or disconnects from the user's Chrome: approvals given
+	// for one browser (a site, JavaScript on a site) are keyed by it and never carry to the other.
+	gen atomic.Int64
+}
+
+// approvalKey is the "don't ask again" key for a browser approval, tied to the current browser.
+func (e *Engine) approvalKey(kind, host string) string {
+	return fmt.Sprintf("%s#%d@%s", kind, e.br.gen.Load(), strings.ToLower(host))
+}
+
+// forgetBrowserApprovals drops what was approved for the previous browser.
+func (e *Engine) forgetBrowserApprovals() {
+	e.br.gen.Add(1)
+	e.br.hosts.Range(func(k, _ any) bool { e.br.hosts.Delete(k); return true })
+	e.br.hostMu.Lock()
+	e.br.site = ""
+	e.br.hostMu.Unlock()
 }
 
 // browserGrant is what the user approved a browser action for.
@@ -280,6 +298,7 @@ func (e *Engine) ConnectBrowser(ctx context.Context, addr string) error {
 	if err != nil {
 		return err
 	}
+	e.forgetBrowserApprovals() // sites approved in werkz's own browser ask again in yours
 	e.br.mu.Lock()
 	old := e.br.b
 	e.br.b, e.br.connected, e.br.addr = b, true, addr
@@ -293,6 +312,7 @@ func (e *Engine) ConnectBrowser(ctx context.Context, addr string) error {
 // DisconnectBrowser closes werkz's tabs in the user's Chrome (never Chrome itself) and goes back
 // to werkz's own browser.
 func (e *Engine) DisconnectBrowser() {
+	e.forgetBrowserApprovals()
 	e.br.mu.Lock()
 	b := e.br.b
 	e.br.b, e.br.connected, e.br.addr = nil, false, ""
@@ -337,7 +357,7 @@ func (e *Engine) browserCheck(ctx context.Context, tc llm.ToolCall) (ask bool, w
 		if _, ok := e.br.hosts.Load(host); ok {
 			return
 		}
-		return true, "opens " + host + " in werkz's browser", "Browse@" + host, "Yes, and don't ask again for " + host + " this session", g, nil
+		return true, "opens " + host + " in werkz's browser", e.approvalKey("Browse", host), "Yes, and don't ask again for " + host + " this session", g, nil
 	case "Click", "Type":
 		b, err := e.session(ctx)
 		if err != nil {
@@ -450,7 +470,11 @@ func (e *Engine) runBrowserTool(ctx context.Context, tc llm.ToolCall, approvedAl
 				e.br.hosts.Store(host, true)
 			}
 		}
-		snap, err = b.Navigate(ctx, a.URL)
+		target := a.URL
+		if u, err := browseTarget(a.URL); err == nil {
+			target = u.String() // open exactly what was approved (a missing scheme is https elsewhere)
+		}
+		snap, err = b.Navigate(ctx, target)
 	case "ReadPage":
 		tree, err := b.ReadPage(ctx, a.Interactive)
 		if err != nil {
@@ -592,7 +616,7 @@ func networkResult(reqs []browser.Request) tools.Result {
 		}
 		fmt.Fprintf(&b, "%s %s → %s (%s, %dms)\n", r.Method, r.URL, status, r.Type, r.Duration.Milliseconds())
 	}
-	return tools.Result{Output: b.String(), Summary: fmt.Sprintf("%d request(s), %d failed", len(reqs), failed)}
+	return tools.Result{Output: web.Untrusted("network", "browser network", b.String()), Summary: fmt.Sprintf("%d request(s), %d failed", len(reqs), failed)}
 }
 
 // runDevServer runs the DevServer tool.

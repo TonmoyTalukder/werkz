@@ -139,7 +139,7 @@ func run(provider, model string, opts tui.Options) error {
 	// their own process groups and wouldn't get the signal). If the program can't quit in time,
 	// clean up and exit anyway.
 	hup := make(chan os.Signal, 1)
-	signal.Notify(hup, syscall.SIGHUP)
+	signal.Notify(hup, syscall.SIGHUP, syscall.SIGTERM)
 	defer signal.Stop(hup)
 	go func() {
 		if _, ok := <-hup; !ok {
@@ -148,6 +148,7 @@ func run(provider, model string, opts tui.Options) error {
 		p.Quit()
 		time.Sleep(3 * time.Second)
 		eng.CloseBrowser()
+		mcpMgr.StopAll()
 		tools.KillAll()
 		os.Exit(129)
 	}()

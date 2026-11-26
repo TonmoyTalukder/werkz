@@ -65,7 +65,7 @@ func (f *Fetcher) Fetch(ctx context.Context, rawURL string) (*Page, error) {
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return nil, fmt.Errorf("HTTP %s", resp.Status)
+		return nil, fmt.Errorf("HTTP %d", resp.StatusCode) // not the server's own reason text: it isn't trusted
 	}
 
 	limit := f.MaxBytes

@@ -184,7 +184,7 @@ func (m *model) connectView() string {
 	b.WriteString(sRed.Bold(true).Render("Connect werkz to your own Chrome?") + "\n\n")
 	b.WriteString(wrapTo(sText.Render("werkz will open a window in your Chrome at "+chromeAddr(m.connAddr)+", where you are signed in to sites, "+
 		"and use only that window's tabs: it never reads your other tabs. Sites other than this machine ask first (even in bypass), "+
-		"form submits, uploads and downloads always ask, and password and payment fields are never typed into."), max(m.w-8, 20)) + "\n")
+		"sending forms, uploads and downloads always ask, and password and payment fields are never typed into."), max(m.w-8, 20)) + "\n")
 	b.WriteString(sDim.Render("It lasts until /browser disconnect or you quit werkz.") + "\n\n")
 	opts := []string{"No (esc)", "Yes, connect to my Chrome for this session"}
 	for i, o := range opts {

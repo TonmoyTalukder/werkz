@@ -165,6 +165,10 @@ func (m *model) mcpCommand(args []string) tea.Cmd {
 		}
 		return p(renderNotice("info", "Stopped MCP server "+c.Name+"."))
 	case "login":
+		if !m.mcpApproved(c) {
+			return p(renderNotice("warn", c.Name+" is a project server you haven't approved: it connects to "+mcpWhat(c)+
+				". /mcp approve "+c.Name+" first."))
+		}
 		if c.Type == "stdio" {
 			return p(renderNotice("info", c.Name+" runs on this machine: there's nothing to sign in to."))
 		}
@@ -192,19 +196,15 @@ func (m *model) handleMCPLogin(msg mcpLoginMsg) tea.Cmd {
 		return m.printS(renderNotice("error", "Sign-in to "+msg.name+" failed: "+msg.err.Error()))
 	}
 	c, ok := m.mcpConfig(msg.name)
-	if !ok {
-		return nil
+	if !ok || !m.mcpApproved(c) {
+		return nil // never starts a server that isn't approved
 	}
 	return tea.Batch(m.printS(renderNotice("info", "Signed in to "+msg.name+"; connecting.")), m.startMCP(c))
 }
 
-// mcpWhat is what a server runs or where it connects, for approvals.
-func mcpWhat(c mcp.ServerConfig) string {
-	if c.Type == "stdio" {
-		return "`" + strings.TrimSpace(c.Command+" "+strings.Join(c.Args, " ")) + "`"
-	}
-	return c.URL
-}
+// mcpWhat is what a server runs or where it connects, as written: command, arguments and
+// environment, or URL and headers. Approvals show all of it.
+func mcpWhat(c mcp.ServerConfig) string { return "`" + c.Describe() + "`" }
 
 func (m *model) mcpText() string {
 	w := max(m.w-8, 30)

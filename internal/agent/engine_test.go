@@ -2,10 +2,12 @@ package agent
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -244,5 +246,23 @@ func TestProviderClientsAreReused(t *testing.T) {
 	cfg.Keys["anthropic"] = "k2" // a different key gets its own client
 	if e.provider("anthropic") == a {
 		t.Fatal("changing the key must not reuse the old client")
+	}
+}
+
+// An approval with "don't ask again" from default mode must not let a change through in plan mode.
+func TestPlanModeIgnoresAlwaysApprovals(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	e := New(config.Load(), func(v any) {
+		if pr, ok := v.(PermReqMsg); ok {
+			pr.Reply <- PermAlways
+		}
+	})
+	dir := t.TempDir()
+	e.SetWorkspace([]string{dir}, nil, "")
+	e.execTool(context.Background(), llm.ToolCall{ID: "1", Name: "Write", Args: fmt.Sprintf(`{"path":%q,"content":"a"}`, filepath.Join(dir, "a.txt"))})
+	e.SetMode(config.ModePlan)
+	res := e.execTool(context.Background(), llm.ToolCall{ID: "2", Name: "Write", Args: fmt.Sprintf(`{"path":%q,"content":"b"}`, filepath.Join(dir, "b.txt"))})
+	if _, err := os.Stat(filepath.Join(dir, "b.txt")); err == nil || !res.IsError {
+		t.Fatalf("plan mode wrote a file after an always-approval: %+v", res)
 	}
 }

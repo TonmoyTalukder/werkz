@@ -185,7 +185,7 @@ func TestFetchHTTPError(t *testing.T) {
 	s := httptest.NewServer(http.NotFoundHandler())
 	defer s.Close()
 	_, err := (&Fetcher{LocalHost: "127.0.0.1"}).Fetch(context.Background(), s.URL)
-	if err == nil || !strings.Contains(err.Error(), "HTTP 404 Not Found") {
+	if err == nil || !strings.Contains(err.Error(), "HTTP 404") || strings.Contains(err.Error(), "Not Found") {
 		t.Errorf("error = %v", err)
 	}
 }

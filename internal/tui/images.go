@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"image"
+	_ "image/gif" // MCP tools may return GIF and JPEG images
+	_ "image/jpeg"
 	"image/png"
 	"io"
 	"os"
@@ -45,6 +48,7 @@ type picture struct {
 	err    error
 	placed map[[2]int]uint32 // cols×rows -> placement id (Kitty)
 	nextP  uint32
+	png    bool // a PNG (shown inline); other formats are links
 }
 
 // livePicture is the /browser view state.
@@ -102,11 +106,10 @@ func (m *model) picture(path string) *picture {
 	p := &picture{placed: map[[2]int]uint32{}}
 	p.data, p.err = os.ReadFile(path)
 	if p.err == nil {
-		cfg, err := png.DecodeConfig(bytes.NewReader(p.data))
-		if err != nil {
-			p.err = err
-		} else {
-			p.w, p.h = cfg.Width, cfg.Height
+		// PNG shows inline (Kitty takes PNG); JPEG and GIF (MCP tools return those too) are links
+		cfg, format, err := image.DecodeConfig(bytes.NewReader(p.data))
+		if err == nil {
+			p.w, p.h, p.png = cfg.Width, cfg.Height, format == "png"
 		}
 	}
 	m.img.imgs[path] = p
@@ -117,10 +120,13 @@ func (m *model) picture(path string) *picture {
 func (m *model) renderImage(path string, w int) string {
 	p := m.picture(path)
 	if p.err != nil {
-		return sFaint.Render("     (screenshot no longer on disk)")
+		return sFaint.Render("     (image no longer on disk)")
 	}
-	if !m.inlineImages() {
-		label := fmt.Sprintf("screenshot %d×%d ↗", p.w, p.h)
+	if !m.inlineImages() || !p.png {
+		label := "image ↗"
+		if p.w > 0 {
+			label = fmt.Sprintf("image %d×%d ↗", p.w, p.h)
+		}
 		s := "     " + sSky.Render("▣ ") + termimg.FileLink(path, sSky.Render(label))
 		if m.img.caps.Proto != termimg.None {
 			s += sDim.Render(" · /browser view shows the page here")

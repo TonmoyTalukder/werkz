@@ -49,3 +49,20 @@ func TestProjectMCPServersNeedApproval(t *testing.T) {
 		t.Fatal("a changed command kept its approval")
 	}
 }
+
+func TestMCPLoginNeedsApprovalFirst(t *testing.T) {
+	proj := t.TempDir()
+	m := chatModel(t, proj)
+	m.mcp = mcp.NewManager(mcp.Options{})
+	defer m.mcp.StopAll()
+	_ = os.MkdirAll(filepath.Join(proj, ".werkz"), 0o755)
+	_ = os.WriteFile(filepath.Join(proj, ".werkz", "mcp.json"), []byte(`{"mcpServers":{"remote":{"url":"https://x.test/mcp"}}}`), 0o644)
+	m.loadMCP(false)
+	m.mcpCommand([]string{"login", "remote"})
+	if v := ansi.Strip(m.View()); !strings.Contains(v, "haven't approved") {
+		t.Fatalf("login on an unapproved server:\n%s", v)
+	}
+	if cmd := m.handleMCPLogin(mcpLoginMsg{name: "remote"}); cmd != nil {
+		t.Fatal("a finished sign-in started an unapproved server")
+	}
+}

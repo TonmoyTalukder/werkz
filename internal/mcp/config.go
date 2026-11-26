@@ -27,6 +27,8 @@ type ServerConfig struct {
 	Headers map[string]string
 	Scope   string // "user" | "project"
 	Source  string // the file it came from
+	// raw is the entry as written, before ${VAR} expansion: what an approval is tied to.
+	raw rawServer
 }
 
 var nameRe = regexp.MustCompile(`^[A-Za-z0-9_-]{1,40}$`)
@@ -130,7 +132,7 @@ func loadFile(path, scope string) ([]ServerConfig, []error) {
 		c := ServerConfig{
 			Name: name, Type: strings.ToLower(strings.TrimSpace(r.Type)),
 			Command: expand(r.Command), URL: expand(r.URL),
-			Scope: scope, Source: path,
+			Scope: scope, Source: path, raw: r,
 		}
 		for _, a := range r.Args {
 			c.Args = append(c.Args, expand(a))
@@ -200,6 +202,13 @@ func (c ServerConfig) Hash() string {
 		sort.Slice(out, func(i, j int) bool { return out[i][0] < out[j][0] })
 		return out
 	}
+	// The entry as written (before ${VAR} expansion) when it came from a file: every change to the
+	// file, headers included, needs approval again, while a variable's value may change freely.
+	// Built in code (no file), the expanded values stand in, header values left out.
+	cmd, args, env, url, hdr := c.Command, c.Args, keys(c.Env, true), c.URL, keys(c.Headers, false)
+	if c.Source != "" {
+		cmd, args, env, url, hdr = c.raw.Command, c.raw.Args, keys(c.raw.Env, true), c.raw.URL, keys(c.raw.Headers, true)
+	}
 	b, _ := json.Marshal(struct {
 		Type    string      `json:"t"`
 		Command string      `json:"c"`
@@ -207,7 +216,38 @@ func (c ServerConfig) Hash() string {
 		Env     [][2]string `json:"e"`
 		URL     string      `json:"u"`
 		Headers [][2]string `json:"h"`
-	}{c.Type, c.Command, c.Args, keys(c.Env, true), c.URL, keys(c.Headers, false)})
+	}{c.Type, cmd, args, env, url, hdr})
 	sum := sha256.Sum256(b)
 	return hex.EncodeToString(sum[:])
+}
+
+// Describe is what the server runs or connects to, as written in its file (${VAR} templates, not
+// their values): the command and arguments, its environment variables, or the URL and headers.
+// Approvals show this, since a variable like NODE_OPTIONS or a header changes what runs or is sent.
+func (c ServerConfig) Describe() string {
+	r := c.raw
+	if c.Source == "" { // built in code: no file to quote
+		r = rawServer{Command: c.Command, Args: c.Args, URL: c.URL}
+	}
+	pairs := func(m map[string]string, sep string) []string {
+		var out []string
+		for k, v := range m {
+			out = append(out, k+sep+v)
+		}
+		sort.Strings(out)
+		return out
+	}
+	var parts []string
+	if c.Type == "stdio" {
+		parts = append(parts, strings.TrimSpace(r.Command+" "+strings.Join(r.Args, " ")))
+		if env := pairs(r.Env, "="); len(env) > 0 {
+			parts = append(parts, "with "+strings.Join(env, " "))
+		}
+	} else {
+		parts = append(parts, r.URL)
+		if h := pairs(r.Headers, ": "); len(h) > 0 {
+			parts = append(parts, "headers "+strings.Join(h, ", "))
+		}
+	}
+	return strings.Join(parts, " · ")
 }

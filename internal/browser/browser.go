@@ -124,6 +124,7 @@ type Browser struct {
 	dlSeen     map[string]bool
 	dlOrder    []string
 	dlPending  map[string]dlInfo // guid -> file, for allowed downloads
+	dlNoted    map[string]string // connected mode: download URL -> its note in downloads
 	dlDir      string            // download directory of the running action ("" = denied)
 	approved   string            // host:port approved by the current Navigate call
 	onceOnly   bool              // approved is for the first main-frame request only (history)
@@ -327,6 +328,7 @@ func (b *Browser) prepTab(octx context.Context) error {
 			return err
 		},
 		func() error { return b.installSubmitGuard(octx) },
+		func() error { return b.tabDownloads(octx, false) },
 		func() error { return b.applyEmulation(octx) },
 	}
 	for _, s := range steps {
@@ -570,4 +572,26 @@ func hostKey(u *url.URL) string {
 		return name
 	}
 	return name + ":" + port
+}
+
+// setDownloadBehaviorPage is Page.setDownloadBehavior, which the pinned
+// cdproto leaves out. Unlike the Browser command it applies to one tab only,
+// so the user's other tabs and their downloads are untouched.
+var setDownloadBehaviorPage = cdp.Command[struct {
+	Behavior string `json:"behavior"`
+}, cdp.Empty]{Method: "Page.setDownloadBehavior"}
+
+// tabDownloads switches downloads of one tab of werkz's own on or off in the
+// user's own Chrome ("default" lets Chrome save to its own download folder).
+// Connected mode only. The page cannot reach this switch; the fence also
+// cancels any download that starts while it is off (see judgeDownload).
+func (b *Browser) tabDownloads(ctx context.Context, on bool) error {
+	p := struct {
+		Behavior string `json:"behavior"`
+	}{"deny"}
+	if on {
+		p.Behavior = "default"
+	}
+	_, err := chromedp.Call(ctx, setDownloadBehaviorPage, p)
+	return err
 }

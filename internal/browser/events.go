@@ -151,13 +151,6 @@ func (b *Browser) onEvent(ev any) {
 			b.lastURL = e.URL
 		}
 		b.mu.Unlock()
-	case *runtime.EventBindingCalled:
-		switch e.Name {
-		case "__werkzBlocked":
-			b.addBlocked(submitNote(e.Payload))
-		case "__werkzDownload":
-			b.noteDownloadLink(e.Payload)
-		}
 	case *browser.EventDownloadWillBegin:
 		b.onDownloadBegin(e)
 	case *browser.EventDownloadProgress:
@@ -403,27 +396,29 @@ const (
 	dlSavedNote   = " (saved by Chrome to its download folder)"
 )
 
-func (b *Browser) addDownloadNote(note string) {
-	b.mu.Lock()
-	b.downloads = capTail(append(b.downloads, note), maxBlocked)
-	b.mu.Unlock()
-}
-
-// noteDownloadLink records a download link the page script clicked (connected
-// mode): payload is "1" (allowed) or "0" (blocked) followed by the file name.
-func (b *Browser) noteDownloadLink(payload string) {
-	if payload == "" {
-		return
-	}
-	name := truncate(payload[1:], 200)
+// connectedDownload judges a download that one of werkz's own targets starts
+// in the user's own Chrome, whatever started it: a link, a script's detached
+// <a download> with a blob: URL, a response header. The fence calls it for
+// each Page.downloadWillBegin and cancels the download when it says no. The
+// browser-wide download switch is the user's, so a download runs only while
+// the running action may download.
+func (b *Browser) connectedDownload(name, rawURL string) bool {
 	if name == "" {
+		name = path.Base(strings.SplitN(rawURL, "?", 2)[0])
+	}
+	if name == "" || name == "." || name == "/" {
 		name = "download"
 	}
-	if payload[0] == '1' {
-		b.addDownloadNote(name + dlSavedNote)
-	} else {
-		b.addDownloadNote(name + dlBlockedNote)
+	name = truncate(name, 200)
+	b.mu.Lock()
+	allowed := b.dlDir != ""
+	b.mu.Unlock()
+	note := name + dlBlockedNote
+	if allowed {
+		note = name + dlSavedNote
 	}
+	b.noteDownload(rawURL, note, false)
+	return allowed
 }
 
 // onResponsePaused judges a response in connected mode, where downloads cannot
@@ -440,12 +435,15 @@ func (b *Browser) onResponsePaused(tab context.Context, e *fetch.EventRequestPau
 	b.mu.Lock()
 	allowed := b.dlDir != ""
 	b.mu.Unlock()
+	note := name + dlBlockedNote
 	if allowed {
-		b.addDownloadNote(name + dlSavedNote)
+		note = name + dlSavedNote
+	}
+	b.noteDownload(e.Request.URL, note, true)
+	if allowed {
 		_, _ = chromedp.Call(ctx, fetch.ContinueRequest, fetch.ContinueRequestParams{RequestID: e.RequestID})
 		return
 	}
-	b.addDownloadNote(name + dlBlockedNote)
 	// like a blocked navigation: an empty answer leaves the page where it is
 	_, _ = chromedp.Call(ctx, fetch.FulfillRequest, fetch.FulfillRequestParams{RequestID: e.RequestID, ResponseCode: 204})
 }
@@ -534,4 +532,29 @@ func truncate(s string, n int) string {
 		return s
 	}
 	return s[:n] + "…"
+}
+
+// noteDownload records one download of url. Chrome announces a download and
+// the response policy sees it too, so the same file may be reported twice: the
+// note made from the response header (named true) has the real file name and
+// replaces the one made from the announcement.
+func (b *Browser) noteDownload(rawURL, note string, named bool) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if old, ok := b.dlNoted[rawURL]; ok {
+		for i, n := range b.downloads {
+			if n == old {
+				if named {
+					b.downloads[i] = note
+					b.dlNoted[rawURL] = note
+				}
+				return
+			}
+		}
+	}
+	if b.dlNoted == nil || len(b.dlNoted) > 100 {
+		b.dlNoted = map[string]string{}
+	}
+	b.dlNoted[rawURL] = note
+	b.downloads = capTail(append(b.downloads, note), maxBlocked)
 }

@@ -55,11 +55,24 @@ func (b *Browser) startAllow(ctx context.Context, allow Allow) (func(), error) {
 		// download happen during this action.
 		b.mu.Lock()
 		b.dlDir = dir
+		tab := b.tab
 		b.mu.Unlock()
-		undo = append(undo, b.armDownloads(ctx), func() {
+		if err := b.tabDownloads(ctx, true); err != nil {
 			b.mu.Lock()
 			b.dlDir = ""
 			b.mu.Unlock()
+			end()
+			return nil, fmt.Errorf("could not allow downloads: %w", err)
+		}
+		undo = append(undo, func() {
+			b.mu.Lock()
+			b.dlDir = ""
+			b.mu.Unlock()
+			if tab != nil {
+				dctx, cancel := context.WithTimeout(tab, 5*time.Second)
+				defer cancel()
+				_ = b.tabDownloads(dctx, false)
+			}
 		})
 	} else if dir != "" {
 		if err := os.MkdirAll(dir, 0o700); err != nil {

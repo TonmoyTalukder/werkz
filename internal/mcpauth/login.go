@@ -318,8 +318,9 @@ func discoverAS(ctx context.Context, hc *http.Client, issuer string) (*asMetadat
 				return nil, err
 			}
 		}
-		if len(md.CodeChallengeMethodsSupported) > 0 && !contains(md.CodeChallengeMethodsSupported, "S256") {
-			return nil, errors.New("the authorization server doesn't support PKCE S256")
+		// MCP requires PKCE: a server that doesn't say it supports S256 isn't used (the spec's rule)
+		if !contains(md.CodeChallengeMethodsSupported, "S256") {
+			return nil, errors.New("the authorization server doesn't support PKCE (S256), which MCP sign-in requires")
 		}
 		return &md, nil
 	}

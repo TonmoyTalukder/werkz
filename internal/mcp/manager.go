@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"sort"
@@ -291,7 +292,11 @@ func (m *Manager) transport(s *server) (sdk.Transport, error) {
 		}
 		if len(c.Headers) > 0 {
 			cp := *hc
-			cp.Transport = &headerTransport{base: hc.Transport, headers: c.Headers}
+			origin := ""
+			if u, err := url.Parse(c.URL); err == nil {
+				origin = u.Scheme + "://" + u.Host
+			}
+			cp.Transport = &headerTransport{base: hc.Transport, headers: c.Headers, origin: origin}
 			hc = &cp
 		}
 		if c.Type == "sse" {
@@ -305,12 +310,17 @@ func (m *Manager) transport(s *server) (sdk.Transport, error) {
 type headerTransport struct {
 	base    http.RoundTripper
 	headers map[string]string
+	origin  string // scheme://host of the server
 }
 
 func (t *headerTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	r = r.Clone(r.Context())
-	for k, v := range t.headers {
-		r.Header.Set(k, v)
+	// the configured headers (often keys) go only to the server's own scheme and host, never to
+	// another host a redirect leads to
+	if t.origin == "" || r.URL.Scheme+"://"+r.URL.Host == t.origin {
+		for k, v := range t.headers {
+			r.Header.Set(k, v)
+		}
 	}
 	base := t.base
 	if base == nil {
@@ -331,11 +341,17 @@ func (m *Manager) listTools(ctx context.Context, s *server, cs *sdk.ClientSessio
 	return out, nil
 }
 
+// setTools stores a server's tools, once per name: a server that lists a tool twice would
+// otherwise make every model request fail on the duplicate.
 func (s *server) setTools(ts []Tool) {
-	s.tools = ts
+	s.tools = ts[:0:0]
 	s.byFull = make(map[string]Tool, len(ts))
 	for _, t := range ts {
+		if _, dup := s.byFull[t.FullName]; dup {
+			continue
+		}
 		s.byFull[t.FullName] = t
+		s.tools = append(s.tools, t)
 	}
 }
 

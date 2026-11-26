@@ -86,14 +86,16 @@ func TestActRoutesKeepTheRules(t *testing.T) {
 			t.Fatalf("%s %s wrote a password field: %s", c.tool, c.args, out)
 		}
 	}
-	if out := run("Eval", `{"code":"document.getElementById('pw').value"}`); !strings.Contains(strings.ToLower(out), "secret") && !strings.Contains(strings.ToLower(out), "password") {
-		t.Fatalf("Eval read the password field: %s", out)
+	// JavaScript on a page with a password field always asks (here: denied)
+	before := len(asked)
+	if out := run("Eval", `{"code":"document.getElementById('pw').value"}`); len(asked) != before+1 || !strings.Contains(out, "denied") {
+		t.Fatalf("Eval on a password page didn't ask: %s", out)
 	}
 	// select by text, and JavaScript on localhost doesn't ask
 	if out := run("FormInput", fmt.Sprintf(`{"ref":%q,"value":"Green"}`, ref("Color"))); strings.Contains(out, "error") {
 		t.Fatalf("select: %s", out)
 	}
-	if out := run("Eval", `{"code":"document.getElementById('color').value"}`); !strings.Contains(out, "g") {
+	if out := run("Find", `{"query":"Color"}`); !strings.Contains(out, "Green") {
 		t.Fatalf("select value: %s", out)
 	}
 	if posts != 0 {
@@ -117,17 +119,54 @@ func TestActRoutesKeepTheRules(t *testing.T) {
 	}
 }
 
-func TestEvalAsksOffThisMachine(t *testing.T) {
-	e := New(config.Load(), func(any) {})
-	e.br.connected = true
-	// the check needs the page's host; without a browser it reports the error instead of asking
-	if ask, _, _, _, _, err := e.actCheck(context.Background(), llm.ToolCall{Name: "Eval", Args: `{"code":"1"}`}); ask && err == nil {
-		t.Log("asked") // covered end to end in the browser tests
-	}
+func TestEvalAsks(t *testing.T) {
 	if !pressesSubmitKey("ctrl+Enter") || !pressesSubmitKey("space") || pressesSubmitKey("Tab ArrowDown") {
 		t.Fatal("pressesSubmitKey")
 	}
 	if !onlyNavigationKeys("Tab shift+Tab ArrowDown") || onlyNavigationKeys("a") || onlyNavigationKeys("ctrl+v") {
 		t.Fatal("onlyNavigationKeys")
+	}
+	if _, err := browser.Find(); err != nil {
+		t.Skip("no browser installed")
+	}
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		if r.URL.Path == "/login" {
+			fmt.Fprint(w, `<title>Login</title><input type="password">`)
+			return
+		}
+		fmt.Fprint(w, `<title>Plain</title><p>hello</p>`)
+	}))
+	defer srv.Close()
+	var asked []PermReqMsg
+	e := New(config.Load(), func(v any) {
+		if p, ok := v.(PermReqMsg); ok {
+			asked = append(asked, p)
+			p.Reply <- PermNo
+		}
+	})
+	e.SetMode(config.ModeDefault)
+	defer e.CloseBrowser()
+	run := func(name, args string) string {
+		return e.execTool(context.Background(), llm.ToolCall{ID: name, Name: name, Args: args}).Output
+	}
+	// this machine, no secret field: no question
+	run("Browse", fmt.Sprintf(`{"url":%q}`, srv.URL))
+	if out := run("Eval", `{"code":"1+1"}`); len(asked) != 0 || !strings.Contains(out, "2") {
+		t.Fatalf("plain local page asked (%d) or failed: %s", len(asked), out)
+	}
+	// a page with a password field: asks, even on this machine
+	run("Browse", fmt.Sprintf(`{"url":%q}`, srv.URL+"/login"))
+	run("Eval", `{"code":"1+1"}`)
+	if len(asked) != 1 || !strings.Contains(asked[0].Summary, "password or payment field") || asked[0].Always != "" {
+		t.Fatalf("secret page: %+v", asked)
+	}
+	// a page that isn't on this machine (about:blank counts): asks
+	run("Tabs", `{"action":"new"}`)
+	run("Eval", `{"code":"1+1"}`)
+	if len(asked) != 2 {
+		t.Fatalf("off-machine page didn't ask: %d", len(asked))
 	}
 }

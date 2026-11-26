@@ -164,7 +164,7 @@ signed in (a staging admin, a dashboard), connect it to your own Chrome for the 
 
 While connected, a red **connected to your Chrome** line shows at the bottom. werkz opens one tab of its own and
 uses only that tab and the popups it opens: it never reads or touches your other tabs, and it never closes
-Chrome. Sites other than this machine ask first even in bypass; form submits, uploads and downloads always ask;
+Chrome. Sites other than this machine ask first even in bypass; sending forms, uploads and downloads always ask;
 password and payment fields are never typed into. Downloads it's allowed go where your Chrome saves them.
 `/browser disconnect` (or quitting werkz) closes werkz's tab. Connecting is never saved: each session starts
 with werkz's own browser.
@@ -190,11 +190,11 @@ What asks first:
 | Opening a page on this machine (`localhost`, `127.0.0.1`) | No |
 | Opening any other site | Yes (not in bypass), with "don't ask again" for that domain. The page can't move itself, open a popup or load a frame from a site you haven't approved |
 | Clicking, typing, keys, dragging, setting form values | No, except as below. Blocked in plan mode (scrolling, hovering, reading and screenshots aren't) |
-| Running JavaScript (`Eval`) | On this machine, no; elsewhere it asks (in your own Chrome, every time). Blocked in plan mode |
-| Submitting a form (a submit button, a click at its position, Enter or space in a form, or the page's own script) | Always, in every mode. werkz checks the element actually under the pointer or focus, and any submit it wasn't approved for is blocked in the page |
+| Running JavaScript (`Eval`) | On this machine, no; elsewhere it asks (in your own Chrome, every time). On a page with a password or payment field it always asks, since a script can read what a page shows. Blocked in plan mode |
+| Sending a form (one that posts data: a submit button, a click at its position, Enter or space in a form, or the page's own script) | Always, in every mode. werkz checks the element actually under the pointer or focus, and any post it wasn't approved for is stopped before it leaves the browser. Search-style forms (GET) open like links, under the site rules |
 | Uploading a file (only files in your working folders) | Always |
 | Downloading a file | Always; it's saved in `~/Downloads` |
-| Typing into a password or payment field (by typing, keys, form values or JavaScript) | Never done |
+| Typing into a password or payment field (by typing, keys or form values) | Never done |
 | Starting a dev server | Like any command (`Bash` rules) |
 
 ## MCP servers

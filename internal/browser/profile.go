@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"syscall"
 )
 
 // profileLocked reports whether a live Chrome on this host holds dir: Chrome
@@ -26,8 +25,7 @@ func profileLocked(dir string) bool {
 	if host, err := os.Hostname(); err != nil || host != target[:i] {
 		return false // another machine's lock (shared home): Chrome itself decides
 	}
-	err = syscall.Kill(pid, 0)
-	return err == nil || err == syscall.EPERM
+	return pidAlive(pid)
 }
 
 // pickProfile returns the profile directory to use and whether it is a

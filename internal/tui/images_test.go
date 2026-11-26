@@ -63,7 +63,7 @@ func TestScreenshotLinkElsewhere(t *testing.T) {
 	path, _ := writePNG(t, 640, 400)
 	m.pushItem(session.Item{Kind: "tool", Call: "Screenshot", Text: "640×400", Image: path})
 	v := m.View()
-	if !strings.Contains(v, "screenshot 640×400") || !strings.Contains(v, "/browser view") || out.Len() != 0 {
+	if !strings.Contains(v, "image 640×400") || !strings.Contains(v, "/browser view") || out.Len() != 0 {
 		t.Fatalf("link card wrong (wrote %d bytes):\n%s", out.Len(), v)
 	}
 	_ = os.Remove(path)

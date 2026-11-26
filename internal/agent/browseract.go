@@ -202,15 +202,20 @@ func (e *Engine) actCheck(ctx context.Context, tc llm.ToolCall) (ask bool, why, 
 		if err != nil {
 			return false, "", "", "", g, err
 		}
+		host := hostOf(b.URL())
+		// JavaScript can read any field a page shows, so on a page with a password or payment
+		// field it always asks, even on this machine and with "don't ask again".
+		if secret, err := b.HasSecretField(ctx); err != nil || secret {
+			return true, "runs JavaScript on " + host + ", a page with a password or payment field", "", "", g, nil
+		}
 		u, err := browseTarget(b.URL())
 		if err == nil && loopbackHost(u.Hostname()) {
 			return false, "", "", "", g, nil
 		}
-		host := hostOf(b.URL())
 		if e.BrowserConnected() {
 			return true, "runs JavaScript on " + host + " in your own Chrome", "", "", g, nil // never "don't ask again" there
 		}
-		return true, "runs JavaScript on " + host, "Eval@" + host, "Yes, and don't ask again for JavaScript on " + host + " this session", g, nil
+		return true, "runs JavaScript on " + host, e.approvalKey("Eval", host), "Yes, and don't ask again for JavaScript on " + host + " this session", g, nil
 	case "Tabs":
 		if a.Action == "new" && a.URL != "" {
 			return e.browserCheck(ctx, llm.ToolCall{ID: tc.ID, Name: "Browse", Args: fmt.Sprintf(`{"url":%q}`, a.URL)})
@@ -314,7 +319,8 @@ func (e *Engine) runActTool(ctx context.Context, tc llm.ToolCall) tools.Result {
 	case "Eval":
 		out, err := b.Eval(ctx, a.Code)
 		if err != nil {
-			return tools.Fail("%v", err)
+			// the page wrote this error (its exception message): untrusted like any page text
+			return tools.Result{Output: web.Untrusted("javascript", b.URL(), "Error: "+err.Error()), Summary: "error", IsError: true}
 		}
 		return tools.Result{Output: web.Untrusted("javascript", b.URL(), out), Summary: fmt.Sprintf("%d characters", len([]rune(out)))}
 	case "Tabs":
@@ -338,11 +344,15 @@ func (e *Engine) runActTool(ctx context.Context, tc llm.ToolCall) tools.Result {
 				e.br.hostMu.Lock()
 				e.br.site = u.Hostname()
 				e.br.hostMu.Unlock()
-				if e.allow["Browse@"+u.Hostname()] {
+				if e.allow[e.approvalKey("Browse", u.Hostname())] {
 					e.br.hosts.Store(u.Hostname(), true)
 				}
 			}
-			snap, err = b.NewTab(ctx, a.URL)
+			target := a.URL
+			if u, err := browseTarget(a.URL); err == nil && a.URL != "" {
+				target = u.String()
+			}
+			snap, err = b.NewTab(ctx, target)
 		case "switch":
 			snap, err = b.SwitchTab(ctx, a.ID)
 		case "close":

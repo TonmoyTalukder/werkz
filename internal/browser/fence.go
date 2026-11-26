@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/chromedp/cdproto"
 	"github.com/chromedp/cdproto/cdp/jsonv2"
@@ -32,11 +33,14 @@ type conn interface {
 // fencePolicy is the set of targets werkz may touch, shared by the fences of
 // every connection to the same browser.
 type fencePolicy struct {
-	mu       sync.Mutex
-	targets  map[target.ID]bool // werkz's tabs and the popups they opened
-	tabs     []target.ID        // the tabs werkz created, in order
-	dead     map[target.ID]bool // tabs that were closed
-	lost     chan struct{}      // closed when the last tab of werkz's is gone
+	mu      sync.Mutex
+	targets map[target.ID]bool // werkz's tabs and the popups they opened
+	tabs    []target.ID        // the tabs werkz created, in order
+	dead    map[target.ID]bool // tabs that were closed
+	lost    chan struct{}      // closed when the last tab of werkz's is gone
+	// download is asked about every download one of werkz's targets starts
+	// (Page.downloadWillBegin); false makes the fence cancel it.
+	download func(name, url string) bool
 	lostOnce sync.Once
 }
 
@@ -142,6 +146,7 @@ type fence struct {
 	mu       sync.Mutex
 	sessions map[target.SessionID]fsession
 	pend     map[int64]string // commands whose answer teaches the fence something
+	ownSeq   int64
 }
 
 func newFence(pol *fencePolicy, c conn) *fence {
@@ -330,6 +335,42 @@ func (f *fence) learn(id int64, what string) {
 	f.mu.Unlock()
 }
 
+// fenceOwnIDBase starts the message IDs of commands the fence sends itself,
+// far above anything chromedp counts up to.
+const fenceOwnIDBase = int64(1) << 40
+
+// judgeDownload asks the policy about a download of one of werkz's targets
+// and cancels it (Browser.cancelDownload for exactly that GUID, sent by the
+// fence itself, never by werkz) when the answer is no. The page cannot send or
+// widen this: it only ever cancels. Page.downloadWillBegin is not in the
+// pinned cdproto, so it is read raw.
+func (f *fence) judgeDownload(m *cdproto.Message) {
+	var d struct {
+		GUID              string `json:"guid"`
+		URL               string `json:"url"`
+		SuggestedFilename string `json:"suggestedFilename"`
+	}
+	if !parseParams(m, &d) || d.GUID == "" {
+		return
+	}
+	f.pol.mu.Lock()
+	judge := f.pol.download
+	f.pol.mu.Unlock()
+	if judge != nil && judge(d.SuggestedFilename, d.URL) {
+		return
+	}
+	params, _ := json.Marshal(map[string]string{"guid": d.GUID})
+	f.mu.Lock()
+	f.ownSeq++
+	id := fenceOwnIDBase + f.ownSeq
+	f.mu.Unlock()
+	go func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = f.c.Write(ctx, &cdproto.Message{ID: id, Method: "Browser.cancelDownload", Params: jsonv2.Value(params)})
+	}()
+}
+
 type targetEvent struct {
 	TargetInfo struct {
 		TargetID target.ID `json:"targetId"`
@@ -342,6 +383,9 @@ type targetEvent struct {
 // filterIn updates the fence's knowledge from a message and reports whether
 // werkz may see it.
 func (f *fence) filterIn(m *cdproto.Message) bool {
+	if m.ID >= fenceOwnIDBase {
+		return false // the answer to a command the fence sent itself
+	}
 	if m.ID != 0 {
 		f.mu.Lock()
 		what := f.pend[m.ID]
@@ -430,6 +474,11 @@ func (f *fence) filterIn(m *cdproto.Message) bool {
 		return true
 	case "Target.receivedMessageFromTarget":
 		return false
+	}
+	if m.SessionID != "" && string(m.Method) == "Page.downloadWillBegin" {
+		if _, ok := f.owns(m.SessionID); ok {
+			f.judgeDownload(m)
+		}
 	}
 	if m.SessionID == "" {
 		return false // browser-wide events are none of werkz's business

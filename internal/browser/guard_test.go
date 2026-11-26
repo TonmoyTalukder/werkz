@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/chromedp/cdproto/browser"
-	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
 )
 
@@ -102,15 +101,8 @@ func TestSubmitBlockedUnlessAllowed(t *testing.T) {
 	if err != nil || !hasNote(got.Blocked, post3) || c.n("POST /post3") != 0 {
 		t.Fatalf("label submit: %v %+v", err, got)
 	}
-	// the network layer blocks a POST document even if the page script is armed behind our back
-	eval := func(js string) {
-		if _, err := chromedp.Call(b.tab, runtime.Evaluate, runtime.EvaluateParams{Expression: js}); err != nil {
-			t.Fatal(err)
-		}
-	}
-	eval(`window[` + quote(b.guardKey) + `](true)`)
+	// the network layer blocks a POST document, whatever the page script did
 	got, err = b.Click(ctx5(t), js, Allow{})
-	eval(`window[` + quote(b.guardKey) + `](false)`)
 	if err != nil || !hasNote(got.Blocked, post1) || c.n("POST /post1") != 0 {
 		t.Fatalf("network POST guard: %v %+v", err, got)
 	}
@@ -149,8 +141,6 @@ func TestSubmitBlockedUnlessAllowed(t *testing.T) {
 		t.Fatalf("enter allowed: %v %+v", err, got)
 	}
 }
-
-func quote(s string) string { return `"` + s + `"` }
 
 func TestClickRefusesCoveredElement(t *testing.T) {
 	b := br(t)

@@ -517,19 +517,17 @@ func submitNote(raw string) string {
 	return "form submit to " + truncate(raw, 200) + " (needs the user's approval)"
 }
 
-// The submit guard is injected into every document. It stops form
-// submissions from every route (user events, submit(), requestSubmit(),
-// handlers that fire later) unless an action armed it.
-const submitGuardJS = `(function(K,DL){
+// The page guard is injected into every document. It keeps new windows in
+// this tab (so the navigation policy judges them) and, while Eval runs, locks
+// secret fields. It holds no switch a page could flip: whether a form may be
+// submitted or a file downloaded is decided on the protocol side, in Go (the
+// Fetch policy for POST documents, Page.downloadWillBegin for downloads).
+const submitGuardJS = `(function(K){
  if(Object.prototype.hasOwnProperty.call(window,K))return;
- var armed=false;
- var rec=function(f){try{var a;try{a=new URL((f.getAttribute&&f.getAttribute('action'))||'',document.baseURI).href}catch(e){a=String(f.action)}
-  if(typeof window.__werkzBlocked==='function')window.__werkzBlocked(a)}catch(e){}};
- var P=HTMLFormElement.prototype,os=P.submit,or=P.requestSubmit;
- Object.defineProperty(P,'submit',{value:function(){if(!armed){rec(this);return}fixT(this);return os.apply(this,arguments)},writable:true,configurable:true,enumerable:true});
- if(or)Object.defineProperty(P,'requestSubmit',{value:function(){if(!armed){rec(this);return}return or.apply(this,arguments)},writable:true,configurable:true,enumerable:true});
- window.addEventListener('submit',function(e){if(!armed){e.preventDefault();e.stopImmediatePropagation();rec(e.target)}else{fixT(e.target)}},true);
- Object.defineProperty(window,K,{value:function(v){armed=(v===true)},enumerable:false});
+ Object.defineProperty(window,K,{value:true,enumerable:false});
+ var P=HTMLFormElement.prototype,os=P.submit;
+ Object.defineProperty(P,'submit',{value:function(){fixT(this);return os.apply(this,arguments)},writable:true,configurable:true,enumerable:true});
+ window.addEventListener('submit',function(e){fixT(e.target)},true);
  /* New windows: every route that would open one (target=_blank, formtarget,
     window.open, ctrl/middle click) navigates this tab instead, so the
     navigation policy judges the address before any request is made. */
@@ -570,42 +568,15 @@ const submitGuardJS = `(function(K,DL){
  ['value','defaultValue'].forEach(function(p){lock(HTMLTextAreaElement.prototype,p)});
  Object.defineProperty(window,K+'e',{value:function(v){evalOn=(v===true);
   for(var i=0;i<window.frames.length;i++){try{var f=window.frames[i][K+'e'];if(typeof f==='function')f(v)}catch(e){}}},enumerable:false});
- if(DL){
-  /* the user's own Chrome: a download link is stopped here unless the action may download */
-  var dlOK=false,inClick=false;
-  var rd=function(a,ok){try{var n=a.getAttribute('download')||'';
-   if(!n){try{n=new URL(a.href,document.baseURI).pathname.split('/').pop()}catch(e){}}
-   if(typeof window.__werkzDownload==='function')window.__werkzDownload((ok?'1':'0')+n)}catch(e){}};
-  var AP=HTMLAnchorElement.prototype,oc=AP.click;
-  Object.defineProperty(AP,'click',{value:function(){
-   if(this.hasAttribute&&this.hasAttribute('download')){rd(this,dlOK);if(!dlOK)return;inClick=true;try{return oc.apply(this,arguments)}finally{inClick=false}}
-   return oc.apply(this,arguments)},writable:true,configurable:true,enumerable:true});
-  window.addEventListener('click',function(e){if(inClick)return;
-   var a=e.target&&e.target.closest&&e.target.closest('a[download],area[download]');
-   if(a&&!e.defaultPrevented){if(dlOK){rd(a,true)}else{e.preventDefault();rd(a,false)}}},true);
-  Object.defineProperty(window,K+'d',{value:function(v){dlOK=(v===true)},enumerable:false});
- }
-})(%q,%t)`
-
-const armDLJS = `(function(K){var f=window[K+'d'];if(typeof f==='function')f(%s)})(%q)`
+})(%q)`
 
 const evalSwitchJS = `(function(K){var f=window[K+'e'];if(typeof f==='function')f(%s)})(%q)`
 
-const armJS = `(function(K){if(typeof window[K]==='function')window[K](%s)})(%q)`
-
-func (b *Browser) guardScript() string { return fmt.Sprintf(submitGuardJS, b.guardKey, b.connected) }
+func (b *Browser) guardScript() string { return fmt.Sprintf(submitGuardJS, b.guardKey) }
 
 // installSubmitGuard injects the script into future documents and the current
 // one, and starts listening for blocked submissions.
 func (b *Browser) installSubmitGuard(ctx context.Context) error {
-	if _, err := chromedp.Call(ctx, runtime.AddBinding, runtime.AddBindingParams{Name: "__werkzBlocked"}); err != nil {
-		return err
-	}
-	if b.connected {
-		if _, err := chromedp.Call(ctx, runtime.AddBinding, runtime.AddBindingParams{Name: "__werkzDownload"}); err != nil {
-			return err
-		}
-	}
 	src := b.guardScript()
 	if _, err := chromedp.Call(ctx, page.AddScriptToEvaluateOnNewDocument, page.AddScriptToEvaluateOnNewDocumentParams{Source: src}); err != nil {
 		return err
@@ -620,54 +591,16 @@ func (b *Browser) isArmed() bool {
 	return b.armed
 }
 
-// arm lets form submissions through until the returned func is called. New
-// documents created meanwhile (a submission's response page) start armed too.
-func (b *Browser) arm(ctx context.Context) func() {
+// arm lets form submissions through until the returned func is called. The
+// switch is Go's alone: the network layer refuses a POST document otherwise,
+// and nothing in the page can reach it.
+func (b *Browser) arm(context.Context) func() {
 	b.mu.Lock()
 	b.armed = true
 	b.mu.Unlock()
-	eval := func(v string) {
-		_, _ = chromedp.Call(ctx, runtime.Evaluate, runtime.EvaluateParams{Expression: fmt.Sprintf(armJS, v, b.guardKey)})
-	}
-	eval("true")
-	id, err := chromedp.Call(ctx, page.AddScriptToEvaluateOnNewDocument, page.AddScriptToEvaluateOnNewDocumentParams{Source: fmt.Sprintf(armJS, "true", b.guardKey)})
 	return func() {
 		b.mu.Lock()
 		b.armed = false
-		tab := b.tab
 		b.mu.Unlock()
-		if tab == nil {
-			return
-		}
-		dctx, cancel := context.WithTimeout(tab, 5*time.Second)
-		defer cancel()
-		_, _ = chromedp.Call(dctx, runtime.Evaluate, runtime.EvaluateParams{Expression: fmt.Sprintf(armJS, "false", b.guardKey)})
-		if err == nil {
-			_, _ = chromedp.Call(dctx, page.RemoveScriptToEvaluateOnNewDocument, page.RemoveScriptToEvaluateOnNewDocumentParams(id))
-		}
-	}
-}
-
-// armDownloads lets download links through (in connected mode) until the
-// returned func is called, the way arm does for form submissions.
-func (b *Browser) armDownloads(ctx context.Context) func() {
-	eval := func(c context.Context, v string) {
-		_, _ = chromedp.Call(c, runtime.Evaluate, runtime.EvaluateParams{Expression: fmt.Sprintf(armDLJS, v, b.guardKey)})
-	}
-	eval(ctx, "true")
-	id, err := chromedp.Call(ctx, page.AddScriptToEvaluateOnNewDocument, page.AddScriptToEvaluateOnNewDocumentParams{Source: fmt.Sprintf(armDLJS, "true", b.guardKey)})
-	return func() {
-		b.mu.Lock()
-		tab := b.tab
-		b.mu.Unlock()
-		if tab == nil {
-			return
-		}
-		dctx, cancel := context.WithTimeout(tab, 5*time.Second)
-		defer cancel()
-		eval(dctx, "false")
-		if err == nil {
-			_, _ = chromedp.Call(dctx, page.RemoveScriptToEvaluateOnNewDocument, page.RemoveScriptToEvaluateOnNewDocumentParams(id))
-		}
 	}
 }

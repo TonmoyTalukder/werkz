@@ -97,3 +97,22 @@ func TestBrowserToolRules(t *testing.T) {
 		t.Fatalf("console: %s", out)
 	}
 }
+
+// Approvals given for werkz's own browser don't carry into the user's Chrome (and back).
+func TestBrowserApprovalsDontCarryAcrossBrowsers(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	e := New(config.Load(), func(any) {})
+	key := e.approvalKey("Browse", "github.com")
+	e.allow[key] = true
+	e.br.hosts.Store("github.com", true)
+	e.forgetBrowserApprovals() // what connecting and disconnecting do
+	if e.allow[e.approvalKey("Browse", "github.com")] {
+		t.Fatal("a site approval carried over to the other browser")
+	}
+	if _, ok := e.br.hosts.Load("github.com"); ok {
+		t.Fatal("approved hosts kept")
+	}
+	if e.allowHost("github.com:443") {
+		t.Fatal("the page may still navigate to the old browser's approved site")
+	}
+}

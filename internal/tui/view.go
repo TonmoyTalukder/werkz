@@ -271,17 +271,26 @@ func (m *model) statusBar() string {
 	case m.available != "":
 		modeLine = sGreen.Render("↑ werkz "+m.available+" available") + sDim.Render(" · /update shows how · ") + modeLine
 	}
-	if m.eng != nil && m.eng.BrowserConnected() {
-		modeLine = sRed.Bold(true).Render("● werkz is connected to your Chrome") + sDim.Render(" · it uses only its own tab · /browser disconnect · ") + modeLine
-	}
 	if m.mouseOff {
-		modeLine = sSky.Render("◇ mouse off: select text with your terminal") + sDim.Render(" · ctrl+s turns scrolling back on")
+		mouse := sSky.Render("◇ mouse off: select text with your terminal") + sDim.Render(" · ctrl+s turns scrolling back on")
+		if m.cfg.Mode == config.ModeDefault {
+			modeLine = mouse // replaces only the help hint, never a mode warning
+		} else {
+			modeLine = mouse + sDim.Render(" · ") + modeLine
+		}
 	}
 	if m.toast != "" {
 		modeLine = sGreen.Render(m.toast)
 	}
 	if m.flash != "" {
 		modeLine = sYellow.Render(m.flash)
+	}
+	// Last, so nothing hides it: werkz working in the user's own Chrome, and Bypass.
+	if m.cfg.Mode == config.ModeBypass && (m.toast != "" || m.flash != "") {
+		modeLine = sRed.Bold(true).Render("⚠ bypass") + sDim.Render(" · ") + modeLine
+	}
+	if m.eng != nil && m.eng.BrowserConnected() {
+		modeLine = sRed.Bold(true).Render("● werkz is connected to your Chrome") + sDim.Render(" · it uses only its own tab · /browser disconnect · ") + modeLine
 	}
 	return left + "\n" + modeLine
 }

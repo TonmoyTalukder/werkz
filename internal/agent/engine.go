@@ -351,7 +351,7 @@ func (e *Engine) execTool(ctx context.Context, tc llm.ToolCall) tools.Result {
 		always := false
 		if a := parseBrowserArgs(tc); tc.Name == "Browse" {
 			if u, err := browseTarget(a.URL); err == nil {
-				always = e.allow["Browse@"+strings.ToLower(u.Hostname())]
+				always = e.allow[e.approvalKey("Browse", u.Hostname())]
 			}
 		}
 		res = e.runBrowserTool(ctx, tc, always)
@@ -470,12 +470,14 @@ func (e *Engine) permit(ctx context.Context, tc llm.ToolCall, summary string) (t
 		key, always = "WebFetch@"+localHost, "Yes, and don't ask again for "+localHost+" this session"
 		summary = localAskSummary(summary, localHost)
 	}
+	// Plan mode blocks before any "don't ask again" is considered: an approval given in another
+	// mode never lets a change through in plan mode.
+	if need && kind == "plan" {
+		r := tools.Result{Output: "Plan mode is on: only read-only tools may run. Describe the plan instead.", IsError: true}
+		e.send(ToolResultMsg{ID: tc.ID, Name: tc.Name, Summary: "blocked (plan mode)", IsError: true})
+		return r, false
+	}
 	if need && (key == "" || !e.allow[key]) {
-		if kind == "plan" {
-			r := tools.Result{Output: "Plan mode is on: only read-only tools may run. Describe the plan instead.", IsError: true}
-			e.send(ToolResultMsg{ID: tc.ID, Name: tc.Name, Summary: "blocked (plan mode)", IsError: true})
-			return r, false
-		}
 		reply := make(chan PermDecision, 1)
 		detail := tools.Preview(tc)
 		if isMCPTool(tc.Name) {
