@@ -3,7 +3,9 @@
 package catalog
 
 import (
+	"cmp"
 	"fmt"
+	"slices"
 	"strings"
 	"sync"
 
@@ -133,7 +135,12 @@ func All(cfg *config.Config) []ModelInfo {
 	}
 	remoteMu.Lock()
 	defer remoteMu.Unlock()
-	for _, p := range config.Providers {
+	// Subscriptions first (right after the Claude API models), then the other providers: long
+	// lists such as OpenRouter's would otherwise push them out of sight.
+	providers := slices.SortedStableFunc(slices.Values(config.Providers), func(a, b config.ProviderInfo) int {
+		return cmp.Compare(boolInt(!a.Plan()), boolInt(!b.Plan()))
+	})
+	for _, p := range providers {
 		if p.ID == "anthropic" || !cfg.Configured(p.ID) {
 			continue
 		}
@@ -149,6 +156,13 @@ func All(cfg *config.Config) []ModelInfo {
 		}
 	}
 	return out
+}
+
+func boolInt(b bool) int {
+	if b {
+		return 1
+	}
+	return 0
 }
 
 // Cost prices one request. Cache writes are 1.25x input (5-minute TTL) or 2x (1-hour);

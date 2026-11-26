@@ -60,6 +60,9 @@ func (m *model) banner(w int) string {
 	tips := sDim.Render("Tips: ") + sText.Render("/model") + sDim.Render(" switch models · ") + sText.Render("/effort") +
 		sDim.Render(" thinking level · ") + sText.Render("/login") + sDim.Render(" keys · ") + sText.Render("shift+tab") +
 		sDim.Render(" permission mode")
+	if sub := subscriptionTip(m.cfg); sub != "" {
+		tips += "\n" + sub
+	}
 	return "\n" + top + "\n\n" + wrapTo(tips, w) + "\n"
 }
 

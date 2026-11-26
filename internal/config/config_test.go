@@ -126,3 +126,24 @@ func TestOllamaHost(t *testing.T) {
 		}
 	}
 }
+
+// Apps started from a desktop icon may not have ~/.local/bin on PATH: Claude Code is still found.
+func TestClaudeFoundOutsidePath(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("PATH", t.TempDir())
+	t.Setenv("WERKZ_CLAUDE_BIN", "")
+	if p := findClaude(); p != "" {
+		t.Fatalf("nothing installed, found %q", p)
+	}
+	bin := filepath.Join(home, ".local", "bin", "claude")
+	if err := os.MkdirAll(filepath.Dir(bin), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(bin, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if p := findClaude(); p != bin {
+		t.Fatalf("found %q, want %q", p, bin)
+	}
+}

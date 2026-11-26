@@ -340,10 +340,31 @@ func ClaudeCLI() string {
 	claudeCLI.Lock()
 	defer claudeCLI.Unlock()
 	if time.Since(claudeCLI.at) > 30*time.Second {
-		claudeCLI.path, _ = exec.LookPath("claude")
+		claudeCLI.path = findClaude()
 		claudeCLI.at = time.Now()
 	}
 	return claudeCLI.path
+}
+
+// findClaude looks for `claude` on PATH, then in Claude Code's usual install locations: apps
+// started from a desktop icon often run without ~/.local/bin on their PATH.
+func findClaude() string {
+	if p, err := exec.LookPath("claude"); err == nil {
+		return p
+	}
+	home, _ := os.UserHomeDir()
+	for _, p := range []string{
+		filepath.Join(home, ".local", "bin", "claude"),      // native installer
+		filepath.Join(home, ".claude", "local", "claude"),   // older local install
+		filepath.Join(home, ".npm-global", "bin", "claude"), // npm with a user prefix
+		filepath.Join(home, ".bun", "bin", "claude"),
+		"/opt/homebrew/bin/claude", "/usr/local/bin/claude", "/home/linuxbrew/.linuxbrew/bin/claude",
+	} {
+		if st, err := os.Stat(p); err == nil && !st.IsDir() && st.Mode()&0o111 != 0 {
+			return p
+		}
+	}
+	return ""
 }
 
 func (c *Config) BaseURL(id string) string {

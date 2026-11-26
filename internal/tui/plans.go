@@ -170,3 +170,20 @@ func planStatus(provider string, wide bool) string {
 	}
 	return ""
 }
+
+// subscriptionTip points new users at the subscription options they can use but aren't using.
+func subscriptionTip(cfg *config.Config) string {
+	if cfg.Provider == "chatgpt" || cfg.Provider == "claudecode" {
+		return ""
+	}
+	var opts []string
+	if cfg.Configured("claudecode") {
+		opts = append(opts, sText.Render("/model")+sDim.Render(" → a \"(Claude Code)\" model uses your Claude subscription"))
+	}
+	if !cfg.Configured("chatgpt") {
+		opts = append(opts, sText.Render("/login chatgpt")+sDim.Render(" uses your ChatGPT plan"))
+	} else {
+		opts = append(opts, sText.Render("/model")+sDim.Render(" → a \"plan\" model uses your ChatGPT plan"))
+	}
+	return sDim.Render("Subscriptions: ") + strings.Join(opts, sDim.Render(" · "))
+}
