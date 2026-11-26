@@ -28,23 +28,28 @@ import (
 
 const repo = "https://github.com/TonmoyTalukder/werkz"
 
+// githubPath is the GitHub mark (Octicons), used for links to the repository.
+const githubPath = "M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"
+
 // doc is one documentation page, in reading order.
 type doc struct {
 	Slug, Title, Blurb string
+	Src                string // source file, relative to the repository (default docs/<slug>.md)
 }
 
 var docs = []doc{
-	{"installation", "Installation", "Installer, Homebrew, apt, dnf, package files, updating, uninstalling"},
-	{"getting-started", "Getting started", "First run and your first task"},
-	{"usage", "Usage", "Commands, keyboard shortcuts, command-line flags, tools"},
-	{"providers-and-models", "Providers and models", "API keys, subscriptions, free and local models, effort"},
-	{"safety", "Safety and privacy", "Permission modes and the rules that always apply"},
-	{"fallback", "Fallback", "What happens when a model fails"},
-	{"workspaces", "Workspaces", "Working across several repositories"},
-	{"saving-tokens", "Saving tokens and money", "Caching, compaction, context window, cost"},
-	{"configuration", "Configuration", "Config files and environment variables"},
-	{"troubleshooting", "Troubleshooting", "Common problems and fixes"},
-	{"development", "Development", "Building, testing, releasing, project layout"},
+	{"installation", "Installation", "Installer, Homebrew, apt, dnf, package files, updating, uninstalling", ""},
+	{"getting-started", "Getting started", "First run and your first task", ""},
+	{"usage", "Usage", "Commands, keyboard shortcuts, command-line flags, tools", ""},
+	{"providers-and-models", "Providers and models", "API keys, subscriptions, free and local models, effort", ""},
+	{"safety", "Safety and privacy", "Permission modes and the rules that always apply", ""},
+	{"fallback", "Fallback", "What happens when a model fails", ""},
+	{"workspaces", "Workspaces", "Working across several repositories", ""},
+	{"saving-tokens", "Saving tokens and money", "Caching, compaction, context window, cost", ""},
+	{"configuration", "Configuration", "Config files and environment variables", ""},
+	{"troubleshooting", "Troubleshooting", "Common problems and fixes", ""},
+	{"development", "Development", "Building, testing, releasing, project layout", ""},
+	{"contributing", "Contributing", "Report a bug, set up, and send a change", "CONTRIBUTING.md"},
 }
 
 func main() {
@@ -78,7 +83,11 @@ func build(root, out string) error {
 		return err
 	}
 	for i, d := range docs {
-		src, err := os.ReadFile(filepath.Join(root, "docs", d.Slug+".md"))
+		path := filepath.Join(root, "docs", d.Slug+".md")
+		if d.Src != "" {
+			path = filepath.Join(root, d.Src)
+		}
+		src, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
@@ -140,12 +149,11 @@ type navLink struct {
 
 func navLinks(cur string) []navLink {
 	return []navLink{
+		{"./", "Docs", cur != "releases" && cur != "contributing"},
 		{"../#install", "Install", false},
-		{"../#models", "Models", false},
 		{"../#subscriptions", "Subscriptions", false},
 		{"releases.html", "Releases", cur == "releases"},
-		{"./", "Docs", cur != "releases"},
-		{repo, "GitHub", false},
+		{"contributing.html", "Contribute", cur == "contributing"},
 	}
 }
 
@@ -191,6 +199,12 @@ func rewriteLink(u string) string {
 		frag = "#" + frag
 	}
 	switch {
+	case strings.HasPrefix(path, "docs/") && strings.HasSuffix(path, ".md"):
+		return strings.TrimSuffix(strings.TrimPrefix(path, "docs/"), ".md") + ".html" + frag // from CONTRIBUTING.md
+	case path == "docs/":
+		return "./" + frag
+	case path == "LICENSE" || path == "README.md":
+		return repo + "/blob/main/" + path + frag
 	case strings.HasPrefix(path, "../"):
 		return repo + "/blob/main/" + strings.TrimPrefix(path, "../") + frag
 	case strings.HasSuffix(path, ".md") && !strings.Contains(path, "/"):
@@ -300,7 +314,7 @@ func releaseTree(rels []release, limit int, open bool) string {
 			if !open && len(items) > 6 {
 				more, items = len(items)-6, items[:6]
 			}
-			fmt.Fprintf(&b, `<div class="rgroup"><h4 class="caps">%s</h4><ul>`, g.Label)
+			fmt.Fprintf(&b, `<div class="rgroup"><h3>%s</h3><ul>`, g.Label)
 			for _, it := range items {
 				fmt.Fprintf(&b, "<li>%s</li>", inlineCode(it))
 			}
@@ -380,25 +394,36 @@ const docTemplate = `<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{{.Title}} · werkz</title>
 <meta name="description" content="{{.Doc.Blurb}}">
-<meta name="theme-color" content="#2b2f7f">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c0d14" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="../assets/favicon.png">
-<link rel="preload" href="../fonts/Jost-200-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="../fonts/Geist-300-700.woff2" as="font" type="font/woff2" crossorigin>
+<script>(() => { let t = null; try { t = localStorage.getItem("werkz-theme"); } catch {} const q = new URLSearchParams(location.search).get("theme"); if (q === "light" || q === "dark") t = q; if (t !== "light" && t !== "dark") t = "light"; document.documentElement.dataset.theme = t; })();</script>
 <link rel="stylesheet" href="../styles.css">
 </head>
 <body class="docs">
 <a class="skip" href="#doc">Skip to content</a>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-github" viewBox="0 0 16 16"><path fill="currentColor" d="` + githubPath + `"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></g></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+</svg>
 <header class="top">
   <div class="top-inner">
-    <a class="wordmark" href="../" aria-label="werkz home"><img src="../assets/werkz.png" alt="" width="28" height="28">werkz</a>
-    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="topnav" aria-label="Menu">
-      <svg width="20" height="14" viewBox="0 0 20 14" aria-hidden="true"><path d="M0 1h20M0 7h20M0 13h20" stroke="currentColor" stroke-width="1.4"/></svg>
-    </button>
+    <a class="brand" href="../" aria-label="werkz home"><img src="../assets/werkz.png" alt="" width="28" height="28">werkz</a>
     <nav id="topnav" aria-label="Main">{{range .Nav}}
       <a href="{{.Href}}"{{if .Current}} aria-current="page"{{end}}>{{.Label}}</a>{{end}}
     </nav>
+    <div class="top-actions">
+      <button class="icon-btn theme-toggle" type="button" aria-label="Switch between light and dark theme"><svg class="icon sun" aria-hidden="true"><use href="#i-sun"/></svg><svg class="icon moon" aria-hidden="true"><use href="#i-moon"/></svg></button>
+      <a class="icon-btn" href="https://github.com/TonmoyTalukder/werkz" aria-label="werkz on GitHub"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg><span class="gh-label">GitHub</span></a>
+      <button class="icon-btn menu-toggle" type="button" aria-expanded="false" aria-controls="topnav" aria-label="Menu"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+    </div>
   </div>
 </header>
-<div class="docs-ribbon" aria-hidden="true"><svg viewBox="0 0 1200 14" preserveAspectRatio="none"><defs><filter id="sheer" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="0.85 0.06" numOctaves="2" seed="7" result="weave"/><feColorMatrix in="weave" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.16 0" result="threads"/><feComposite in="threads" in2="SourceGraphic" operator="in" result="lit"/><feBlend in="lit" in2="SourceGraphic" mode="screen"/></filter></defs><path d="M0 0H700L620 14H0Z" fill="#2b2f7f" fill-opacity=".9" filter="url(#sheer)"/><path d="M420 0H980L900 14H340Z" fill="#b23a65" fill-opacity=".8" style="mix-blend-mode:multiply" filter="url(#sheer)"/><path d="M760 0H1200V14H680Z" fill="#f2b31a" fill-opacity=".85" style="mix-blend-mode:multiply" filter="url(#sheer)"/></svg></div>
 <div class="docs-shell">
   <nav class="docs-nav" aria-label="Documentation">
     <details open><summary class="caps">Documentation</summary>
@@ -415,15 +440,17 @@ const docTemplate = `<!doctype html>
       {{with .Prev}}<a href="{{.Slug}}.html"><small class="caps">Previous</small>{{.Title}}</a>{{else}}<span></span>{{end}}
       {{with .Next}}<a href="{{.Slug}}.html" style="text-align:right"><small class="caps">Next</small>{{.Title}}</a>{{end}}
     </nav>{{end}}
-    {{if .Doc.Blurb}}<p class="edit"><a href="https://github.com/TonmoyTalukder/werkz/blob/main/docs/{{.Doc.Slug}}.md">Edit this page on GitHub</a></p>{{end}}
+    {{if .Doc.Blurb}}<p class="edit"><a href="https://github.com/TonmoyTalukder/werkz/blob/main/{{if .Doc.Src}}{{.Doc.Src}}{{else}}docs/{{.Doc.Slug}}.md{{end}}">Edit this page on GitHub</a></p>{{end}}
   </article>
   {{if .TOC}}<aside class="toc" aria-label="On this page"><p class="caps">On this page</p><ol>{{range .TOC}}
     <li><a href="#{{.ID}}">{{.Text}}</a></li>{{end}}
   </ol></aside>{{end}}
 </div>
 <footer class="foot">
-  <span>werkz · Apache License 2.0 · Tonmoy Talukder and contributors</span>
-  <nav aria-label="Footer"><a href="https://github.com/TonmoyTalukder/werkz/releases">Downloads</a><a href="../werkz.asc">Signing key</a><a href="https://github.com/TonmoyTalukder/werkz/issues">Report a problem</a></nav>
+  <div class="foot-base" style="border-top:0;padding-top:24px">
+    <span>© Tonmoy Talukder and contributors · Apache 2.0</span>
+    <a href="https://github.com/TonmoyTalukder/werkz"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>TonmoyTalukder/werkz</a>
+  </div>
 </footer>
 <script src="../site.js" defer></script>
 </body>

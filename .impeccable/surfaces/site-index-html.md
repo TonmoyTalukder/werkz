@@ -7,18 +7,20 @@ related_targets: []
 
 # werkz website
 
-Scope: the public site (site/index.html landing + generated docs pages). Visitor modes: Persuade (landing) and Read (docs). Audience: developers discovering werkz and existing users, equal weight. Action: copy an install command; find a doc. Proof: real commands, real providers, real docs; no invented numbers or testimonials. Constraints: static HTML/CSS, minimal JS, gh-pages keeps apt/ and rpm/ untouched.
+Scope: the public site (site/index.html landing + generated docs pages). Visitor modes: Persuade (landing) and Read (docs). Audience: developers discovering werkz and existing users, equal weight. Action: copy an install command; find a doc; contribute. Proof: real commands, a real capture of the werkz terminal UI, real docs; no invented numbers or testimonials. Constraints: static HTML/CSS, minimal JS, light and dark themes, gh-pages keeps apt/ and rpm/ untouched.
+
+The user rejected the Silk Canopy world after seeing it built and took the category standard: a professional product site at the level of Anthropic, OpenAI, GitHub and Google. Their craft level is the bar.
 
 ## Direction contract
 
-THESIS: werkz is a canopy of three translucent silk bands, indigo for API keys, madder for subscriptions, saffron for free and local models, and every overlap is werkz choosing between them. Refuses the dark hero, terminal mock and feature-card grid.
+THESIS: the category standard, executed without compromise: calm white (or near-black) canvas, crisp type, one real product shot, and werkz's saffron-red-blue gradient used once, as light behind the product.
 
-OWN-WORLD: sun-white ground, indigo ink, madder and saffron silk, overlap chords in violet and brown; thin wide-tracked sans display, wide caps labels pinned at band edges, hairline indigo rules, rectangular indigo buttons.
+OWN-WORLD: white and zinc neutrals, near-black ink, the brand gradient only as a soft glow and the logo; Geist Sans and Geist Mono; 1px zinc borders, 12-16px radii, quiet shadows; line icons at one stroke weight; full dark theme.
 
-STORY: the visitor sees werkz runs on whatever model access they already have, copies the install line, finds their install method, then reads the docs.
+STORY: the visitor sees what werkz is, sees it working, copies the install line, learns how API keys and subscriptions work, then reads the docs or contributes.
 
-FIRST VIEWPORT: lowercase wordmark top left, dot rail nav at left, huge thin indigo headline left half, three labelled silk bands sweeping the right two thirds; install command with copy button under the headline.
+FIRST VIEWPORT: centered headline and subhead, install command card with tabs and copy, two buttons, then the real werkz TUI capture in a window frame over the gradient glow.
 
-FORM: challenger Silk Canopy (competitive in the roll), chosen by the user; seed c1244bb7.
+FORM: canon (category standard), chosen by the user after the built challenger; seed c1244bb7.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance
