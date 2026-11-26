@@ -104,6 +104,14 @@ and doesn't overwrite it until you fix it.</li>
 <td>Don't check for or install updates this session (see <a href="installation.html#updating">Updating</a>)</td>
 </tr>
 <tr>
+<td><code>BRAVE_API_KEY</code>, <code>TAVILY_API_KEY</code>, <code>SEARXNG_URL</code></td>
+<td>A web search service for models without their own search (see <a href="usage.html#web-access">Web access</a>)</td>
+</tr>
+<tr>
+<td><code>WERKZ_BROWSER</code></td>
+<td>The Chrome, Chromium or Edge executable for werkz's browser (default: the first one found)</td>
+</tr>
+<tr>
 <td><code>WERKZ_NO_MOUSE=1</code></td>
 <td>Start with werkz's mouse handling off (the terminal's own selection; <strong>Ctrl+S</strong> turns it on)</td>
 </tr>
@@ -133,6 +141,10 @@ and doesn't overwrite it until you fix it.</li>
 <tr>
 <td><code>~/.config/werkz/sessions/</code></td>
 <td>Saved conversations for <code>/resume</code> (mode 0600, the latest 500); <code>history_off</code> in config.json, or <code>/resume off</code>, stops saving</td>
+</tr>
+<tr>
+<td><code>~/.cache/werkz/browser-profile/</code>, <code>~/.cache/werkz/screenshots/</code></td>
+<td>werkz's own browser profile, and screenshots</td>
 </tr>
 <tr>
 <td><code>~/.cache/werkz/outputs/</code></td>

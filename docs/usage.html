@@ -155,6 +155,14 @@
 <td>Save the conversation as a markdown file</td>
 </tr>
 <tr>
+<td><code>/search</code></td>
+<td>Web search for the model: <code>/search brave|tavily &lt;key&gt;</code>, <code>/search searxng &lt;url&gt;</code>, <code>/search off</code> (see <a href="#web-access">Web access</a>)</td>
+</tr>
+<tr>
+<td><code>/browser</code></td>
+<td>werkz's browser: <code>/browser show</code> to watch it, <code>/browser hide</code>, <code>/browser close</code></td>
+</tr>
+<tr>
 <td><code>/docs</code></td>
 <td>Open this documentation in your browser</td>
 </tr>
@@ -263,6 +271,95 @@ to pick a message, or <code>/copy</code>. A response with code blocks lets you c
 file. werkz copies with your system's clipboard tool (<code>wl-copy</code>, <code>xclip</code>, <code>xsel</code>, <code>pbcopy</code>, PowerShell on
 WSL), inside tmux into tmux's buffer, and over SSH with the OSC 52 terminal sequence. If your terminal doesn't
 support that, press <strong>Ctrl+S</strong> and select with the terminal itself.</p>
+<h2 id="web-access">Web access<a class="anchor" href="#web-access" aria-label="Link to this section">#</a></h2>
+<p>werkz can read pages and search the web, so it can look up current documentation, an error message or a
+library's latest version.</p>
+<ul>
+<li>
+<p><strong>WebFetch</strong> reads any public <code>http(s)</code> page as Markdown, with scripts, menus and page furniture removed.
+Long pages are read in parts. It needs no setup and doesn't ask: it only reads.</p>
+</li>
+<li>
+<p><strong>Pages on your local network ask first</strong>: <code>localhost</code>, private addresses (<code>10.x</code>, <code>192.168.x</code>, …) and
+cloud metadata addresses. Choose &quot;don't ask again&quot; to allow one host (say, your dev server) for the session.
+The check is made when connecting, so a public address that redirects or resolves to a local one asks too.</p>
+</li>
+<li>
+<p><strong>WebSearch</strong> uses the search built into your model's provider when it has one: Claude (on your Claude
+model; Anthropic charges $10 per 1,000 searches plus tokens), OpenAI, and Gemini (Google Search). Other
+models use a search service you set up with <code>/search</code>:</p>
+<pre><code class="language-text">/search brave &lt;key&gt;       # Brave (free tier)
+/search tavily &lt;key&gt;      # Tavily (free tier)
+/search searxng &lt;url&gt;     # your SearXNG, no key
+/search                   # what's used now
+/search off               # no web search
+</code></pre>
+<p><code>/search provider</code> uses only the model's own search; <code>/search auto</code> (the default) prefers it and falls back
+to a service. Keys can also come from <code>BRAVE_API_KEY</code>, <code>TAVILY_API_KEY</code> and <code>SEARXNG_URL</code>.</p>
+</li>
+</ul>
+<p>Everything read from the web reaches the model marked as untrusted: it is told to use it as information and
+never to follow instructions in it. In Claude Code mode, Claude Code's own web tools are used, with the same
+rule for local pages.</p>
+<h2 id="the-browser">The browser<a class="anchor" href="#the-browser" aria-label="Link to this section">#</a></h2>
+<p>werkz checks web UI it changes the way you would: it starts the dev server (<code>DevServer</code>), opens the page,
+clicks and types through it, reads the console and the network requests, and compares screenshots from before
+and after a change. For example: &quot;the signup button does nothing, fix it and check it in the browser&quot;.</p>
+<ul>
+<li>It uses <strong>your installed Chrome, Chromium or Edge</strong>, with its own separate profile (your bookmarks, logins
+and cookies are never used). werkz never downloads a browser; if none is installed, the browser tools aren't
+offered. Set <code>WERKZ_BROWSER</code> to use a particular one.</li>
+<li>It runs in the background. <code>/browser show</code> opens its window so you can watch (on a desktop), <code>/browser hide</code>
+goes back, <code>/browser close</code> closes it. <code>/browser</code> shows its state and the running dev servers.</li>
+<li>The model reads pages through their accessibility tree (the structure screen readers use), with ids it
+clicks and types by. Screenshots are saved under <code>~/.cache/werkz/screenshots/</code>; comparing two says how much
+of the page changed and where.</li>
+<li>Dev servers keep running in the background until stopped, and werkz stops them when you quit. At most four
+run at once.</li>
+</ul>
+<p>What asks first:</p>
+<table>
+<thead>
+<tr>
+<th>Action</th>
+<th>Asks?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Opening a page on this machine (<code>localhost</code>, <code>127.0.0.1</code>)</td>
+<td>No</td>
+</tr>
+<tr>
+<td>Opening any other site</td>
+<td>Yes, with &quot;don't ask again&quot; for that domain. The page can't move itself to a site you haven't approved</td>
+</tr>
+<tr>
+<td>Clicking and typing</td>
+<td>No, except as below. Blocked in plan mode</td>
+</tr>
+<tr>
+<td>Submitting a form (submit button, or Enter in a form)</td>
+<td>Always, in every mode</td>
+</tr>
+<tr>
+<td>Uploading a file (only files in your working folders)</td>
+<td>Always</td>
+</tr>
+<tr>
+<td>Downloading a file</td>
+<td>Always</td>
+</tr>
+<tr>
+<td>Typing into a password or payment field</td>
+<td>Never done</td>
+</tr>
+<tr>
+<td>Starting a dev server</td>
+<td>Like any command (<code>Bash</code> rules)</td>
+</tr>
+</tbody>
+</table>
 <h2 id="saved-conversations">Saved conversations<a class="anchor" href="#saved-conversations" aria-label="Link to this section">#</a></h2>
 <p>Every conversation is saved as you go, so you can come back to it. <code>/resume</code> lists the ones from this
 folder (Tab shows all folders), newest first; type to search what was asked and answered, <strong>Enter</strong>
@@ -307,6 +404,26 @@ until you delete them).</p>
 <td><code>Task</code></td>
 <td>Hands a research question to a read-only sub-agent and gets a short report back</td>
 </tr>
+<tr>
+<td><code>WebFetch</code></td>
+<td>Reads a web page as Markdown: docs, issues, changelogs, or your local dev server (see <a href="#web-access">Web access</a>)</td>
+</tr>
+<tr>
+<td><code>WebSearch</code></td>
+<td>Searches the web for current information</td>
+</tr>
+<tr>
+<td><code>DevServer</code></td>
+<td>Starts your project's dev server in the background, waits for its port, reads its output, stops it</td>
+</tr>
+<tr>
+<td><code>Browse</code> · <code>ReadPage</code> · <code>Click</code> · <code>Type</code></td>
+<td>Opens and uses pages in werkz's browser (see <a href="#the-browser">The browser</a>)</td>
+</tr>
+<tr>
+<td><code>Screenshot</code> · <code>Console</code> · <code>Network</code></td>
+<td>Captures and compares screenshots; reads console errors and failed requests</td>
+</tr>
 </tbody>
 </table>
 <p>Because <code>Bash</code> runs your real shell, werkz works with whatever your project uses: <code>git</code>, <code>go</code>, <code>npm</code>,
@@ -326,6 +443,8 @@ asking depends on the <a href="safety.html">permission mode</a>.</p>
     <li><a href="#command-line">Command line</a></li>
     <li><a href="#mentioning-files">Mentioning files</a></li>
     <li><a href="#copying-text">Copying text</a></li>
+    <li><a href="#web-access">Web access</a></li>
+    <li><a href="#the-browser">The browser</a></li>
     <li><a href="#saved-conversations">Saved conversations</a></li>
     <li><a href="#the-tools-werkz-uses">The tools werkz uses</a></li>
   </ol></aside>
