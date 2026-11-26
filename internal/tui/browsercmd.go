@@ -112,7 +112,7 @@ func (m *model) browserText() string {
 		add(sRed.Render("● connected to your Chrome at "+m.eng.BrowserAddr()) + sDim.Render(" · werkz uses only its own tab · /browser disconnect"))
 	}
 	add(sDim.Render("/browser view (see the page here) · /browser connect (use your own Chrome) · /browser show (its window) · /browser hide · /browser close"))
-	add(sDim.Render("Pages on this machine open freely; other sites ask. Form submits, uploads and downloads always ask, and password fields are never typed into."))
+	add(sDim.Render("Pages on this machine open freely; other sites ask. Sending forms (posts), uploads and downloads always ask, and password fields are never typed into."))
 	return box(gradient("Browser", 0)+"\n"+strings.Join(lines, "\n"), cSky, m.w)
 }
 

@@ -120,6 +120,7 @@ type Browser struct {
 	lastURL    string
 	mainDocID  network.RequestID
 	blocked    []string
+	notes      []string
 	downloads  []string
 	dlSeen     map[string]bool
 	dlOrder    []string
@@ -255,7 +256,7 @@ func (b *Browser) initState(allocCancel context.CancelFunc, tabCtx context.Conte
 	b.reqStart = map[network.RequestID]float64{}
 	b.errTotal, b.failTotal, b.errMark, b.failMark = 0, 0, 0, 0
 	b.inflight, b.loading, b.mainStatus = 0, false, 0
-	b.blocked, b.downloads = nil, nil
+	b.blocked, b.downloads, b.notes = nil, nil, nil
 	b.dlSeen, b.dlOrder, b.dlPending, b.dlDir = map[string]bool{}, nil, map[string]dlInfo{}, ""
 	b.frameSeen, b.popups, b.armed = map[string]bool{}, 0, false
 	b.approved, b.onceOnly = "", false
@@ -328,7 +329,6 @@ func (b *Browser) prepTab(octx context.Context) error {
 			return err
 		},
 		func() error { return b.installSubmitGuard(octx) },
-		func() error { return b.tabDownloads(octx, false) },
 		func() error { return b.applyEmulation(octx) },
 	}
 	for _, s := range steps {
@@ -397,7 +397,22 @@ func (b *Browser) beginFor(call context.Context, d time.Duration) (context.Conte
 	}
 	ctx, cancel := context.WithTimeout(tab, d)
 	stop := context.AfterFunc(call, cancel)
-	return ctx, func() { stop(); cancel(); b.opMu.Unlock() }, nil
+	if b.connected {
+		// Downloads are denied only while an action of werkz runs: the switch
+		// is profile-wide, so it must never stay on while werkz is idle (the
+		// user's own tabs download normally then).
+		_ = b.tabDownloads(ctx, false)
+	}
+	return ctx, func() {
+		stop()
+		if b.connected {
+			rctx, rcancel := context.WithTimeout(tab, 3*time.Second)
+			_ = b.tabDownloads(rctx, true)
+			rcancel()
+		}
+		cancel()
+		b.opMu.Unlock()
+	}, nil
 }
 
 // startGuard connects the raw guard connection that pauses popups and
@@ -583,8 +598,10 @@ var setDownloadBehaviorPage = cdp.Command[struct {
 
 // tabDownloads switches downloads of one tab of werkz's own on or off in the
 // user's own Chrome ("default" lets Chrome save to its own download folder).
-// Connected mode only. The page cannot reach this switch; the fence also
-// cancels any download that starts while it is off (see judgeDownload).
+// Connected mode only. The setting is profile-wide in Chrome, not per tab, so
+// it is on only during an action of werkz's (see beginFor). The page cannot
+// reach this switch; the fence also cancels any download of werkz's targets
+// that starts while downloads are off, and between actions (judgeDownload).
 func (b *Browser) tabDownloads(ctx context.Context, on bool) error {
 	p := struct {
 		Behavior string `json:"behavior"`

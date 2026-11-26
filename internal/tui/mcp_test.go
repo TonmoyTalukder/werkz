@@ -8,6 +8,7 @@ import (
 
 	"github.com/TonmoyTalukder/werkz/internal/mcp"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
 )
 
@@ -34,6 +35,11 @@ func TestProjectMCPServersNeedApproval(t *testing.T) {
 		t.Fatalf("an unapproved project server started: %+v", st)
 	}
 	m.mcpCommand([]string{"approve", "db"})
+	if m.state != stateMCPApprove || !strings.Contains(ansi.Strip(m.View()), "werkz-test-no-such-command --port 5") {
+		t.Fatalf("approve didn't show what it runs:\n%s", ansi.Strip(m.View()))
+	}
+	m.mcpApproveKey(tea.KeyMsg{Type: tea.KeyDown})
+	m.mcpApproveKey(tea.KeyMsg{Type: tea.KeyEnter})
 	if len(m.cfg.MCPApproved) != 1 {
 		t.Fatalf("approval not saved: %v", m.cfg.MCPApproved)
 	}

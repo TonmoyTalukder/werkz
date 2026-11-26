@@ -113,6 +113,8 @@ func (m *model) bottomView() string {
 		b.WriteString(m.resumeView())
 	case stateConnect:
 		b.WriteString(m.connectView())
+	case stateMCPApprove:
+		b.WriteString(m.mcpApproveView())
 	case stateCopy:
 		b.WriteString(m.copyPickerView() + "\n")
 	case stateSelect:

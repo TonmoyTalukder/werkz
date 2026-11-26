@@ -39,13 +39,14 @@ const (
 	stateFallback
 	stateFallbackMode
 	stateFallbackChain
-	stateNotice  // the one-time "You're using your ChatGPT plan" notice
-	stateBypass  // confirming Bypass permissions
-	stateResume  // /resume: choosing a saved conversation
-	stateCopy    // choosing what of a response to copy
-	stateSelect  // moving between messages to copy one (alt+↑)
-	stateLive    // /browser view: the browser's page, full screen
-	stateConnect // confirming /browser connect (werkz in the user's own Chrome)
+	stateNotice     // the one-time "You're using your ChatGPT plan" notice
+	stateBypass     // confirming Bypass permissions
+	stateResume     // /resume: choosing a saved conversation
+	stateCopy       // choosing what of a response to copy
+	stateSelect     // moving between messages to copy one (alt+↑)
+	stateLive       // /browser view: the browser's page, full screen
+	stateConnect    // confirming /browser connect (werkz in the user's own Chrome)
+	stateMCPApprove // confirming a project's MCP server
 )
 
 type tickMsg time.Time
@@ -118,21 +119,23 @@ type model struct {
 	planWarned  map[string]bool           // limit warnings already shown
 	bypassSel   int                       // highlighted answer in the Bypass confirmation (0 = No)
 
-	ment      mentionState // the @ file picker
-	sess      sessionInfo  // this conversation, as saved for /resume
-	rp        resumePicker
-	cp        copyPicker
-	prevState uiState            // where the copy picker returns to
-	selEntry  int                // selected transcript entry (stateSelect)
-	mouseOff  bool               // mouse capture off: the terminal's own selection works
-	toast     string             // a short confirmation in the status line, until the next key
-	sel       textSel            // text selected with the mouse
-	lines     []string           // the transcript as last drawn (for copying a selection)
-	img       gfx                // pictures in the terminal (screenshots, /browser view)
-	mcp       *mcp.Manager       // the session's MCP servers (nil = MCP off)
-	mcpCfgs   []mcp.ServerConfig // configured servers, as last read
-	connAddr  string             // the Chrome address being confirmed (stateConnect)
-	connSel   int                // highlighted answer (0 = No)
+	ment       mentionState // the @ file picker
+	sess       sessionInfo  // this conversation, as saved for /resume
+	rp         resumePicker
+	cp         copyPicker
+	prevState  uiState            // where the copy picker returns to
+	selEntry   int                // selected transcript entry (stateSelect)
+	mouseOff   bool               // mouse capture off: the terminal's own selection works
+	toast      string             // a short confirmation in the status line, until the next key
+	sel        textSel            // text selected with the mouse
+	lines      []string           // the transcript as last drawn (for copying a selection)
+	img        gfx                // pictures in the terminal (screenshots, /browser view)
+	mcp        *mcp.Manager       // the session's MCP servers (nil = MCP off)
+	mcpCfgs    []mcp.ServerConfig // configured servers, as last read
+	connAddr   string             // the Chrome address being confirmed (stateConnect)
+	mcpPending string             // the project MCP server being confirmed
+	mcpSel     int                // highlighted answer (0 = No)
+	connSel    int                // highlighted answer (0 = No)
 }
 
 // sessionInfo identifies the saved conversation.

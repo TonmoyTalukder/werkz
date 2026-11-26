@@ -196,3 +196,68 @@ func TestHasSecretField(t *testing.T) {
 		}
 	}
 }
+
+// While werkz is connected and idle, the user's own tabs download as usual:
+// werkz's download switch is profile-wide, so it is on only during an action.
+func TestConnectedUserTabDownloads(t *testing.T) {
+	u := startUserChrome(t)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/user", html(`<button onclick="var a=document.createElement('a');a.href=window.URL.createObjectURL(new Blob(['mine']));a.download='usertab.bin';a.dispatchEvent(new MouseEvent('click'))">Mine</button>`))
+	mux.HandleFunc("/", html(`<h1>werkz</h1>`))
+	s := serve(t, mux.ServeHTTP)
+	user := u.openTab(s.URL + "/user")
+	userCtx := u.userContext(user.ID)
+	b, err := Connect(ctx5(t), u.port, Options{ShotDir: filepath.Join(t.TempDir(), "shots"), AllowHost: func(string) bool { return true }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	if _, err := b.Navigate(ctx5(t), s.URL+"/"); err != nil {
+		t.Fatal(err)
+	}
+	userEval(t, userCtx, `document.querySelector('button').click()`)
+	eventually(t, "the user's own download", 5*time.Second, func() bool { return len(filesNamed(u.home, "usertab.bin")) > 0 })
+}
+
+// A cross-site (out-of-process) iframe of werkz's tab cannot download either.
+func TestConnectedCrossSiteIframeDownload(t *testing.T) {
+	u := startUserChrome(t)
+	inner := serve(t, html(`<button style="position:fixed;left:0;top:0;width:200px;height:80px" onclick="var a=document.createElement('a');a.href=window.URL.createObjectURL(new Blob(['x']));a.download='oopif.bin';a.dispatchEvent(new MouseEvent('click'))">In frame</button>`))
+	innerURL := strings.Replace(inner.URL, "127.0.0.1", "localhost", 1)
+	outer := serve(t, html(`<iframe src="`+innerURL+`/" style="position:absolute;left:0;top:0;width:300px;height:200px;border:0"></iframe>`))
+	b, err := Connect(ctx5(t), u.port, Options{ShotDir: filepath.Join(t.TempDir(), "shots"), AllowHost: func(string) bool { return true }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	if _, err := b.Navigate(ctx5(t), outer.URL+"/"); err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(500 * time.Millisecond)
+	got, err := b.ClickAt(ctx5(t), 50, 40, "left", 1, "", Allow{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	time.Sleep(1500 * time.Millisecond)
+	if f := filesNamed(u.home, "oopif"); len(f) != 0 {
+		t.Fatalf("a cross-site iframe downloaded: %v (notes %v)", f, got.Downloads)
+	}
+	t.Logf("iframe download notes: %v", got.Downloads)
+}
+
+func TestGetFormSubmitIsReported(t *testing.T) {
+	b := br(t)
+	s, c := countingServer(t, `<form id=f method=get action="/search"><input name=q value="secret words"></form>
+<button onclick="document.getElementById('f').requestSubmit()">Send</button>`)
+	snap, err := b.Navigate(ctx5(t), s.URL+"/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := b.Click(ctx5(t), refOf(t, snap.Tree, "button", "Send"), Allow{})
+	if err != nil || !hasNote(got.Notes, "sent a form to "+s.URL+"/search?q=secret+words (GET)") || c.n("GET /search") != 1 {
+		t.Fatalf("GET form: %v notes=%v blocked=%v hits=%d", err, got.Notes, got.Blocked, c.n("GET /search"))
+	}
+	if next, err := b.Navigate(ctx5(t), s.URL+"/"); err != nil || len(next.Notes) != 0 {
+		t.Errorf("notes leaked into the next call: %v %v", err, next.Notes)
+	}
+}

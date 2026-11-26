@@ -38,10 +38,11 @@ it. Credential locations stay blocked even in bypass.
 - **Web pages on your local network** (`localhost`, private and cloud-metadata addresses) are fetched only
   after you approve, checked again when connecting, so redirects and DNS tricks can't reach them. Public pages
   and searches don't ask; their content is marked as untrusted for the model.
-- **werkz's browser** uses its own profile, never yours. Sites other than this machine ask first; form
-  submits, uploads and downloads ask in every mode, including bypass; password and payment fields are never
-  typed into. Connecting it to your own Chrome (`/browser connect`) is opt-in per session, shows a red banner,
-  and uses only the tab werkz opens. See [The browser](usage.md#the-browser).
+- **werkz's browser** uses its own profile, never yours. Sites other than this machine ask first. Sending a
+  form that posts data, uploads and downloads ask in every mode, including bypass (search-style GET forms open
+  like links, under the site rules, and are reported); password and payment fields are never typed into, and
+  JavaScript asks on any page that has one. Connecting it to your own Chrome (`/browser connect`) is opt-in
+  per session, shows a red banner, and uses only the tab werkz opens. See [The browser](usage.md#the-browser).
 - **MCP servers** from a project's `.werkz/mcp.json` start only after you approve them (again if their command
   changes); each MCP tool asks the first time it runs, and its results are marked as untrusted.
 - Text from models, tools and files is cleaned of terminal escape sequences before it's displayed.

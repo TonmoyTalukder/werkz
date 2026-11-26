@@ -25,6 +25,7 @@ type Snapshot struct {
 	// What werkz stopped since the last call: navigations AllowHost rejected
 	// (the URL), "form submit to <url> (needs the user's approval)",
 	// "popup to <url>", "frame from <url>". At most the last 50.
+	Notes     []string // things that happened that the model and user should see (a GET form was sent)
 	Blocked   []string
 	Downloads []string // downloads blocked or saved since the last call (file name + status)
 }
@@ -71,7 +72,7 @@ func (b *Browser) startAllow(ctx context.Context, allow Allow) (func(), error) {
 			if tab != nil {
 				dctx, cancel := context.WithTimeout(tab, 5*time.Second)
 				defer cancel()
-				_ = b.tabDownloads(dctx, false)
+				_ = b.tabDownloads(dctx, false) // denied again until the action ends
 			}
 		})
 	} else if dir != "" {
@@ -281,8 +282,8 @@ func (b *Browser) snapshot(ctx context.Context) (*Snapshot, error) {
 	s.Status = b.mainStatus
 	s.NewConsoleErrors, s.NewFailedRequests = b.errTotal-b.errMark, b.failTotal-b.failMark
 	b.errMark, b.failMark = b.errTotal, b.failTotal
-	s.Blocked, s.Downloads = b.blocked, b.downloads
-	b.blocked, b.downloads = nil, nil
+	s.Blocked, s.Downloads, s.Notes = b.blocked, b.downloads, b.notes
+	b.blocked, b.downloads, b.notes = nil, nil, nil
 	b.mu.Unlock()
 	return s, nil
 }

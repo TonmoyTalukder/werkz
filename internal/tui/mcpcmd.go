@@ -9,6 +9,7 @@ import (
 
 	"github.com/TonmoyTalukder/werkz/internal/mcp"
 	"github.com/TonmoyTalukder/werkz/internal/mcpauth"
+	"github.com/TonmoyTalukder/werkz/internal/textutil"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/x/ansi"
@@ -147,13 +148,30 @@ func (m *model) mcpCommand(args []string) tea.Cmd {
 		if c.Scope != "project" {
 			return p(renderNotice("info", c.Name+" is one of your own servers: it doesn't need approval."))
 		}
+		// show everything it runs, in full, and confirm
+		m.mcpPending, m.mcpSel, m.state, m.dialogAt = c.Name, 0, stateMCPApprove, time.Now()
+		return nil
+	}
+	return m.mcpCommand2(sub, c)
+}
+
+// approveMCP records the approval of a project server and starts it.
+func (m *model) approveMCP(c mcp.ServerConfig) tea.Cmd {
+	p := m.printS
+	{
 		if m.cfg.MCPApproved == nil {
 			m.cfg.MCPApproved = map[string]string{}
 		}
 		m.cfg.MCPApproved[approvalKey(m.mcpProjectDir(), c.Name)] = c.Hash()
 		m.saveConfig()
-		return tea.Batch(p(renderNotice("info", "Approved "+c.Name+" for this project: "+mcpWhat(c)+". It starts now, and with werkz "+
-			"from now on, until its command or address changes.")), m.startMCP(c))
+		return tea.Batch(p(renderNotice("info", "Approved "+c.Name+" for this project. It starts now, and with werkz "+
+			"from now on, until its entry in .werkz/mcp.json changes.")), m.startMCP(c))
+	}
+}
+
+func (m *model) mcpCommand2(sub string, c mcp.ServerConfig) tea.Cmd {
+	p := m.printS
+	switch sub {
 	case "connect", "start":
 		if !m.mcpApproved(c) {
 			return p(renderNotice("warn", c.Name+" is a project server you haven't approved: it runs "+mcpWhat(c)+". /mcp approve "+c.Name+" starts it."))
@@ -203,8 +221,47 @@ func (m *model) handleMCPLogin(msg mcpLoginMsg) tea.Cmd {
 }
 
 // mcpWhat is what a server runs or where it connects, as written: command, arguments and
-// environment, or URL and headers. Approvals show all of it.
-func mcpWhat(c mcp.ServerConfig) string { return "`" + c.Describe() + "`" }
+// environment, or URL and headers. Terminal escapes are removed, so the file can't hide any of it.
+func mcpWhat(c mcp.ServerConfig) string { return "`" + textutil.Sanitize(c.Describe()) + "`" }
+
+func (m *model) mcpApproveKey(k tea.KeyMsg) tea.Cmd {
+	switch k.String() {
+	case "up", "down", "tab", "shift+tab":
+		m.mcpSel = 1 - m.mcpSel
+	case "esc":
+		m.state = stateChat
+	case "enter":
+		m.state = stateChat
+		if c, ok := m.mcpConfig(m.mcpPending); ok && m.mcpSel == 1 {
+			return m.approveMCP(c)
+		}
+	}
+	return nil
+}
+
+func (m *model) mcpApproveView() string {
+	c, _ := m.mcpConfig(m.mcpPending)
+	w := max(m.w-8, 20)
+	var b strings.Builder
+	b.WriteString(sYellow.Bold(true).Render("Start the project's MCP server "+c.Name+"?") + "\n\n")
+	what := "It runs this command on your machine, with your user's access:"
+	if c.Type != "stdio" {
+		what = "It connects to this server and sends it these headers:"
+	}
+	b.WriteString(wrapTo(sText.Render(what), w) + "\n")
+	b.WriteString(wrapTo(sPink.Render(textutil.Sanitize(c.Describe())), w) + "\n")
+	b.WriteString(sDim.Render("From "+tildify(c.Source)+". Approve only if you trust this repository.") + "\n\n")
+	opts := []string{"No (esc)", "Yes, approve and start it for this project"}
+	for i, o := range opts {
+		if i == m.mcpSel {
+			b.WriteString(sPink.Render("❯ ") + sPink.Bold(true).Render(o) + "\n")
+		} else {
+			b.WriteString(sDim.Render("  "+o) + "\n")
+		}
+	}
+	b.WriteString(sDim.Render("↑/↓ choose · enter confirm"))
+	return box(b.String(), cYellow, m.w)
+}
 
 func (m *model) mcpText() string {
 	w := max(m.w-8, 30)

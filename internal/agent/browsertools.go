@@ -26,7 +26,7 @@ import (
 //
 // Rules: pages on this machine (localhost) open without asking; any other site asks, with
 // "don't ask again" per domain, and the page can't navigate itself to a site that wasn't
-// approved. Form submits, uploads and downloads always ask. Password and payment fields are
+// approved. Forms that post data, uploads and downloads always ask (GET forms open like links). Password and payment fields are
 // never typed into.
 
 func boolP(desc string) map[string]any { return map[string]any{"type": "boolean", "description": desc} }
@@ -325,6 +325,9 @@ func (e *Engine) DisconnectBrowser() {
 // CloseBrowser closes werkz's browser (it starts again when a browser tool is used). Connected to
 // the user's Chrome, it closes only werkz's tabs there and disconnects.
 func (e *Engine) CloseBrowser() {
+	if e.BrowserConnected() {
+		e.forgetBrowserApprovals() // leaving the user's Chrome: its approvals stay behind
+	}
 	e.br.mu.Lock()
 	b := e.br.b
 	e.br.b, e.br.connected, e.br.addr = nil, false, ""
@@ -341,8 +344,7 @@ func (e *Engine) browserCheck(ctx context.Context, tc llm.ToolCall) (ask bool, w
 	a := parseBrowserArgs(tc)
 	switch tc.Name {
 	case "Browse":
-		switch a.URL {
-		case "back", "forward", "reload":
+		if historyMove(a.URL) {
 			return
 		}
 		u, err := browseTarget(a.URL)
@@ -407,6 +409,15 @@ func (e *Engine) browserCheck(ctx context.Context, tc llm.ToolCall) (ask bool, w
 	return
 }
 
+// historyMove reports whether a Browse "URL" is a move in the tab's history.
+func historyMove(u string) bool {
+	switch strings.ToLower(strings.TrimSpace(u)) {
+	case "back", "forward", "reload":
+		return true
+	}
+	return false
+}
+
 // browseTarget reads a Browse URL the way the browser does: a missing scheme means http for this
 // machine (localhost:3000/x) and https elsewhere.
 func browseTarget(raw string) (*url.URL, error) {
@@ -461,18 +472,18 @@ func (e *Engine) runBrowserTool(ctx context.Context, tc llm.ToolCall, approvedAl
 	var snap *browser.Snapshot
 	switch tc.Name {
 	case "Browse":
-		if u, err := browseTarget(a.URL); err == nil {
-			host := strings.ToLower(u.Hostname())
-			e.br.hostMu.Lock()
-			e.br.site = host
-			e.br.hostMu.Unlock()
-			if approvedAlways {
-				e.br.hosts.Store(host, true)
-			}
-		}
 		target := a.URL
-		if u, err := browseTarget(a.URL); err == nil {
-			target = u.String() // open exactly what was approved (a missing scheme is https elsewhere)
+		if !historyMove(a.URL) { // back/forward/reload aren't host names
+			if u, err := browseTarget(a.URL); err == nil {
+				host := strings.ToLower(u.Hostname())
+				e.br.hostMu.Lock()
+				e.br.site = host
+				e.br.hostMu.Unlock()
+				if approvedAlways {
+					e.br.hosts.Store(host, true)
+				}
+				target = u.String() // open exactly what was approved (a missing scheme is https elsewhere)
+			}
 		}
 		snap, err = b.Navigate(ctx, target)
 	case "ReadPage":
@@ -540,6 +551,9 @@ func snapshotResult(s *browser.Snapshot) tools.Result {
 	}
 	for _, d := range s.Downloads {
 		fmt.Fprintf(&b, "Download: %s\n", d)
+	}
+	for _, n := range s.Notes {
+		fmt.Fprintf(&b, "Note: the page %s\n", n) // e.g. sent a form (GET), so the model and the user see it
 	}
 	b.WriteString("\n" + s.Tree)
 	sum := s.Title

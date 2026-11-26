@@ -127,6 +127,12 @@ func (b *Browser) onEvent(ev any) {
 		b.mu.Unlock()
 	case *input.EventDragIntercepted:
 		b.noteDrag(e)
+	case *page.EventFrameRequestedNavigation:
+		b.mu.Lock()
+		if e.FrameID == b.mainID && e.Reason == page.ClientNavigationReasonFormSubmissionGet {
+			b.notes = capTail(append(b.notes, "sent a form to "+truncate(e.URL, 200)+" (GET)"), maxBlocked)
+		}
+		b.mu.Unlock()
 	case *page.EventFrameStartedLoading:
 		b.mu.Lock()
 		if e.FrameID == b.mainID {

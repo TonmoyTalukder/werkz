@@ -349,7 +349,7 @@ func (e *Engine) execTool(ctx context.Context, tc llm.ToolCall) tools.Result {
 		res = e.runBatch(ctx, tc)
 	case "Browse", "ReadPage", "Click", "Type", "Screenshot", "Console", "Network":
 		always := false
-		if a := parseBrowserArgs(tc); tc.Name == "Browse" {
+		if a := parseBrowserArgs(tc); tc.Name == "Browse" && !historyMove(a.URL) {
 			if u, err := browseTarget(a.URL); err == nil {
 				always = e.allow[e.approvalKey("Browse", u.Hostname())]
 			}
@@ -439,7 +439,7 @@ func (e *Engine) permit(ctx context.Context, tc llm.ToolCall, summary string) (t
 			key, always = "DevServer:"+p, "Yes, and don't ask again for dev servers started with "+p+" this session"
 		}
 	}
-	// Browser actions: other sites ask (per domain); form submits, uploads and downloads always
+	// Browser actions: other sites ask (per domain); posting forms, uploads and downloads always
 	// ask, even in Bypass; password fields are never typed into. Clicking and typing change the
 	// page, so plan mode doesn't allow them.
 	if isBrowserTool(tc.Name) || isActTool(tc.Name) {

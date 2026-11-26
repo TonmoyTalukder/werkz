@@ -90,3 +90,33 @@ func TestBrowserRestartsAfterItDies(t *testing.T) {
 		t.Fatalf("not restarted:\n%s", out)
 	}
 }
+
+// back, forward and reload move through the tab's history; they are never host names.
+func TestBrowseHistoryMoves(t *testing.T) {
+	if _, err := browser.Find(); err != nil {
+		t.Skip("no browser installed")
+	}
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, `<title>%s</title><h1>page %s</h1>`, r.URL.Path, r.URL.Path)
+	}))
+	defer srv.Close()
+	e := New(config.Load(), func(any) {})
+	e.SetMode(config.ModeDefault)
+	defer e.CloseBrowser()
+	browse := func(u string) string {
+		return e.execTool(context.Background(), llm.ToolCall{ID: "b", Name: "Browse", Args: fmt.Sprintf(`{"url":%q}`, u)}).Output
+	}
+	browse(srv.URL + "/one")
+	browse(srv.URL + "/two")
+	if out := browse("back"); !strings.Contains(out, "page /one") {
+		t.Fatalf("back:\n%s", out)
+	}
+	if out := browse("forward"); !strings.Contains(out, "page /two") {
+		t.Fatalf("forward:\n%s", out)
+	}
+	if out := browse("reload"); !strings.Contains(out, "page /two") || strings.Contains(out, "https://reload") {
+		t.Fatalf("reload:\n%s", out)
+	}
+}
