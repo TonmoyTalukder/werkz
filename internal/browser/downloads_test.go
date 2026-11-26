@@ -315,3 +315,41 @@ func TestConnectedOnLoadDownloads(t *testing.T) {
 		t.Errorf("an on-load download landed: %v", f)
 	}
 }
+
+// The live view only looks at the page: capturing frames never turns the user's downloads off.
+func TestCaptureLeavesDownloadsAlone(t *testing.T) {
+	b := &Browser{connected: true, closed: true}
+	if _, _, err := b.beginRead(t.Context()); err == nil {
+		t.Fatal("a closed browser accepted an operation")
+	}
+	b.mu.Lock()
+	gen := b.denyGen
+	b.mu.Unlock()
+	if gen != 0 {
+		t.Fatalf("a read-only operation touched the download switch (generation %d)", gen)
+	}
+	if !b.opMu.TryLock() {
+		t.Fatal("the lock wasn't released")
+	}
+	b.opMu.Unlock()
+}
+
+// A download the page starts after werkz's action finished says so; one during an action doesn't.
+func TestLateDownloadNotesSayWhen(t *testing.T) {
+	b := &Browser{}
+	b.mu.Lock()
+	b.idle = true // the previous action's results were collected
+	late := b.addDownloadLocked("report.csv (blocked: downloads are off)")
+	b.mu.Unlock()
+	if !strings.Contains(late, "after werkz's previous action had finished") {
+		t.Fatalf("late note: %q", late)
+	}
+	unlock := b.lockOp() // the next action starts
+	b.mu.Lock()
+	during := b.addDownloadLocked("data.zip (blocked: downloads are off)")
+	b.mu.Unlock()
+	unlock()
+	if strings.Contains(during, "previous action") {
+		t.Fatalf("a note during an action was marked late: %q", during)
+	}
+}

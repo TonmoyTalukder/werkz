@@ -167,8 +167,8 @@ uses only that tab and the popups it opens: it never reads or touches your other
 Chrome. Sites other than this machine ask first even in bypass; sending forms, uploads and downloads always ask;
 password and payment fields are never typed into. Downloads it's allowed go where your Chrome saves them.
 `/browser disconnect` (or quitting werkz) closes werkz's tab. One limit: Chrome's download setting covers
-your whole profile, so werkz turns downloads off only while it is acting (for those few seconds your own
-tabs can't download either); a page werkz opened that starts a download on its own later can save it to your
+your whole profile, so werkz turns downloads off only while it is acting and for about 1.5 seconds after (your
+own tabs can't download during that time; watching with `/browser view` doesn't count as acting); a page werkz opened that starts a download on its own later can save it to your
 Downloads folder, as any page you open can. Connecting is never saved: each session starts
 with werkz's own browser.
 

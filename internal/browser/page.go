@@ -283,6 +283,7 @@ func (b *Browser) snapshot(ctx context.Context) (*Snapshot, error) {
 	b.errMark, b.failMark = b.errTotal, b.failTotal
 	s.Blocked, s.Downloads, s.Notes = b.blocked, b.downloads, b.notes
 	b.blocked, b.downloads, b.notes = nil, nil, nil
+	b.idle = true // this action's results are collected: what the page does now happens on its own
 	b.mu.Unlock()
 	return s, nil
 }

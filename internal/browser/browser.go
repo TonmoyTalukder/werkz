@@ -91,6 +91,7 @@ type Options struct {
 
 // Browser is one werkz-owned browser with a single reused tab.
 type Browser struct {
+	idle bool // the last action's results were collected and no action runs (under mu)
 	opts Options
 
 	opMu sync.Mutex // serializes operations on the tab
@@ -389,6 +390,9 @@ func (b *Browser) begin(call context.Context) (context.Context, func(), error) {
 // Every operation takes opMu through here, so none can skip it.
 func (b *Browser) lockOp() func() {
 	b.opMu.Lock()
+	b.mu.Lock()
+	b.idle = false // an action is running: what the page does now is part of it
+	b.mu.Unlock()
 	if !b.connected {
 		return b.opMu.Unlock
 	}
@@ -448,7 +452,18 @@ func (b *Browser) setDeny(on bool) {
 
 // beginFor is begin with a custom time budget.
 func (b *Browser) beginFor(call context.Context, d time.Duration) (context.Context, func(), error) {
-	unlock := b.lockOp()
+	return b.beginWith(call, d, b.lockOp)
+}
+
+// beginRead is begin for an operation that only looks at the page (the live view's frames): it
+// takes the lock but leaves downloads alone, since looking can't start one. Without this, the live
+// view's capture every 1.5 s would keep the user's own tabs from downloading for as long as it is open.
+func (b *Browser) beginRead(call context.Context) (context.Context, func(), error) {
+	return b.beginWith(call, opTimeout, func() func() { b.opMu.Lock(); return b.opMu.Unlock })
+}
+
+func (b *Browser) beginWith(call context.Context, d time.Duration, lock func() func()) (context.Context, func(), error) {
+	unlock := lock()
 	b.mu.Lock()
 	b.fallbackLocked()
 	tab, closed := b.tab, b.closed

@@ -261,7 +261,7 @@ func absDiff(a, b uint8) uint8 {
 
 // Capture returns a PNG of the viewport without saving it: the live view in the terminal.
 func (b *Browser) Capture(call context.Context) ([]byte, error) {
-	ctx, done, err := b.begin(call)
+	ctx, done, err := b.beginRead(call) // only looks: leaves the user's downloads alone
 	if err != nil {
 		return nil, err
 	}

@@ -507,7 +507,7 @@ func (b *Browser) onDownloadBegin(e *browser.EventDownloadWillBegin) {
 		name = filepath.Base(e.URL)
 	}
 	if b.dlDir == "" {
-		b.downloads = capTail(append(b.downloads, name+" (blocked: downloads are off)"), maxBlocked)
+		b.addDownloadLocked(name + " (blocked: downloads are off)")
 		return
 	}
 	b.dlPending[e.GUID] = dlInfo{name: name, dir: b.dlDir}
@@ -526,9 +526,9 @@ func (b *Browser) onDownloadProgress(e *browser.EventDownloadProgress) {
 		if where == "" {
 			where = filepath.Join(info.dir, info.name)
 		}
-		b.downloads = capTail(append(b.downloads, fmt.Sprintf("%s (saved to %s)", info.name, where)), maxBlocked)
+		b.addDownloadLocked(fmt.Sprintf("%s (saved to %s)", info.name, where))
 	case browser.DownloadProgressStateCanceled:
-		b.downloads = capTail(append(b.downloads, info.name+" (canceled)"), maxBlocked)
+		b.addDownloadLocked(info.name + " (canceled)")
 	default:
 		return
 	}
@@ -570,6 +570,17 @@ func (b *Browser) noteDownload(rawURL, note string, named bool) {
 	if b.dlNoted == nil || len(b.dlNoted) > 100 {
 		b.dlNoted = map[string]string{}
 	}
-	b.dlNoted[rawURL] = note
+	b.dlNoted[rawURL] = b.addDownloadLocked(note)
+}
+
+// addDownloadLocked records a download note and returns it as recorded. A page can start a download
+// on its own after werkz's action has finished (a script's timer); such a note is reported with the
+// next action's result, so it says when it happened instead of looking like that action's doing.
+// Callers hold b.mu.
+func (b *Browser) addDownloadLocked(note string) string {
+	if b.idle {
+		note += ", started by the page after werkz's previous action had finished"
+	}
 	b.downloads = capTail(append(b.downloads, note), maxBlocked)
+	return note
 }
