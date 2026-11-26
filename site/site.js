@@ -127,7 +127,9 @@
       '<svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span>';
     return b;
   };
-  for (const pre of document.querySelectorAll(".doc > pre")) {
+  // every code block in the docs, also those inside lists and tables, gets the frame and copy button
+  for (const pre of document.querySelectorAll(".doc pre")) {
+    if (pre.closest(".cmd")) continue;
     const wrap = document.createElement("div");
     wrap.className = "cmd";
     pre.replaceWith(wrap);
