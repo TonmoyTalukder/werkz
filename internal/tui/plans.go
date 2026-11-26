@@ -2,6 +2,9 @@ package tui
 
 import (
 	"context"
+	"errors"
+	"net/url"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -86,15 +89,73 @@ func waitLogin(ch chan chatgptLoginMsg) tea.Cmd { return func() tea.Msg { return
 
 // openBrowser opens a URL in the user's default browser.
 func openBrowser(u string) error {
-	name := "xdg-open"
-	if runtime.GOOS == "darwin" {
-		name = "open"
+	if !hasBrowser() {
+		return errors.New("no browser on this machine")
 	}
-	return exec.Command(name, u).Start()
+	var names []string
+	switch {
+	case runtime.GOOS == "darwin":
+		names = []string{"open", "/usr/bin/open"}
+	case isWSL():
+		names = []string{"wslview", "xdg-open", "/usr/bin/xdg-open"}
+	default:
+		// a bare PATH (e.g. some app launchers) still finds the system opener
+		names = []string{"xdg-open", "/usr/bin/xdg-open", "/usr/local/bin/xdg-open"}
+	}
+	for _, n := range names {
+		if p, err := exec.LookPath(n); err == nil {
+			return exec.Command(p, u).Start()
+		}
+	}
+	return errors.New("no program to open a browser was found")
+}
+
+// hasBrowser reports whether a browser can be opened here: not over SSH, and on Linux only with
+// a graphical session (or under WSL, where Windows opens it).
+func hasBrowser() bool {
+	if os.Getenv("SSH_CONNECTION") != "" || os.Getenv("SSH_TTY") != "" {
+		return false
+	}
+	if runtime.GOOS == "linux" {
+		return os.Getenv("DISPLAY") != "" || os.Getenv("WAYLAND_DISPLAY") != "" || isWSL()
+	}
+	return true
+}
+
+func isWSL() bool {
+	if runtime.GOOS != "linux" {
+		return false
+	}
+	b, err := os.ReadFile("/proc/version")
+	return err == nil && strings.Contains(strings.ToLower(string(b)), "microsoft")
+}
+
+// callbackPort is the local port the sign-in returns to (from the sign-in URL's redirect_uri).
+func callbackPort(authURL string) string {
+	u, err := url.Parse(authURL)
+	if err != nil {
+		return ""
+	}
+	r, err := url.Parse(u.Query().Get("redirect_uri"))
+	if err != nil {
+		return ""
+	}
+	return r.Port()
+}
+
+// signInHelp is what to show when the sign-in link is ready.
+func signInHelp(authURL string, browser bool) string {
+	if browser {
+		return "Opening your browser to sign in with ChatGPT. If it didn't open, visit:\n" + authURL
+	}
+	port := callbackPort(authURL)
+	return "No browser can be opened here (SSH session or no desktop). Open this link in a browser on your " +
+		"computer:\n" + authURL + "\nThe sign-in returns to werkz on port " + port + ". If werkz runs on another machine, " +
+		"forward that port first by running this on your computer:\nssh -L " + port + ":127.0.0.1:" + port + " <this machine>"
 }
 
 func (m *model) handleChatGPTURL(msg chatgptURLMsg) tea.Cmd {
-	m.printS(renderNotice("info", "Opening your browser to sign in with ChatGPT. If it didn't open, visit:\n"+msg.URL))
+	m.printS(renderNotice("info", signInHelp(msg.URL, hasBrowser())))
 	return waitLogin(msg.result)
 }
 

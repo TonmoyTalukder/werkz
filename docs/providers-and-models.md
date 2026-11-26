@@ -40,6 +40,9 @@ says **Using ChatGPT plan** while one of these models is selected.
   automatically. `/logout chatgpt` revokes it.
 - When the plan's limit is reached, werkz says so and links to the usage page; with [fallback](fallback.md)
   on, another model can take over.
+- Over SSH or on a machine without a desktop, werkz shows the sign-in link instead of opening a browser.
+  Open it on your computer; if werkz runs on another machine, first forward the port werkz names (for
+  example `ssh -L 1455:127.0.0.1:1455 your-server`) so the sign-in can return to werkz.
 
 ### Claude Code (your Claude subscription)
 
