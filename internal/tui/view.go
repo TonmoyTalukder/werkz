@@ -111,6 +111,8 @@ func (m *model) bottomView() string {
 		b.WriteString(m.fallbackChainView())
 	case stateResume:
 		b.WriteString(m.resumeView())
+	case stateConnect:
+		b.WriteString(m.connectView())
 	case stateCopy:
 		b.WriteString(m.copyPickerView() + "\n")
 	case stateSelect:
@@ -268,6 +270,9 @@ func (m *model) statusBar() string {
 		modeLine = sGreen.Render("↑ werkz "+m.updated+" installed · restart to use it") + sDim.Render(" · ") + modeLine
 	case m.available != "":
 		modeLine = sGreen.Render("↑ werkz "+m.available+" available") + sDim.Render(" · /update shows how · ") + modeLine
+	}
+	if m.eng != nil && m.eng.BrowserConnected() {
+		modeLine = sRed.Bold(true).Render("● werkz is connected to your Chrome") + sDim.Render(" · it uses only its own tab · /browser disconnect · ") + modeLine
 	}
 	if m.mouseOff {
 		modeLine = sSky.Render("◇ mouse off: select text with your terminal") + sDim.Render(" · ctrl+s turns scrolling back on")

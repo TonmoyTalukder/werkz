@@ -30,17 +30,19 @@ import (
 // resumed or closed, so the guard speaks the protocol for them directly.
 type guard struct {
 	b    *Browser
-	conn *remote.Conn
+	conn conn
 	next atomic.Int64
 	done chan struct{}
 
-	mu       sync.Mutex
-	pending  map[int64]chan *cdproto.Message
-	sessions map[target.SessionID]*gsession
-	closed   bool
-	tabID    target.ID
-	tabReady chan struct{} // closed once werkz's tab is watched for iframes
-	tabOnce  sync.Once
+	mu        sync.Mutex
+	pending   map[int64]chan *cdproto.Message
+	sessions  map[target.SessionID]*gsession
+	closed    bool
+	tabs      map[target.ID]bool // werkz's own tabs (everything else that appears is a popup)
+	expecting bool               // a tab werkz is creating right now (launch mode) is about to appear
+	tabReady  chan struct{}      // closed once werkz's tab is watched for iframes
+	tabOnce   sync.Once
+	byTarget  map[target.ID]*gsession // connected mode: popups of werkz's tab
 }
 
 type gsession struct {
@@ -48,6 +50,7 @@ type gsession struct {
 	typ      string
 	popup    bool
 	decided  bool
+	counted  bool // popupBegin was called for it
 }
 
 const popupWait = 2 * time.Second // how long a popup may stay silent before it is closed
@@ -76,13 +79,18 @@ func dialGuard(ctx context.Context, b *Browser, wsURL string, tabID target.ID) (
 	if err != nil {
 		return nil, err
 	}
+	return newGuard(b, conn, tabID), nil
+}
+
+func newGuard(b *Browser, c conn, tabID target.ID) *guard {
 	g := &guard{
-		b: b, conn: conn, done: make(chan struct{}), tabID: tabID, tabReady: make(chan struct{}),
+		b: b, conn: c, done: make(chan struct{}), tabs: map[target.ID]bool{tabID: true}, tabReady: make(chan struct{}),
 		pending:  map[int64]chan *cdproto.Message{},
 		sessions: map[target.SessionID]*gsession{},
+		byTarget: map[target.ID]*gsession{},
 	}
 	go g.readLoop()
-	return g, nil
+	return g
 }
 
 func (g *guard) readLoop() {
@@ -117,6 +125,51 @@ func (g *guard) readLoop() {
 			continue
 		}
 		go g.onEvent(msg.SessionID, ev)
+	}
+}
+
+func (g *guard) isTab(id target.ID) bool {
+	g.mu.Lock()
+	own := g.tabs[id]
+	g.mu.Unlock()
+	// connected mode: the fence knows a tab the moment its creation is answered,
+	// before the browser has registered it here
+	return own || (g.b.connected && g.b.pol != nil && g.b.pol.isTab(id))
+}
+
+// expectTab says that werkz is about to create a tab (launch mode, where every
+// new page is paused for vetting): the first new page without an opener is it.
+func (g *guard) expectTab() {
+	g.mu.Lock()
+	g.expecting = true
+	g.mu.Unlock()
+}
+
+func (g *guard) endExpect() {
+	g.mu.Lock()
+	g.expecting = false
+	g.mu.Unlock()
+}
+
+func (g *guard) takeExpected(id target.ID) bool {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if !g.expecting {
+		return false
+	}
+	g.expecting = false
+	g.tabs[id] = true
+	return true
+}
+
+// watchTab registers a tab werkz created. In connected mode the guard attaches
+// to it to watch for out-of-process iframes.
+func (g *guard) watchTab(id target.ID, connected bool) {
+	g.mu.Lock()
+	g.tabs[id] = true
+	g.mu.Unlock()
+	if connected {
+		_, _ = gcall(g, "", target.AttachToTarget, target.AttachToTargetParams{TargetID: id, Flatten: new(true)})
 	}
 }
 
@@ -194,6 +247,24 @@ func (g *guard) start() error {
 	return err
 }
 
+// startConnected watches werkz's tab in the user's own Chrome. Chrome cannot
+// pause a popup for us there (that would need browser-wide auto-attach, which
+// pauses the user's popups too), so it asks to hear about new pages; the
+// fence lets through only the ones werkz's own tab opened.
+func (g *guard) startConnected() error {
+	if _, err := gcall(g, "", target.SetDiscoverTargets, target.SetDiscoverTargetsParams{Discover: true, Filter: target.Filter{{Type: "page"}}}); err != nil {
+		return err
+	}
+	g.mu.Lock()
+	var id target.ID
+	for t := range g.tabs {
+		id = t
+	}
+	g.mu.Unlock()
+	_, err := gcall(g, "", target.AttachToTarget, target.AttachToTargetParams{TargetID: id, Flatten: new(true)})
+	return err
+}
+
 func (g *guard) resume(sess target.SessionID) {
 	_, _ = gcall(g, sess, runtime.RunIfWaitingForDebugger, cdp.Empty{})
 }
@@ -204,8 +275,21 @@ func (g *guard) onEvent(sess target.SessionID, ev any) {
 		g.attached(e)
 	case *target.EventDetachedFromTarget:
 		g.mu.Lock()
+		gone := g.sessions[e.SessionID]
 		delete(g.sessions, e.SessionID)
 		g.mu.Unlock()
+		if gone != nil && g.isTab(gone.targetID) {
+			g.b.tabGone(gone.targetID)
+		}
+	case *target.EventTargetCreated:
+		g.discovered(e.TargetInfo)
+	case *target.EventTargetInfoChanged:
+		g.discovered(e.TargetInfo)
+	case *target.EventTargetDestroyed:
+		if g.isTab(e.TargetID) {
+			g.b.tabGone(e.TargetID)
+		}
+		g.destroyed(e.TargetID)
 	case *fetch.EventRequestPaused:
 		g.paused(sess, e)
 	case *network.EventRequestWillBeSent, *network.EventResponseReceived, *network.EventLoadingFailed, *network.EventLoadingFinished:
@@ -225,20 +309,29 @@ func (g *guard) attached(e *target.EventAttachedToTarget) {
 	}
 	s := &gsession{targetID: ti.TargetID, typ: ti.Type}
 	g.mu.Lock()
+	if known := g.byTarget[ti.TargetID]; known != nil {
+		s = known // a popup found by discovery
+	}
 	g.sessions[e.SessionID] = s
 	g.mu.Unlock()
 
 	switch {
-	case ti.Type == "page" && ti.TargetID == g.tabID:
+	case ti.Type == "page" && (g.isTab(ti.TargetID) || (e.WaitingForDebugger && ti.OpenerID == "" && g.takeExpected(ti.TargetID))):
 		// werkz's own tab: watch for out-of-process iframes.
 		_, _ = gcall(g, e.SessionID, target.SetAutoAttach, autoAttachParams())
 		g.tabOnce.Do(func() { close(g.tabReady) })
 		if e.WaitingForDebugger {
 			g.resume(e.SessionID)
 		}
-	case ti.Type == "page" && e.WaitingForDebugger:
+	case ti.Type == "page" && (e.WaitingForDebugger || s.popup):
+		g.mu.Lock()
 		s.popup = true
-		g.b.popupBegin()
+		counted := s.counted
+		s.counted = true
+		g.mu.Unlock()
+		if !counted {
+			g.b.popupBegin()
+		}
 		_, err := gcall(g, e.SessionID, fetch.Enable, fetch.EnableParams{
 			Patterns: []*fetch.RequestPattern{{ResourceType: network.ResourceTypeDocument, RequestStage: fetch.RequestStageRequest}},
 		})
@@ -247,7 +340,9 @@ func (g *guard) attached(e *target.EventAttachedToTarget) {
 			return
 		}
 		g.resume(e.SessionID)
-		time.AfterFunc(popupWait, func() { g.endPopup(e.SessionID, s, "") })
+		if !counted {
+			time.AfterFunc(popupWait, func() { g.endPopup(e.SessionID, s, "") })
+		}
 	case ti.Type == "iframe":
 		_, _ = gcall(g, e.SessionID, network.Enable, network.EnableParams{})
 		if _, err := gcall(g, e.SessionID, fetch.Enable, fetch.EnableParams{
@@ -266,21 +361,78 @@ func (g *guard) attached(e *target.EventAttachedToTarget) {
 	}
 }
 
+// claim reports whether the caller is the one to decide popup s.
+func (g *guard) claim(s *gsession) bool {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	if s.decided {
+		return false
+	}
+	s.decided = true
+	return true
+}
+
 // endPopup closes a popup (once) and, if navURL is set, sends werkz's tab
 // there instead.
 func (g *guard) endPopup(sess target.SessionID, s *gsession, navURL string) {
-	g.mu.Lock()
-	if s.decided {
-		g.mu.Unlock()
-		return
+	if g.claim(s) {
+		g.finishPopup(s, navURL)
 	}
-	s.decided = true
-	g.mu.Unlock()
+}
+
+func (g *guard) finishPopup(s *gsession, navURL string) {
 	_, _ = gcall(g, "", target.CloseTarget, target.CloseTargetParams{TargetID: s.targetID})
+	g.mu.Lock()
+	delete(g.byTarget, s.targetID)
+	g.mu.Unlock()
 	if navURL != "" {
 		g.b.navigateTab(navURL)
 	}
 	g.b.popupEnd()
+}
+
+// discovered handles a page the fence let through: a popup that werkz's tab
+// opened. It is attached for vetting, and decided as soon as its address is
+// known, or closed when it stays blank.
+func (g *guard) discovered(ti *target.Info) {
+	if ti == nil || g.isTab(ti.TargetID) || ti.Type != "page" {
+		return
+	}
+	g.mu.Lock()
+	s := g.byTarget[ti.TargetID]
+	fresh := s == nil
+	if fresh {
+		s = &gsession{targetID: ti.TargetID, typ: ti.Type, popup: true, counted: true}
+		g.byTarget[ti.TargetID] = s
+	}
+	g.mu.Unlock()
+	if fresh {
+		g.b.popupBegin()
+		time.AfterFunc(popupWait, func() { g.endPopup("", s, "") })
+		go func() {
+			_, _ = gcall(g, "", target.AttachToTarget, target.AttachToTargetParams{TargetID: ti.TargetID, Flatten: new(true)})
+		}()
+	}
+	if u := ti.URL; u != "" && u != "about:blank" && g.claim(s) {
+		navURL := ""
+		if g.b.navAllowed(u) {
+			navURL = u
+		} else {
+			g.b.addBlocked("popup to " + truncate(u, 200))
+		}
+		g.finishPopup(s, navURL)
+	}
+}
+
+// destroyed notes a popup that closed itself.
+func (g *guard) destroyed(id target.ID) {
+	g.mu.Lock()
+	s := g.byTarget[id]
+	delete(g.byTarget, id)
+	g.mu.Unlock()
+	if s != nil && g.claim(s) {
+		g.b.popupEnd()
+	}
 }
 
 func (g *guard) paused(sess target.SessionID, e *fetch.EventRequestPaused) {
@@ -368,27 +520,91 @@ func submitNote(raw string) string {
 // The submit guard is injected into every document. It stops form
 // submissions from every route (user events, submit(), requestSubmit(),
 // handlers that fire later) unless an action armed it.
-const submitGuardJS = `(function(K){
+const submitGuardJS = `(function(K,DL){
  if(Object.prototype.hasOwnProperty.call(window,K))return;
  var armed=false;
  var rec=function(f){try{var a;try{a=new URL((f.getAttribute&&f.getAttribute('action'))||'',document.baseURI).href}catch(e){a=String(f.action)}
   if(typeof window.__werkzBlocked==='function')window.__werkzBlocked(a)}catch(e){}};
  var P=HTMLFormElement.prototype,os=P.submit,or=P.requestSubmit;
- Object.defineProperty(P,'submit',{value:function(){if(!armed){rec(this);return}return os.apply(this,arguments)},writable:true,configurable:true,enumerable:true});
+ Object.defineProperty(P,'submit',{value:function(){if(!armed){rec(this);return}fixT(this);return os.apply(this,arguments)},writable:true,configurable:true,enumerable:true});
  if(or)Object.defineProperty(P,'requestSubmit',{value:function(){if(!armed){rec(this);return}return or.apply(this,arguments)},writable:true,configurable:true,enumerable:true});
- window.addEventListener('submit',function(e){if(!armed){e.preventDefault();e.stopImmediatePropagation();rec(e.target)}},true);
+ window.addEventListener('submit',function(e){if(!armed){e.preventDefault();e.stopImmediatePropagation();rec(e.target)}else{fixT(e.target)}},true);
  Object.defineProperty(window,K,{value:function(v){armed=(v===true)},enumerable:false});
-})(%q)`
+ /* New windows: every route that would open one (target=_blank, formtarget,
+    window.open, ctrl/middle click) navigates this tab instead, so the
+    navigation policy judges the address before any request is made. */
+ var frameNamed=function(n){try{if(!n)return false;var l=document.getElementsByName(n);for(var i=0;i<l.length;i++){if(l[i].tagName==='IFRAME'||l[i].tagName==='FRAME')return true}}catch(e){}return false};
+ var selfish=function(t){t=String(t||'').toLowerCase();return t===''||t==='_self'||t==='_parent'||t==='_top'};
+ var fixT=function(el){try{var t=el.getAttribute('target');if(t===null){var b=document.querySelector('base[target]');t=b?b.getAttribute('target'):''}
+  if(!selfish(t)&&!frameNamed(t))el.setAttribute('target','_self')}catch(e){}};
+ var go=function(h){try{var u=new URL(String(h),document.baseURI);if(u.protocol==='http:'||u.protocol==='https:')location.assign(u.href)}catch(e){}};
+ var oo=window.open;
+ /* the real window.open stays reachable under a private name: a popup made that way is still vetted by the popup watcher */
+ if(oo)Object.defineProperty(window,K+'o',{value:oo,enumerable:false});
+ Object.defineProperty(window,'open',{value:function(u,n){try{if(n&&frameNamed(n)&&oo)return oo.apply(window,arguments);
+  if(u!==undefined&&u!==null&&String(u)!=='')go(u)}catch(e){}return null},writable:true,configurable:true,enumerable:true});
+ var path=function(e){return (e.composedPath&&e.composedPath())||[]};
+ var link=function(e){var p=path(e),a=null,f=null,fm=null;
+  for(var i=0;i<p.length;i++){var n=p[i];if(!n||n.nodeType!==1)continue;
+   if(!a&&n.matches('a[href],area[href]'))a=n;
+   if(!f&&n.matches('button[formtarget],input[formtarget]'))f=n;
+   if(!fm&&n.tagName==='FORM')fm=n}
+  if(a){fixT(a);if(!a.hasAttribute('download')&&(e.ctrlKey||e.metaKey||e.shiftKey||e.button===1)){e.preventDefault();go(a.href)}}
+  if(f){var ft=f.getAttribute('formtarget');if(!selfish(ft)&&!frameNamed(ft))f.setAttribute('formtarget','_self')}
+  if(fm)fixT(fm)};
+ window.addEventListener('click',link,true);window.addEventListener('auxclick',link,true);
+ /* Eval: while a script runs for the model, password and payment fields cannot be read or written. This only
+    stops accidental reads through the value accessors; it is not a sandbox (see Browser.Eval). */
+ var evalOn=false,MSG='werkz never reads or sets password or payment fields';
+ var secretRe=/card[-_ ]?(number|num|no)\b|\bcvc\b|\bcvv\b|cc[-_]?(num|number|csc|exp)/i;
+ var isSecret=function(el){try{var tg=String(el.tagName||'').toLowerCase();if(tg!=='input'&&tg!=='textarea')return false;
+  if(String(el.type||'').toLowerCase()==='password')return true;
+  var ac=String(el.getAttribute('autocomplete')||'').toLowerCase().split(/\s+/);
+  for(var i=0;i<ac.length;i++){if(/^(current-password|new-password|one-time-code|cc-number|cc-csc|cc-exp|cc-exp-month|cc-exp-year)$/.test(ac[i]))return true}
+  return secretRe.test(el.getAttribute('name')||'')||secretRe.test(el.id||'')}catch(e){return false}};
+ var lock=function(proto,prop){var d=Object.getOwnPropertyDescriptor(proto,prop);if(!d||!d.get)return;
+  Object.defineProperty(proto,prop,{configurable:true,enumerable:d.enumerable,
+   get:function(){if(evalOn&&isSecret(this))throw new Error(MSG);return d.get.call(this)},
+   set:d.set?function(v){if(evalOn&&isSecret(this))throw new Error(MSG);d.set.call(this,v)}:undefined})};
+ ['value','defaultValue','valueAsNumber'].forEach(function(p){lock(HTMLInputElement.prototype,p)});
+ ['value','defaultValue'].forEach(function(p){lock(HTMLTextAreaElement.prototype,p)});
+ Object.defineProperty(window,K+'e',{value:function(v){evalOn=(v===true);
+  for(var i=0;i<window.frames.length;i++){try{var f=window.frames[i][K+'e'];if(typeof f==='function')f(v)}catch(e){}}},enumerable:false});
+ if(DL){
+  /* the user's own Chrome: a download link is stopped here unless the action may download */
+  var dlOK=false,inClick=false;
+  var rd=function(a,ok){try{var n=a.getAttribute('download')||'';
+   if(!n){try{n=new URL(a.href,document.baseURI).pathname.split('/').pop()}catch(e){}}
+   if(typeof window.__werkzDownload==='function')window.__werkzDownload((ok?'1':'0')+n)}catch(e){}};
+  var AP=HTMLAnchorElement.prototype,oc=AP.click;
+  Object.defineProperty(AP,'click',{value:function(){
+   if(this.hasAttribute&&this.hasAttribute('download')){rd(this,dlOK);if(!dlOK)return;inClick=true;try{return oc.apply(this,arguments)}finally{inClick=false}}
+   return oc.apply(this,arguments)},writable:true,configurable:true,enumerable:true});
+  window.addEventListener('click',function(e){if(inClick)return;
+   var a=e.target&&e.target.closest&&e.target.closest('a[download],area[download]');
+   if(a&&!e.defaultPrevented){if(dlOK){rd(a,true)}else{e.preventDefault();rd(a,false)}}},true);
+  Object.defineProperty(window,K+'d',{value:function(v){dlOK=(v===true)},enumerable:false});
+ }
+})(%q,%t)`
+
+const armDLJS = `(function(K){var f=window[K+'d'];if(typeof f==='function')f(%s)})(%q)`
+
+const evalSwitchJS = `(function(K){var f=window[K+'e'];if(typeof f==='function')f(%s)})(%q)`
 
 const armJS = `(function(K){if(typeof window[K]==='function')window[K](%s)})(%q)`
 
-func (b *Browser) guardScript() string { return fmt.Sprintf(submitGuardJS, b.guardKey) }
+func (b *Browser) guardScript() string { return fmt.Sprintf(submitGuardJS, b.guardKey, b.connected) }
 
 // installSubmitGuard injects the script into future documents and the current
 // one, and starts listening for blocked submissions.
 func (b *Browser) installSubmitGuard(ctx context.Context) error {
 	if _, err := chromedp.Call(ctx, runtime.AddBinding, runtime.AddBindingParams{Name: "__werkzBlocked"}); err != nil {
 		return err
+	}
+	if b.connected {
+		if _, err := chromedp.Call(ctx, runtime.AddBinding, runtime.AddBindingParams{Name: "__werkzDownload"}); err != nil {
+			return err
+		}
 	}
 	src := b.guardScript()
 	if _, err := chromedp.Call(ctx, page.AddScriptToEvaluateOnNewDocument, page.AddScriptToEvaluateOnNewDocumentParams{Source: src}); err != nil {
@@ -426,6 +642,30 @@ func (b *Browser) arm(ctx context.Context) func() {
 		dctx, cancel := context.WithTimeout(tab, 5*time.Second)
 		defer cancel()
 		_, _ = chromedp.Call(dctx, runtime.Evaluate, runtime.EvaluateParams{Expression: fmt.Sprintf(armJS, "false", b.guardKey)})
+		if err == nil {
+			_, _ = chromedp.Call(dctx, page.RemoveScriptToEvaluateOnNewDocument, page.RemoveScriptToEvaluateOnNewDocumentParams(id))
+		}
+	}
+}
+
+// armDownloads lets download links through (in connected mode) until the
+// returned func is called, the way arm does for form submissions.
+func (b *Browser) armDownloads(ctx context.Context) func() {
+	eval := func(c context.Context, v string) {
+		_, _ = chromedp.Call(c, runtime.Evaluate, runtime.EvaluateParams{Expression: fmt.Sprintf(armDLJS, v, b.guardKey)})
+	}
+	eval(ctx, "true")
+	id, err := chromedp.Call(ctx, page.AddScriptToEvaluateOnNewDocument, page.AddScriptToEvaluateOnNewDocumentParams{Source: fmt.Sprintf(armDLJS, "true", b.guardKey)})
+	return func() {
+		b.mu.Lock()
+		tab := b.tab
+		b.mu.Unlock()
+		if tab == nil {
+			return
+		}
+		dctx, cancel := context.WithTimeout(tab, 5*time.Second)
+		defer cancel()
+		eval(dctx, "false")
 		if err == nil {
 			_, _ = chromedp.Call(dctx, page.RemoveScriptToEvaluateOnNewDocument, page.RemoveScriptToEvaluateOnNewDocumentParams(id))
 		}

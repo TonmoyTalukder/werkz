@@ -26,7 +26,7 @@
 | `/copy` | Copy the latest response as markdown, or one of its code blocks exactly; `/copy 2` the one before, `/copy prompt` your last request, `/copy all` the whole conversation |
 | `/export [file]` | Save the conversation as a markdown file |
 | `/search` | Web search for the model: `/search brave\|tavily <key>`, `/search searxng <url>`, `/search off` (see [Web access](#web-access)) |
-| `/browser` | werkz's browser: `/browser view` to see the page in the terminal, `/browser show` to open its window, `/browser hide`, `/browser close` |
+| `/browser` | werkz's browser: `/browser view` to see the page in the terminal, `/browser connect` to use your own Chrome, `/browser show` to open its window, `/browser hide`, `/browser close` |
 | `/docs` | Open this documentation in your browser |
 | `/clear` | Start a new conversation (the previous one stays in `/resume`) |
 | `/help` · `/exit` | Help · quit |
@@ -146,6 +146,28 @@ and after a change. For example: "the signup button does nothing, fix it and che
   can each use a browser at the same time. If Chrome crashes or you close its window, werkz starts it again
   when needed.
 
+### Using your own Chrome
+
+By default werkz uses its own browser profile, signed in to nothing. To let it work on sites where you are
+signed in (a staging admin, a dashboard), connect it to your own Chrome for the session:
+
+1. Start Chrome with a debugging port. `/browser connect` shows the exact command for your system, for example:
+
+   ```bash
+   google-chrome --remote-debugging-port=9222 --user-data-dir="$HOME/.config/werkz/chrome-connect"
+   ```
+
+   Chrome only allows this with a profile of its own (not your default one), so this is a separate profile: sign
+   in there once to the sites werkz should use, and it remembers them.
+2. In werkz, run `/browser connect` (or `/browser connect 9333` for another port) and confirm.
+
+While connected, a red **connected to your Chrome** line shows at the bottom. werkz opens one tab of its own and
+uses only that tab and the popups it opens: it never reads or touches your other tabs, and it never closes
+Chrome. Sites other than this machine ask first even in bypass; form submits, uploads and downloads always ask;
+password and payment fields are never typed into. Downloads it's allowed go where your Chrome saves them.
+`/browser disconnect` (or quitting werkz) closes werkz's tab. Connecting is never saved: each session starts
+with werkz's own browser.
+
 ### Seeing the page in your terminal
 
 werkz shows its browser inside the terminal when the terminal can draw pictures:
@@ -166,11 +188,12 @@ What asks first:
 |---|---|
 | Opening a page on this machine (`localhost`, `127.0.0.1`) | No |
 | Opening any other site | Yes (not in bypass), with "don't ask again" for that domain. The page can't move itself, open a popup or load a frame from a site you haven't approved |
-| Clicking and typing | No, except as below. Blocked in plan mode |
-| Submitting a form (a submit button, Enter in a form, or the page's own script) | Always, in every mode. Any submit werkz wasn't approved for is blocked in the page |
+| Clicking, typing, keys, dragging, setting form values | No, except as below. Blocked in plan mode (scrolling, hovering, reading and screenshots aren't) |
+| Running JavaScript (`Eval`) | On this machine, no; elsewhere it asks (in your own Chrome, every time). Blocked in plan mode |
+| Submitting a form (a submit button, a click at its position, Enter or space in a form, or the page's own script) | Always, in every mode. werkz checks the element actually under the pointer or focus, and any submit it wasn't approved for is blocked in the page |
 | Uploading a file (only files in your working folders) | Always |
 | Downloading a file | Always; it's saved in `~/Downloads` |
-| Typing into a password or payment field | Never done |
+| Typing into a password or payment field (by typing, keys, form values or JavaScript) | Never done |
 | Starting a dev server | Like any command (`Bash` rules) |
 
 ## Saved conversations
@@ -203,6 +226,9 @@ werkz gives the model a small set of tools and runs them on your machine:
 | `DevServer` | Starts your project's dev server in the background, waits for its port, reads its output, stops it |
 | `Browse` · `ReadPage` · `Click` · `Type` | Opens and uses pages in werkz's browser (see [The browser](#the-browser)) |
 | `Screenshot` · `Console` · `Network` | Captures and compares screenshots; reads console errors and failed requests |
+| `Act` | Mouse and keyboard: clicks (also right, double, triple, with modifiers, at an element or a point), typing into the focused field, hover, scroll, keys and shortcuts, drag and drop, wait, and a zoomed screenshot of a region |
+| `Find` · `PageText` · `FormInput` | Finds elements by text or role; reads a page's main text; sets selects, checkboxes, radios, sliders and text |
+| `Eval` · `Tabs` · `Resize` · `Batch` | Runs JavaScript to inspect a page; werkz's own tabs; mobile, tablet or desktop sizes; several steps in one call |
 
 Because `Bash` runs your real shell, werkz works with whatever your project uses: `git`, `go`, `npm`,
 `pytest`, `cargo`, `make`, `docker` and so on. If a folder has an **`AGENTS.md`** or **`CLAUDE.md`**, werkz

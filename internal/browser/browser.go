@@ -133,6 +133,16 @@ type Browser struct {
 	lastShots  map[string]string
 	closed     bool
 
+	tabs []*tab // werkz's tabs, in opening order; the active one is cur
+	cur  *tab
+	root *tab              // the tab the browser was started with: its context carries the others
+	emul *viewportOverride // viewport override, applied to every tab (see Resize)
+	drag chan dragData     // HTML5 drags the browser intercepted (see Drag)
+
+	connected bool         // attached to the user's own Chrome (see Connect)
+	pol       *fencePolicy // connected mode: the targets werkz may touch
+	wsURL     string       // connected mode: the browser's debugging address
+
 	guardKey string
 	g        *guard
 	profile  string // profile directory in use
@@ -224,8 +234,20 @@ func (b *Browser) launch(ctx context.Context, headless bool) error {
 		return errors.New("the browser did not start within 30s")
 	}
 
+	b.initState(allocCancel, tab, tabStop, headless)
+
+	if err := b.setup(ctx, tab); err != nil {
+		b.shutdown()
+		return err
+	}
+	return nil
+}
+
+// initState installs a fresh tab and clears everything kept about the old one.
+func (b *Browser) initState(allocCancel context.CancelFunc, tabCtx context.Context, tabStop context.CancelFunc, headless bool) {
 	b.mu.Lock()
-	b.alloc, b.tab, b.tabStop = allocCancel, tab, tabStop
+	defer b.mu.Unlock()
+	b.alloc, b.tab, b.tabStop = allocCancel, tabCtx, tabStop
 	b.headless = headless
 	b.refs, b.refNode = map[string]refInfo{}, map[cdp.BackendNodeID]string{}
 	b.console, b.reqs, b.reqOrder = newRing[ConsoleEntry](ringSize), map[network.RequestID]*Request{}, newRing[network.RequestID](ringSize)
@@ -237,53 +259,98 @@ func (b *Browser) launch(ctx context.Context, headless bool) error {
 	b.frameSeen, b.popups, b.armed = map[string]bool{}, 0, false
 	b.approved, b.onceOnly = "", false
 	b.closed = false
-	b.mu.Unlock()
-
-	if err := b.setup(ctx, tab); err != nil {
-		b.shutdown()
-		return err
+	t := &tab{ctx: tabCtx, stop: tabStop, root: true}
+	if c := chromedp.FromContext(tabCtx); c != nil && c.Target != nil {
+		t.id = c.Target.TargetID
 	}
-	return nil
+	b.tabs, b.cur, b.root, b.emul = []*tab{t}, t, t, nil
+	b.drag = make(chan dragData, 4)
 }
 
 // setup subscribes to events before enabling the domains so none are missed.
 func (b *Browser) setup(ctx context.Context, tab context.Context) error {
-	if err := chromedp.Listen(tab, b.onEvent); err != nil {
+	b.mu.Lock()
+	first := b.cur
+	b.mu.Unlock()
+	if err := b.listenTab(first); err != nil {
 		return err
 	}
-	if err := chromedp.ListenBrowser(tab, b.onEvent); err != nil {
-		return err
+	if !b.connected { // browser-wide events would include the user's other tabs
+		if err := chromedp.ListenBrowser(tab, b.onEvent); err != nil {
+			return err
+		}
 	}
 	octx, cancel := b.opContext(ctx, tab)
 	defer cancel()
+	steps := []func() error{
+		func() error { return b.prepTab(octx) },
+		func() error {
+			if b.connected {
+				return nil
+			}
+			return b.setDownloads(octx, "")
+		},
+		func() error {
+			if b.connected {
+				return b.startGuardConnected(octx, tab)
+			}
+			return b.startGuard(octx, tab)
+		},
+		func() error { return b.loadMainID(octx, first) },
+	}
+	for _, s := range steps {
+		if err := s(); err != nil {
+			return fmt.Errorf("could not set up the browser tab: %w", err)
+		}
+	}
+	return nil
+}
+
+// prepTab turns on what werkz needs in the tab whose context ctx is: the
+// protocol domains, the navigation policy (Fetch) and the injected guard.
+func (b *Browser) prepTab(octx context.Context) error {
 	steps := []func() error{
 		func() error { _, err := chromedp.Call(octx, page.Enable, page.EnableParams{}); return err },
 		func() error { _, err := chromedp.Call(octx, network.Enable, network.EnableParams{}); return err },
 		func() error { _, err := chromedp.Call(octx, runtime.Enable, cdp.Empty{}); return err },
 		func() error { _, err := chromedp.Call(octx, log.Enable, cdp.Empty{}); return err },
 		func() error {
-			_, err := chromedp.Call(octx, fetch.Enable, fetch.EnableParams{
-				Patterns: []*fetch.RequestPattern{{ResourceType: network.ResourceTypeDocument, RequestStage: fetch.RequestStageRequest}},
-			})
-			return err
-		},
-		func() error { return b.setDownloads(octx, "") },
-		func() error { return b.installSubmitGuard(octx) },
-		func() error { return b.startGuard(octx, tab) },
-		func() error {
-			ft, err := chromedp.Call(octx, page.GetFrameTree, cdp.Empty{})
-			if err == nil && ft.FrameTree != nil && ft.FrameTree.Frame != nil {
-				b.mu.Lock()
-				b.mainID = ft.FrameTree.Frame.ID
-				b.mu.Unlock()
+			pats := []*fetch.RequestPattern{{ResourceType: network.ResourceTypeDocument, RequestStage: fetch.RequestStageRequest}}
+			if b.connected {
+				// Downloads cannot be denied browser-wide in the user's own
+				// Chrome, so werkz's tab judges each response itself.
+				pats = append(pats,
+					&fetch.RequestPattern{ResourceType: network.ResourceTypeDocument, RequestStage: fetch.RequestStageResponse},
+					&fetch.RequestPattern{ResourceType: network.ResourceTypeOther, RequestStage: fetch.RequestStageResponse})
 			}
+			_, err := chromedp.Call(octx, fetch.Enable, fetch.EnableParams{Patterns: pats})
 			return err
 		},
+		func() error { return b.installSubmitGuard(octx) },
+		func() error { return b.applyEmulation(octx) },
 	}
 	for _, s := range steps {
 		if err := s(); err != nil {
 			return fmt.Errorf("could not set up the browser tab: %w", err)
 		}
+	}
+	return nil
+}
+
+// loadMainID records the main frame of t.
+func (b *Browser) loadMainID(octx context.Context, t *tab) error {
+	ft, err := chromedp.Call(octx, page.GetFrameTree, cdp.Empty{})
+	if err != nil {
+		return fmt.Errorf("could not set up the browser tab: %w", err)
+	}
+	if ft.FrameTree != nil && ft.FrameTree.Frame != nil {
+		b.mu.Lock()
+		if b.cur == t {
+			b.mainID = ft.FrameTree.Frame.ID
+		} else {
+			t.st.mainID = ft.FrameTree.Frame.ID
+		}
+		b.mu.Unlock()
 	}
 	return nil
 }
@@ -308,8 +375,14 @@ func (b *Browser) opContext(call, tab context.Context) (context.Context, context
 
 // begin serializes operations and returns the tab context for one of them.
 func (b *Browser) begin(call context.Context) (context.Context, func(), error) {
+	return b.beginFor(call, opTimeout)
+}
+
+// beginFor is begin with a custom time budget.
+func (b *Browser) beginFor(call context.Context, d time.Duration) (context.Context, func(), error) {
 	b.opMu.Lock()
 	b.mu.Lock()
+	b.fallbackLocked()
 	tab, closed := b.tab, b.closed
 	b.mu.Unlock()
 	if closed || tab == nil {
@@ -320,8 +393,9 @@ func (b *Browser) begin(call context.Context) (context.Context, func(), error) {
 		b.opMu.Unlock()
 		return nil, nil, err
 	}
-	ctx, cancel := b.opContext(call, tab)
-	return ctx, func() { cancel(); b.opMu.Unlock() }, nil
+	ctx, cancel := context.WithTimeout(tab, d)
+	stop := context.AfterFunc(call, cancel)
+	return ctx, func() { stop(); cancel(); b.opMu.Unlock() }, nil
 }
 
 // startGuard connects the raw guard connection that pauses popups and
@@ -358,19 +432,29 @@ func (b *Browser) startGuard(ctx context.Context, tab context.Context) error {
 // shutdown stops the browser process and waits for it, so the profile lock is
 // released before a relaunch.
 func (b *Browser) shutdown() {
+	if b.connected {
+		b.shutdownConnected()
+		return
+	}
 	b.mu.Lock()
-	tab, stop, alloc, g := b.tab, b.tabStop, b.alloc, b.g
+	tabs, root, alloc, g := b.tabs, b.root, b.alloc, b.g
 	b.tab, b.tabStop, b.alloc, b.g = nil, nil, nil, nil
+	b.tabs, b.cur, b.root = nil, nil, nil
 	b.closed = true
 	b.mu.Unlock()
 	if g != nil {
 		g.close()
 	}
-	if tab != nil {
-		_ = chromedp.Cancel(tab)
+	if root != nil {
+		_ = chromedp.Cancel(root.ctx) // ends the browser process
 	}
-	if stop != nil {
-		stop()
+	for _, t := range tabs {
+		if t != root {
+			t.stop()
+		}
+	}
+	if root != nil {
+		root.stop()
 	}
 	if alloc != nil {
 		alloc()
@@ -383,7 +467,9 @@ func (b *Browser) removeTempProfile() {
 	}
 }
 
-// Close shuts the browser down and removes a fallback profile directory.
+// Close shuts the browser down and removes a fallback profile directory. In
+// connected mode it closes werkz's own tabs and disconnects: the user's
+// Chrome keeps running and none of its other tabs is touched.
 func (b *Browser) Close() error {
 	b.shutdown()
 	b.removeTempProfile()
@@ -399,6 +485,9 @@ func (b *Browser) Alive() bool {
 	b.mu.Unlock()
 	if closed || tab == nil || tab.Err() != nil || g == nil || !g.alive() {
 		return false
+	}
+	if b.connected && b.pol.isLost() {
+		return false // the user closed werkz's tab
 	}
 	c := chromedp.FromContext(tab)
 	if c == nil || c.Browser == nil {
@@ -424,6 +513,9 @@ func (b *Browser) Headless() bool {
 // fails the Browser is left closed (Alive() == false) and the error says so.
 // Called with the current mode on a dead browser, it restarts it.
 func (b *Browser) SetHeadless(ctx context.Context, headless bool) error {
+	if b.connected {
+		return errors.New("werkz is using your own Chrome: its window is yours to show or hide")
+	}
 	b.opMu.Lock()
 	defer b.opMu.Unlock()
 	b.mu.Lock()

@@ -262,11 +262,11 @@ func TestPopups(t *testing.T) {
 	b := br(t)
 	other, _ := countingServer(t, `<h1>Second server</h1>`)
 	denied, dc := countingServer(t, `<h1>Denied</h1>`)
-	s := serve(t, html(`<button onclick="window.open('`+other.URL+`/p')">Open ok</button>
+	s := serve(t, html(`<script>function rawOpen(u){var k=Object.getOwnPropertyNames(window).filter(function(n){return /^__wz[0-9a-f]+o$/.test(n)})[0];window[k](u)}</script><button onclick="rawOpen('`+other.URL+`/p')">Open ok</button>
 <a href="`+other.URL+`/q" target=_blank>Blank ok</a>
-<button onclick="window.open('`+denied.URL+`/p')">Open denied</button>
+<button onclick="rawOpen('`+denied.URL+`/p')">Open denied</button>
 <a href="`+denied.URL+`/q" target=_blank>Blank denied</a>
-<button onclick="window.open('about:blank')">Open empty</button>`))
+<button onclick="rawOpen('about:blank')">Open empty</button>`))
 	allowHook.Store(func(h string) bool { return h == hostOf(s.URL) || h == hostOf(other.URL) })
 	base := targetCount(t, b)
 	fresh := func() *Snapshot {
@@ -285,7 +285,7 @@ func TestPopups(t *testing.T) {
 	snap = fresh()
 	got, err = b.Click(ctx5(t), refOf(t, snap.Tree, "link", "Blank ok"), Allow{})
 	if err != nil || !strings.HasPrefix(got.URL, other.URL+"/q") {
-		t.Fatalf("target=_blank to allowed host: %v %+v", err, got)
+		t.Fatalf("target=_blank to allowed host (rewritten to a navigation): %v %+v", err, got)
 	}
 	snap = fresh()
 	got, err = b.Click(ctx5(t), refOf(t, snap.Tree, "button", "Open denied"), Allow{})
@@ -293,7 +293,7 @@ func TestPopups(t *testing.T) {
 		t.Fatalf("window.open to denied host: %v %+v", err, got)
 	}
 	got, err = b.Click(ctx5(t), refOf(t, snap.Tree, "link", "Blank denied"), Allow{})
-	if err != nil || !hasNote(got.Blocked, "popup to "+denied.URL+"/q") || !strings.HasPrefix(got.URL, s.URL) {
+	if err != nil || !hasNote(got.Blocked, denied.URL+"/q") || !strings.HasPrefix(got.URL, s.URL) {
 		t.Fatalf("target=_blank to denied host: %v %+v", err, got)
 	}
 	if dc.n("GET /p")+dc.n("GET /q") != 0 {

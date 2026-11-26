@@ -38,12 +38,13 @@ const (
 	stateFallback
 	stateFallbackMode
 	stateFallbackChain
-	stateNotice // the one-time "You're using your ChatGPT plan" notice
-	stateBypass // confirming Bypass permissions
-	stateResume // /resume: choosing a saved conversation
-	stateCopy   // choosing what of a response to copy
-	stateSelect // moving between messages to copy one (alt+↑)
-	stateLive   // /browser view: the browser's page, full screen
+	stateNotice  // the one-time "You're using your ChatGPT plan" notice
+	stateBypass  // confirming Bypass permissions
+	stateResume  // /resume: choosing a saved conversation
+	stateCopy    // choosing what of a response to copy
+	stateSelect  // moving between messages to copy one (alt+↑)
+	stateLive    // /browser view: the browser's page, full screen
+	stateConnect // confirming /browser connect (werkz in the user's own Chrome)
 )
 
 type tickMsg time.Time
@@ -127,6 +128,8 @@ type model struct {
 	sel       textSel  // text selected with the mouse
 	lines     []string // the transcript as last drawn (for copying a selection)
 	img       gfx      // pictures in the terminal (screenshots, /browser view)
+	connAddr  string   // the Chrome address being confirmed (stateConnect)
+	connSel   int      // highlighted answer (0 = No)
 }
 
 // sessionInfo identifies the saved conversation.
@@ -428,6 +431,8 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handleCopied(msg)
 	case browserDoneMsg:
 		return m, m.handleBrowserDone(msg)
+	case connectDoneMsg:
+		return m, m.handleConnectDone(msg)
 	case liveFrameMsg:
 		return m, m.handleLiveFrame(msg)
 	case liveTickMsg:

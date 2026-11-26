@@ -50,7 +50,18 @@ func (b *Browser) startAllow(ctx context.Context, allow Allow) (func(), error) {
 	if allow.Submit {
 		undo = append(undo, b.arm(ctx))
 	}
-	if dir := allow.DownloadDir; dir != "" {
+	if dir := allow.DownloadDir; dir != "" && b.connected {
+		// The user's own Chrome decides where a file goes; werkz only lets the
+		// download happen during this action.
+		b.mu.Lock()
+		b.dlDir = dir
+		b.mu.Unlock()
+		undo = append(undo, b.armDownloads(ctx), func() {
+			b.mu.Lock()
+			b.dlDir = ""
+			b.mu.Unlock()
+		})
+	} else if dir != "" {
 		if err := os.MkdirAll(dir, 0o700); err != nil {
 			end()
 			return nil, fmt.Errorf("cannot create the download directory: %w", err)

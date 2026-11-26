@@ -40,7 +40,8 @@ it. Credential locations stay blocked even in bypass.
   and searches don't ask; their content is marked as untrusted for the model.
 - **werkz's browser** uses its own profile, never yours. Sites other than this machine ask first; form
   submits, uploads and downloads ask in every mode, including bypass; password and payment fields are never
-  typed into. See [The browser](usage.md#the-browser).
+  typed into. Connecting it to your own Chrome (`/browser connect`) is opt-in per session, shows a red banner,
+  and uses only the tab werkz opens. See [The browser](usage.md#the-browser).
 - Text from models, tools and files is cleaned of terminal escape sequences before it's displayed.
 - Project instruction files (`AGENTS.md`, `CLAUDE.md`) are passed to the model as repository content, not as
   werkz's own instructions, so they can't override these rules.

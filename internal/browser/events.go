@@ -4,13 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"mime"
 	"net/url"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/chromedp/cdproto/browser"
 	"github.com/chromedp/cdproto/fetch"
+	"github.com/chromedp/cdproto/input"
 	"github.com/chromedp/cdproto/log"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/page"
@@ -122,8 +125,8 @@ func (b *Browser) onEvent(ev any) {
 		}
 		b.endRequestLocked(e.RequestID)
 		b.mu.Unlock()
-	case *fetch.EventRequestPaused:
-		go b.onPaused(e)
+	case *input.EventDragIntercepted:
+		b.noteDrag(e)
 	case *page.EventFrameStartedLoading:
 		b.mu.Lock()
 		if e.FrameID == b.mainID {
@@ -149,8 +152,11 @@ func (b *Browser) onEvent(ev any) {
 		}
 		b.mu.Unlock()
 	case *runtime.EventBindingCalled:
-		if e.Name == "__werkzBlocked" {
+		switch e.Name {
+		case "__werkzBlocked":
 			b.addBlocked(submitNote(e.Payload))
+		case "__werkzDownload":
+			b.noteDownloadLink(e.Payload)
 		}
 	case *browser.EventDownloadWillBegin:
 		b.onDownloadBegin(e)
@@ -300,11 +306,18 @@ func (b *Browser) endRequestLocked(id network.RequestID) {
 
 // onPaused is the navigation policy. Every paused request is continued or
 // answered, otherwise the page would hang.
-func (b *Browser) onPaused(e *fetch.EventRequestPaused) {
+func (b *Browser) onPaused(t *tab, e *fetch.EventRequestPaused) {
 	b.mu.Lock()
-	tab, mainID := b.tab, b.mainID
+	tab, mainID := t.ctx, t.st.mainID
+	if b.cur == t {
+		mainID = b.mainID
+	}
 	b.mu.Unlock()
-	if tab == nil {
+	if tab == nil || tab.Err() != nil {
+		return
+	}
+	if e.ResponseStatusCode != 0 || e.ResponseErrorReason != "" {
+		b.onResponsePaused(tab, e)
 		return
 	}
 	allow := true
@@ -383,6 +396,83 @@ func (b *Browser) navAllowed(raw string) bool {
 		return false
 	}
 	return b.opts.AllowHost == nil || b.opts.AllowHost(host)
+}
+
+const (
+	dlBlockedNote = " (blocked: downloads are off)"
+	dlSavedNote   = " (saved by Chrome to its download folder)"
+)
+
+func (b *Browser) addDownloadNote(note string) {
+	b.mu.Lock()
+	b.downloads = capTail(append(b.downloads, note), maxBlocked)
+	b.mu.Unlock()
+}
+
+// noteDownloadLink records a download link the page script clicked (connected
+// mode): payload is "1" (allowed) or "0" (blocked) followed by the file name.
+func (b *Browser) noteDownloadLink(payload string) {
+	if payload == "" {
+		return
+	}
+	name := truncate(payload[1:], 200)
+	if name == "" {
+		name = "download"
+	}
+	if payload[0] == '1' {
+		b.addDownloadNote(name + dlSavedNote)
+	} else {
+		b.addDownloadNote(name + dlBlockedNote)
+	}
+}
+
+// onResponsePaused judges a response in connected mode, where downloads cannot
+// be switched off browser-wide. An attachment is let through only while the
+// running action may download; everything else just continues.
+func (b *Browser) onResponsePaused(tab context.Context, e *fetch.EventRequestPaused) {
+	ctx, cancel := context.WithTimeout(tab, 10*time.Second)
+	defer cancel()
+	name, isDL := attachmentName(e)
+	if !isDL {
+		_, _ = chromedp.Call(ctx, fetch.ContinueRequest, fetch.ContinueRequestParams{RequestID: e.RequestID})
+		return
+	}
+	b.mu.Lock()
+	allowed := b.dlDir != ""
+	b.mu.Unlock()
+	if allowed {
+		b.addDownloadNote(name + dlSavedNote)
+		_, _ = chromedp.Call(ctx, fetch.ContinueRequest, fetch.ContinueRequestParams{RequestID: e.RequestID})
+		return
+	}
+	b.addDownloadNote(name + dlBlockedNote)
+	// like a blocked navigation: an empty answer leaves the page where it is
+	_, _ = chromedp.Call(ctx, fetch.FulfillRequest, fetch.FulfillRequestParams{RequestID: e.RequestID, ResponseCode: 204})
+}
+
+// attachmentName reports whether a response is a file download and its name.
+func attachmentName(e *fetch.EventRequestPaused) (string, bool) {
+	if e.ResponseStatusCode < 200 || e.ResponseStatusCode > 299 {
+		return "", false
+	}
+	for _, h := range e.ResponseHeaders {
+		if !strings.EqualFold(h.Name, "Content-Disposition") {
+			continue
+		}
+		disp, params, err := mime.ParseMediaType(h.Value)
+		if err != nil {
+			disp = strings.ToLower(strings.TrimSpace(strings.SplitN(h.Value, ";", 2)[0]))
+		}
+		if !strings.EqualFold(disp, "attachment") {
+			return "", false
+		}
+		name := params["filename"]
+		if name == "" && e.Request != nil {
+			name = path.Base(strings.SplitN(e.Request.URL, "?", 2)[0])
+		}
+		return truncate(name, 200), true
+	}
+	return "", false
 }
 
 func (b *Browser) onDownloadBegin(e *browser.EventDownloadWillBegin) {

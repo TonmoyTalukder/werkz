@@ -40,11 +40,27 @@ func (m *model) browserCommand(args []string) tea.Cmd {
 		return m.browserAsync(false, "werkz's browser runs in the background.")
 	case "view", "see", "look":
 		return m.openLiveView()
+	case "connect":
+		addr := "9222"
+		if len(args) > 1 {
+			addr = args[1]
+		}
+		if m.turn.active {
+			return m.printS(renderNotice("warn", "Wait for the current turn to finish (esc to interrupt)."))
+		}
+		m.connAddr, m.connSel, m.state, m.dialogAt = addr, 0, stateConnect, time.Now()
+		return nil
+	case "disconnect":
+		if !m.eng.BrowserConnected() {
+			return m.printS(renderNotice("info", "werkz isn't connected to your Chrome."))
+		}
+		m.eng.DisconnectBrowser()
+		return m.printS(renderNotice("info", "Disconnected: werkz closed its tab in your Chrome. It uses its own browser again."))
 	case "close", "stop":
 		m.eng.CloseBrowser()
 		return m.printS(renderNotice("info", "Closed werkz's browser. It opens again when werkz needs it."))
 	}
-	return m.printS(renderNotice("warn", "Usage: /browser · /browser view · /browser show · /browser hide · /browser close"))
+	return m.printS(renderNotice("warn", "Usage: /browser · /browser view · /browser connect [port] · /browser disconnect · /browser show · /browser hide · /browser close"))
 }
 
 // browserAsync switches the window in the background: relaunching Chrome takes a moment.
@@ -92,7 +108,92 @@ func (m *model) browserText() string {
 		}
 	}
 	lines = append(lines, "")
-	add(sDim.Render("/browser view (see the page here) · /browser show (its window) · /browser hide · /browser close"))
+	if m.eng.BrowserConnected() {
+		add(sRed.Render("● connected to your Chrome at "+m.eng.BrowserAddr()) + sDim.Render(" · werkz uses only its own tab · /browser disconnect"))
+	}
+	add(sDim.Render("/browser view (see the page here) · /browser connect (use your own Chrome) · /browser show (its window) · /browser hide · /browser close"))
 	add(sDim.Render("Pages on this machine open freely; other sites ask. Form submits, uploads and downloads always ask, and password fields are never typed into."))
 	return box(gradient("Browser", 0)+"\n"+strings.Join(lines, "\n"), cSky, m.w)
+}
+
+// ---------------------------------------------------------------- /browser connect
+
+type connectDoneMsg struct {
+	addr string
+	err  error
+}
+
+func (m *model) connectKey(k tea.KeyMsg) tea.Cmd {
+	switch k.String() {
+	case "up", "down", "tab", "shift+tab":
+		m.connSel = 1 - m.connSel
+	case "esc":
+		m.state = stateChat
+	case "enter":
+		m.state = stateChat
+		if m.connSel != 1 {
+			return nil
+		}
+		eng, addr := m.eng, m.connAddr
+		return func() tea.Msg {
+			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+			defer cancel()
+			return connectDoneMsg{addr: addr, err: eng.ConnectBrowser(ctx, addr)}
+		}
+	}
+	return nil
+}
+
+func (m *model) handleConnectDone(msg connectDoneMsg) tea.Cmd {
+	if msg.err == nil {
+		return m.printS(renderNotice("info", "Connected to your Chrome at "+chromeAddr(msg.addr)+". werkz opened its own window there "+
+			"and uses only it; /browser disconnect closes it."))
+	}
+	reason, _, _ := strings.Cut(msg.err.Error(), "Start it with")
+	reason = strings.TrimRight(strings.TrimSpace(reason), ".:")
+	command := browser.LaunchCommand()
+	if port := chromePort(msg.addr); port != "9222" {
+		command = strings.Replace(command, "--remote-debugging-port=9222", "--remote-debugging-port="+port, 1)
+	}
+	return tea.Batch(
+		m.printS(renderNotice("error", "Couldn't connect to your Chrome at "+chromeAddr(msg.addr)+": "+reason+".")),
+		m.printS(renderNotice("info", "Start Chrome ready for werkz with this command (copied to your clipboard), then run "+
+			"/browser connect again. It uses a separate profile, since Chrome doesn't allow this on its default one: sign in "+
+			"there once to the sites werkz should use.")),
+		m.printS("  "+sText.Render(command)),
+		copyText("the Chrome command", command))
+}
+
+// chromeAddr and chromePort read /browser connect's argument: a port, host:port or a URL.
+func chromeAddr(addr string) string {
+	a := strings.TrimPrefix(strings.TrimPrefix(addr, "http://"), "ws://")
+	a = strings.TrimSuffix(a, "/")
+	if !strings.Contains(a, ":") {
+		a = "127.0.0.1:" + a
+	}
+	return a
+}
+
+func chromePort(addr string) string {
+	a := chromeAddr(addr)
+	return a[strings.LastIndex(a, ":")+1:]
+}
+
+func (m *model) connectView() string {
+	var b strings.Builder
+	b.WriteString(sRed.Bold(true).Render("Connect werkz to your own Chrome?") + "\n\n")
+	b.WriteString(wrapTo(sText.Render("werkz will open a window in your Chrome at "+chromeAddr(m.connAddr)+", where you are signed in to sites, "+
+		"and use only that window's tabs: it never reads your other tabs. Sites other than this machine ask first (even in bypass), "+
+		"form submits, uploads and downloads always ask, and password and payment fields are never typed into."), max(m.w-8, 20)) + "\n")
+	b.WriteString(sDim.Render("It lasts until /browser disconnect or you quit werkz.") + "\n\n")
+	opts := []string{"No (esc)", "Yes, connect to my Chrome for this session"}
+	for i, o := range opts {
+		if i == m.connSel {
+			b.WriteString(sPink.Render("❯ ") + sPink.Bold(true).Render(o) + "\n")
+		} else {
+			b.WriteString(sDim.Render("  "+o) + "\n")
+		}
+	}
+	b.WriteString(sDim.Render("↑/↓ choose · enter confirm"))
+	return box(b.String(), cRed, m.w)
 }

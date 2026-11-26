@@ -67,7 +67,8 @@ func NeedsPermission(tool, mode string) (bool, string) {
 		tool == "WebFetch" || tool == "WebSearch" || // local-network pages ask separately (see the engine)
 		// the browser tools and DevServer have their own rules in the engine (sites, forms, commands)
 		tool == "Browse" || tool == "ReadPage" || tool == "Click" || tool == "Type" || tool == "Screenshot" ||
-		tool == "Console" || tool == "Network" || tool == "DevServer"
+		tool == "Console" || tool == "Network" || tool == "DevServer" || tool == "Act" || tool == "Find" ||
+		tool == "PageText" || tool == "FormInput" || tool == "Eval" || tool == "Tabs" || tool == "Resize" || tool == "Batch"
 	if readOnly {
 		return false, ""
 	}

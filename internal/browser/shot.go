@@ -44,6 +44,11 @@ func (b *Browser) Screenshot(call context.Context, fullPage, compare bool) (*Sho
 	defer done()
 
 	params := page.CaptureScreenshotParams{Format: page.CaptureScreenshotFormatPng}
+	if !fullPage {
+		if err := b.viewportClip(ctx, &params); err != nil {
+			return nil, err
+		}
+	}
 	if fullPage {
 		m, err := chromedp.Call(ctx, page.GetLayoutMetrics, cdp.Empty{})
 		if err != nil {
@@ -55,7 +60,8 @@ func (b *Browser) Screenshot(call context.Context, fullPage, compare bool) (*Sho
 				h = maxShotHeight
 			}
 			params.CaptureBeyondViewport = new(true)
-			params.Clip = &page.Viewport{Width: m.CSSContentSize.Width, Height: h, Scale: 1}
+			dpr := b.pixelRatio(ctx)
+			params.Clip = &page.Viewport{Width: m.CSSContentSize.Width, Height: h, Scale: 1 / dpr}
 		}
 	}
 	res, err := chromedp.Call(ctx, page.CaptureScreenshot, params)
@@ -63,19 +69,11 @@ func (b *Browser) Screenshot(call context.Context, fullPage, compare bool) (*Sho
 		return nil, fmt.Errorf("screenshot failed: %w", err)
 	}
 	cur, _ := chromedp.Run(ctx, chromedp.Location())
-	if err := os.MkdirAll(b.opts.ShotDir, 0o700); err != nil {
-		return nil, fmt.Errorf("cannot create the screenshot directory: %w", err)
+	s, err := b.saveShot(res.Data, cur)
+	if err != nil {
+		return nil, err
 	}
-	now := time.Now()
-	name := fmt.Sprintf("%s-%03d-%s.png", now.Format("20060102-150405"), now.Nanosecond()/1e6, fileSafe(hostOf(cur)))
-	path := filepath.Join(b.opts.ShotDir, name)
-	if err := os.WriteFile(path, res.Data, 0o600); err != nil {
-		return nil, fmt.Errorf("cannot save the screenshot: %w", err)
-	}
-	s := &Shot{Path: path}
-	if cfg, err := png.DecodeConfig(bytes.NewReader(res.Data)); err == nil {
-		s.Width, s.Height = cfg.Width, cfg.Height
-	}
+	path := s.Path
 
 	key := shotKey(cur, fullPage)
 	b.mu.Lock()
@@ -90,6 +88,80 @@ func (b *Browser) Screenshot(call context.Context, fullPage, compare bool) (*Sho
 		}
 	}
 	return s, nil
+}
+
+// saveShot writes a PNG into the screenshot directory.
+func (b *Browser) saveShot(data []byte, cur string) (*Shot, error) {
+	if err := os.MkdirAll(b.opts.ShotDir, 0o700); err != nil {
+		return nil, fmt.Errorf("cannot create the screenshot directory: %w", err)
+	}
+	now := time.Now()
+	name := fmt.Sprintf("%s-%03d-%s.png", now.Format("20060102-150405"), now.Nanosecond()/1e6, fileSafe(hostOf(cur)))
+	path := filepath.Join(b.opts.ShotDir, name)
+	if err := os.WriteFile(path, data, 0o600); err != nil {
+		return nil, fmt.Errorf("cannot save the screenshot: %w", err)
+	}
+	s := &Shot{Path: path}
+	if cfg, err := png.DecodeConfig(bytes.NewReader(data)); err == nil {
+		s.Width, s.Height = cfg.Width, cfg.Height
+	}
+	return s, nil
+}
+
+// pixelRatio is the display's device pixel ratio (1 unless the browser runs on
+// a high-density screen).
+func (b *Browser) pixelRatio(ctx context.Context) float64 {
+	v, err := b.viewport(ctx)
+	if err != nil || v.dpr <= 0 {
+		return 1
+	}
+	return v.dpr
+}
+
+// viewportClip makes a capture one image pixel per CSS pixel: on a display
+// with a pixel ratio above 1 the clip is scaled down by it.
+func (b *Browser) viewportClip(ctx context.Context, params *page.CaptureScreenshotParams) error {
+	v, err := b.viewport(ctx)
+	if err != nil || v.dpr == 1 {
+		return nil
+	}
+	params.Clip = &page.Viewport{X: v.pageX, Y: v.pageY, Width: v.w, Height: v.h, Scale: 1 / v.dpr}
+	return nil
+}
+
+// Zoom saves a PNG of just the region x0,y0 to x1,y1 (viewport CSS pixels,
+// clipped to the viewport), at device scale 1. It is not compared with
+// earlier shots.
+func (b *Browser) Zoom(call context.Context, x0, y0, x1, y1 int) (*Shot, error) {
+	ctx, done, err := b.begin(call)
+	if err != nil {
+		return nil, err
+	}
+	defer done()
+	v, err := b.viewport(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if x1 < x0 {
+		x0, x1 = x1, x0
+	}
+	if y1 < y0 {
+		y0, y1 = y1, y0
+	}
+	fx0, fy0 := max(float64(x0), 0), max(float64(y0), 0)
+	fx1, fy1 := min(float64(x1), v.w), min(float64(y1), v.h)
+	if fx1-fx0 < 1 || fy1-fy0 < 1 {
+		return nil, fmt.Errorf("the region %d,%d to %d,%d is empty or outside the viewport (%.0fx%.0f CSS pixels)", x0, y0, x1, y1, v.w, v.h)
+	}
+	res, err := chromedp.Call(ctx, page.CaptureScreenshot, page.CaptureScreenshotParams{
+		Format: page.CaptureScreenshotFormatPng,
+		Clip:   &page.Viewport{X: v.pageX + fx0, Y: v.pageY + fy0, Width: fx1 - fx0, Height: fy1 - fy0, Scale: 1 / v.dpr},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("screenshot failed: %w", err)
+	}
+	cur, _ := chromedp.Run(ctx, chromedp.Location())
+	return b.saveShot(res.Data, cur)
 }
 
 // shotKey identifies "the same page" for comparisons: path and query, no
@@ -194,7 +266,11 @@ func (b *Browser) Capture(call context.Context) ([]byte, error) {
 		return nil, err
 	}
 	defer done()
-	res, err := chromedp.Call(ctx, page.CaptureScreenshot, page.CaptureScreenshotParams{Format: page.CaptureScreenshotFormatPng})
+	params := page.CaptureScreenshotParams{Format: page.CaptureScreenshotFormatPng}
+	if err := b.viewportClip(ctx, &params); err != nil {
+		return nil, err
+	}
+	res, err := chromedp.Call(ctx, page.CaptureScreenshot, params)
 	if err != nil {
 		return nil, fmt.Errorf("screenshot failed: %w", err)
 	}

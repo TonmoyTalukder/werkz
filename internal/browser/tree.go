@@ -89,6 +89,26 @@ func (b *Browser) ReadPage(call context.Context, interactiveOnly bool) (string, 
 // otherwise nodes seen before keep their ref, so the refs a Snapshot shows
 // stay usable for follow-up actions.
 func (b *Browser) treeLines(ctx context.Context, interactiveOnly, reset bool) ([]string, error) {
+	tl, err := b.buildTree(ctx, interactiveOnly, reset)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]string, len(tl))
+	for i, l := range tl {
+		out[i] = l.text
+	}
+	return out, nil
+}
+
+// treeLine is one line of the tree and what Find matches against. A secret
+// field's value is never kept here.
+type treeLine struct {
+	text                    string
+	role, name, value, desc string
+	hasRef                  bool
+}
+
+func (b *Browser) buildTree(ctx context.Context, interactiveOnly, reset bool) ([]treeLine, error) {
 	res, err := chromedp.Call(ctx, accessibility.GetFullAXTree, accessibility.GetFullAXTreeParams{})
 	if err != nil {
 		return nil, fmt.Errorf("could not read the page: %w", err)
@@ -112,7 +132,7 @@ func (b *Browser) treeLines(ctx context.Context, interactiveOnly, reset bool) ([
 	}
 	refs, refNode := b.refs, b.refNode
 	b.mu.Unlock()
-	var lines []string
+	var lines []treeLine
 	var walk func(n *accessibility.Node, depth int, parent string)
 	walk = func(n *accessibility.Node, depth int, parent string) {
 		role := strings.ToLower(axStr(n.Role))
@@ -136,7 +156,7 @@ func (b *Browser) treeLines(ctx context.Context, interactiveOnly, reset bool) ([
 		interactive := interactiveRoles[role] || props["focusable"] == "true" && role != "statictext"
 		if role == "statictext" {
 			if name != "" && !interactiveOnly && !strings.Contains(parent, name) {
-				lines = append(lines, strings.Repeat("  ", depth)+"text "+strconv.Quote(name))
+				lines = append(lines, treeLine{text: strings.Repeat("  ", depth) + "text " + strconv.Quote(name), role: "text", name: name})
 			}
 			return
 		}
@@ -155,6 +175,8 @@ func (b *Browser) treeLines(ctx context.Context, interactiveOnly, reset bool) ([
 			d = 0
 		}
 		var sb strings.Builder
+		var shown string
+		hasRef := false
 		sb.WriteString(strings.Repeat("  ", d))
 		if n.BackendDOMNodeID != 0 && (interactive || role == "heading" || role == "image" || role == "img") {
 			b.mu.Lock()
@@ -166,6 +188,7 @@ func (b *Browser) treeLines(ctx context.Context, interactiveOnly, reset bool) ([
 			refs[ref] = refInfo{backend: n.BackendDOMNodeID, role: role, name: name}
 			b.mu.Unlock()
 			sb.WriteString("[" + ref + "] ")
+			hasRef = true
 		}
 		sb.WriteString(role)
 		if name != "" {
@@ -179,10 +202,13 @@ func (b *Browser) treeLines(ctx context.Context, interactiveOnly, reset bool) ([
 		if role == "heading" && props["level"] != "" {
 			sb.WriteString(" level=" + props["level"])
 		}
+		secretNode := false
 		if textRoles[role] {
 			secret := b.isSecretNode(ctx, n.BackendDOMNodeID)
+			secretNode = secret
 			if v := axStr(n.Value); v != "" && !secret {
-				sb.WriteString(" value=" + strconv.Quote(clean(v)))
+				shown = clean(v)
+				sb.WriteString(" value=" + strconv.Quote(shown))
 			}
 			if secret {
 				sb.WriteString(" (secret field, never typed or shown)")
@@ -207,14 +233,17 @@ func (b *Browser) treeLines(ctx context.Context, interactiveOnly, reset bool) ([
 		case "false":
 			sb.WriteString(" collapsed")
 		}
-		lines = append(lines, sb.String())
+		lines = append(lines, treeLine{text: sb.String(), role: role, name: name, value: shown, desc: clean(axStr(n.Description)), hasRef: hasRef})
+		if secretNode {
+			return // its text child would show the value
+		}
 		kids(d+1, name)
 	}
 	for _, r := range roots {
 		walk(r, 0, "")
 	}
 	if len(lines) == 0 {
-		lines = []string{"(the page has no readable content yet)"}
+		lines = []treeLine{{text: "(the page has no readable content yet)"}}
 	}
 	return lines, nil
 }
@@ -300,54 +329,73 @@ func nodeGone(ref string, err error) error {
 }
 
 const inspectJS = `function(){
-  const el=this, tag=(el.tagName||'').toLowerCase();
+  const el=this.nodeType===1?this:(this.parentElement||this), tag=(el.tagName||'').toLowerCase();
   const a=n=>(el.getAttribute&&el.getAttribute(n))||'';
   const link=el.closest?el.closest('a[href]'):null;
   const lab=(tag==='label')?el:(el.closest?el.closest('label'):null);
   const btn=(lab&&lab.control)?lab.control:(el.closest?(el.closest('button')||el):el);
-  return {tag, type:(typeof el.type==='string'?el.type:a('type')).toLowerCase(),
+  const type=(typeof el.type==='string'?el.type:a('type')).toLowerCase();
+  const role=a('role')||({a:'link',button:'button',select:'combobox',textarea:'textbox',summary:'button',img:'image',
+    h1:'heading',h2:'heading',h3:'heading',h4:'heading',h5:'heading',h6:'heading'}[tag])||(tag==='input'?(({checkbox:'checkbox',radio:'radio',button:'button',submit:'button',reset:'button',image:'button',range:'slider',number:'spinbutton',search:'searchbox'})[type]||'textbox'):'');
+  const txt=((el.innerText||'').trim()||a('aria-label')||(tag==='input'&&/^(button|submit|reset)$/.test(type)?el.value:'')||a('placeholder')||a('title')||a('alt')||a('name')||'').replace(/\s+/g,' ').slice(0,80);
+  return {tag, type, role, label:a('aria-label')||txt,
     autocomplete:a('autocomplete'), name:a('name'), id:el.id||'',
     inForm:!!(el.form||(el.closest&&el.closest('form'))),
     btnTag:(btn.tagName||'').toLowerCase(), btnType:(typeof btn.type==='string'?btn.type:'').toLowerCase(), btnForm:!!btn.form,
     href:(link&&typeof link.href==='string')?link.href:'', download:!!(link&&link.hasAttribute('download'))};
 }`
 
-func (b *Browser) inspect(ctx context.Context, ref string) (*Element, error) {
-	info, err := b.lookup(ref)
+// describeObject inspects one element. ref is its ref when known; else it is
+// looked up in the current tree.
+func (b *Browser) describeObject(ctx context.Context, obj runtime.RemoteObjectID, ref string) (*Element, error) {
+	res, err := chromedp.Call(ctx, runtime.CallFunctionOn, runtime.CallFunctionOnParams{
+		FunctionDeclaration: inspectJS, ObjectID: obj, ReturnByValue: new(true),
+	})
 	if err != nil {
 		return nil, err
 	}
-	obj, err := chromedp.Call(ctx, dom.ResolveNode, dom.ResolveNodeParams{BackendNodeID: info.backend})
-	if err != nil || obj.Object == nil {
-		if err == nil {
-			err = errors.New("not found")
-		}
-		return nil, nodeGone(ref, err)
-	}
-	res, err := chromedp.Call(ctx, runtime.CallFunctionOn, runtime.CallFunctionOnParams{
-		FunctionDeclaration: inspectJS, ObjectID: obj.Object.ObjectID, ReturnByValue: new(true),
-	})
-	if err != nil {
-		return nil, nodeGone(ref, err)
-	}
 	if res.ExceptionDetails != nil || res.Result == nil {
-		return nil, fmt.Errorf("could not inspect %s", ref)
+		return nil, errors.New("could not inspect the element")
 	}
 	var f struct {
-		Tag, Type, Autocomplete, Name, ID, BtnTag, BtnType, Href string
-		InForm, BtnForm, Download                                bool
+		Tag, Type, Role, Label, Autocomplete, Name, ID, BtnTag, BtnType, Href string
+		InForm, BtnForm, Download                                             bool
 	}
 	if err := json.Unmarshal(res.Result.Value, &f); err != nil {
-		return nil, fmt.Errorf("could not inspect %s: %w", ref, err)
+		return nil, fmt.Errorf("could not inspect the element: %w", err)
 	}
-	return &Element{
-		Ref: ref, Role: info.role, Name: info.name, Tag: f.Tag, Type: f.Type,
+	el := &Element{
+		Ref: ref, Role: f.Role, Name: f.Label, Tag: f.Tag, Type: f.Type,
 		Password:  secretField(f.Tag, f.Type, f.Autocomplete, f.Name, f.ID),
 		FileInput: f.Tag == "input" && f.Type == "file",
 		Submits: f.BtnForm && ((f.BtnTag == "button" && f.BtnType == "submit") ||
 			(f.BtnTag == "input" && (f.BtnType == "submit" || f.BtnType == "image"))),
 		InForm: f.InForm, Href: f.Href, Download: f.Download,
-	}, nil
+	}
+	if ref == "" {
+		if d, err := chromedp.Call(ctx, dom.DescribeNode, dom.DescribeNodeParams{ObjectID: obj}); err == nil && d.Node != nil {
+			b.mu.Lock()
+			el.Ref = b.refNode[d.Node.BackendNodeID]
+			if info, ok := b.refs[el.Ref]; ok {
+				el.Role, el.Name = info.role, info.name
+			}
+			b.mu.Unlock()
+		}
+	}
+	return el, nil
+}
+
+func (b *Browser) inspect(ctx context.Context, ref string) (*Element, error) {
+	info, obj, err := b.objectOf(ctx, ref)
+	if err != nil {
+		return nil, err
+	}
+	el, err := b.describeObject(ctx, obj, ref)
+	if err != nil {
+		return nil, nodeGone(ref, err)
+	}
+	el.Role, el.Name = info.role, info.name
+	return el, nil
 }
 
 // Inspect reports what a ref points at, without touching the page.

@@ -57,6 +57,11 @@ func (m *model) handleKey(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.selectKey(k)
 	case stateLive:
 		return m, m.liveKey(k)
+	case stateConnect:
+		if m.typeahead() {
+			return m, nil
+		}
+		return m, m.connectKey(k)
 	case stateLogin:
 		done, cmd := m.login.key(k)
 		if done {

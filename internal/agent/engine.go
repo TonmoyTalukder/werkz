@@ -339,6 +339,10 @@ func (e *Engine) execTool(ctx context.Context, tc llm.ToolCall) tools.Result {
 		res = e.webSearch(ctx, tc)
 	case "DevServer":
 		res = e.runDevServer(ctx, tc)
+	case "Act", "Find", "PageText", "FormInput", "Eval", "Tabs", "Resize":
+		res = e.runActTool(ctx, tc)
+	case "Batch":
+		res = e.runBatch(ctx, tc)
 	case "Browse", "ReadPage", "Click", "Type", "Screenshot", "Console", "Network":
 		always := false
 		if a := parseBrowserArgs(tc); tc.Name == "Browse" {
@@ -419,16 +423,21 @@ func (e *Engine) permit(ctx context.Context, tc llm.ToolCall, summary string) (t
 	// Browser actions: other sites ask (per domain); form submits, uploads and downloads always
 	// ask, even in Bypass; password fields are never typed into. Clicking and typing change the
 	// page, so plan mode doesn't allow them.
-	if isBrowserTool(tc.Name) {
-		if e.mode() == config.ModePlan && (tc.Name == "Click" || tc.Name == "Type") {
+	if isBrowserTool(tc.Name) || isActTool(tc.Name) {
+		if e.mode() == config.ModePlan && changesPage(tc) {
 			need, kind = true, "plan"
 		} else {
-			ask, why, bkey, blabel, g, refuse := e.browserCheck(ctx, tc)
+			check := e.browserCheck
+			if isActTool(tc.Name) {
+				check = e.actCheck
+			}
+			ask, why, bkey, blabel, g, refuse := check(ctx, tc)
 			if refuse != nil {
 				e.send(ToolResultMsg{ID: tc.ID, Name: tc.Name, Summary: "refused", IsError: true})
 				return tools.Fail("%v", refuse), false
 			}
-			if ask && (bkey == "" || e.mode() != config.ModeBypass) {
+			// In the user's own Chrome (signed in), other sites ask even in Bypass.
+			if ask && (bkey == "" || e.mode() != config.ModeBypass || e.BrowserConnected()) {
 				need, kind, key, always = true, "ask", bkey, blabel
 				summary += "  ⚠ " + why
 			}

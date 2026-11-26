@@ -102,6 +102,9 @@ type browserState struct {
 	b       *browser.Browser
 	visible bool  // the user asked to see it (/browser show)
 	avail   *bool // a browser is installed (checked once)
+	// connected: werkz drives the user's own Chrome (/browser connect), for this session only.
+	connected bool
+	addr      string
 
 	hostMu sync.Mutex
 	site   string   // host of the last approved Browse: the page may move around that site
@@ -129,6 +132,7 @@ func (e *Engine) toolDefs() []llm.ToolDef {
 		e.defs = append(append([]llm.ToolDef(nil), tools.Defs...), devServerDef)
 		if e.browserAvailable() {
 			e.defs = append(e.defs, browserDefs...)
+			e.defs = append(e.defs, actDefs...)
 		}
 	})
 	return e.defs
@@ -170,7 +174,7 @@ func (e *Engine) current() (*browser.Browser, bool) {
 }
 
 // session returns the browser, starting it if needed, or again if it crashed or the user closed
-// its window.
+// its window. Connected to the user's Chrome, it never starts one of its own instead.
 func (e *Engine) session(ctx context.Context) (*browser.Browser, error) {
 	if b, _ := e.current(); b != nil && b.Alive() {
 		return b, nil
@@ -180,6 +184,10 @@ func (e *Engine) session(ctx context.Context) (*browser.Browser, error) {
 	b, visible := e.current()
 	if b != nil && b.Alive() {
 		return b, nil // started by someone else meanwhile
+	}
+	if e.BrowserConnected() {
+		return nil, errors.New("werkz's tab in your Chrome is gone (Chrome was closed, or the tab was): " +
+			"ask the user to run /browser connect again, or /browser disconnect to use werkz's own browser")
 	}
 	if b != nil {
 		_ = b.Close() // dead: clear it up before starting another
@@ -241,11 +249,57 @@ func (e *Engine) BrowserCapture(ctx context.Context) (png []byte, url string, ok
 	return png, b.URL(), true, err
 }
 
-// CloseBrowser closes werkz's browser (it starts again when a browser tool is used).
+// BrowserConnected reports whether werkz drives the user's own Chrome, and where.
+func (e *Engine) BrowserConnected() bool {
+	e.br.mu.Lock()
+	defer e.br.mu.Unlock()
+	return e.br.connected
+}
+
+// BrowserAddr is the address of the user's Chrome while connected.
+func (e *Engine) BrowserAddr() string {
+	e.br.mu.Lock()
+	defer e.br.mu.Unlock()
+	return e.br.addr
+}
+
+// ConnectBrowser attaches to the user's own Chrome (started with a debugging port), replacing
+// werkz's own browser for this session. werkz opens its own tab there and uses only that.
+func (e *Engine) ConnectBrowser(ctx context.Context, addr string) error {
+	e.br.startMu.Lock()
+	defer e.br.startMu.Unlock()
+	b, err := browser.Connect(ctx, addr, browser.Options{AllowHost: e.allowHost})
+	if err != nil {
+		return err
+	}
+	e.br.mu.Lock()
+	old := e.br.b
+	e.br.b, e.br.connected, e.br.addr = b, true, addr
+	e.br.mu.Unlock()
+	if old != nil {
+		_ = old.Close()
+	}
+	return nil
+}
+
+// DisconnectBrowser closes werkz's tabs in the user's Chrome (never Chrome itself) and goes back
+// to werkz's own browser.
+func (e *Engine) DisconnectBrowser() {
+	e.br.mu.Lock()
+	b := e.br.b
+	e.br.b, e.br.connected, e.br.addr = nil, false, ""
+	e.br.mu.Unlock()
+	if b != nil {
+		_ = b.Close()
+	}
+}
+
+// CloseBrowser closes werkz's browser (it starts again when a browser tool is used). Connected to
+// the user's Chrome, it closes only werkz's tabs there and disconnects.
 func (e *Engine) CloseBrowser() {
 	e.br.mu.Lock()
 	b := e.br.b
-	e.br.b = nil
+	e.br.b, e.br.connected, e.br.addr = nil, false, ""
 	e.br.mu.Unlock()
 	if b != nil {
 		_ = b.Close()
@@ -594,6 +648,9 @@ func devServerStarts(tc llm.ToolCall) (bool, string) {
 
 // toolSummary is the one-line description of a call for the UI.
 func toolSummary(tc llm.ToolCall) string {
+	if isActTool(tc.Name) || tc.Name == "Batch" {
+		return actSummary(tc)
+	}
 	if !isBrowserTool(tc.Name) && tc.Name != "DevServer" {
 		return tools.Summary(tc)
 	}
