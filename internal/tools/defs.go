@@ -16,6 +16,7 @@ type Result struct {
 	Output  string   // sent to the model
 	Summary string   // one line for the UI
 	Detail  []string // optional extra UI lines
+	Image   string   // a picture to show with the result (a screenshot's path)
 	IsError bool
 }
 

@@ -33,7 +33,8 @@ type Item struct {
 	Args    string   `json:"args,omitempty"` // tool: what it was called with (summary)
 	Detail  []string `json:"d,omitempty"`    // tool: diff or output lines shown
 	IsError bool     `json:"err,omitempty"`
-	OK      []bool   `json:"ok,omitempty"` // attach: per line, attached or not
+	Image   string   `json:"img,omitempty"` // tool: a screenshot shown with the result
+	OK      []bool   `json:"ok,omitempty"`  // attach: per line, attached or not
 }
 
 // Msg is a conversation message as saved: provider-neutral, without provider-specific

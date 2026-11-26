@@ -36,7 +36,11 @@ func (m *model) renderItem(it session.Item, w int) string {
 		if it.Args != "" {
 			call += sDim.Render("(" + it.Args + ")")
 		}
-		return renderToolResult(agent.ToolResultMsg{Name: it.Call, Summary: it.Text, Detail: it.Detail, IsError: it.IsError}, call, w)
+		s := renderToolResult(agent.ToolResultMsg{Name: it.Call, Summary: it.Text, Detail: it.Detail, IsError: it.IsError}, call, w)
+		if it.Image != "" {
+			s += "\n" + m.renderImage(it.Image, w)
+		}
+		return s
 	case "attach":
 		return renderAttach(it, w)
 	case "note":

@@ -58,7 +58,8 @@ changes and checks its work, asking before it does anything risky.
 - **Reads the web:** looks up docs and error messages with `WebFetch` and `WebSearch` (your model's own
   search, or Brave, Tavily or SearXNG); pages on your local network ask first.
 - **Checks its own web UI:** starts your dev server, opens the page in your installed Chrome (a separate
-  profile), clicks through it, reads console and network errors, and compares screenshots before and after.
+  profile), clicks through it, reads console and network errors, and compares screenshots before and after,
+  showing the page right in your terminal where it can (kitty, Ghostty, iTerm2, WezTerm, Sixel).
 - **Made for daily use:** type `@` to attach files (with `@repo/path` across repos), drag to select and copy
   any text, and pick up any earlier conversation with `/resume` or `werkz -c`.
 

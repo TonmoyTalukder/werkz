@@ -55,6 +55,8 @@ func (m *model) handleKey(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.copyPickerKey(k)
 	case stateSelect:
 		return m, m.selectKey(k)
+	case stateLive:
+		return m, m.liveKey(k)
 	case stateLogin:
 		done, cmd := m.login.key(k)
 		if done {

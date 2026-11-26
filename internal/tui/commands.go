@@ -39,7 +39,7 @@ var commands = []struct{ Name, Desc string }{
 	{"/copy", "Copy the latest response (or a code block) · /copy 2 · /copy prompt · /copy all"},
 	{"/export", "Save the conversation as markdown · /export <file>"},
 	{"/clear", "Start a new conversation (this one stays in /resume)"},
-	{"/browser", "werkz's browser for checking web UI · /browser show|hide|close"},
+	{"/browser", "werkz's browser for checking web UI · /browser view shows the page here · show|hide|close"},
 	{"/search", "Web search for the model · /search brave|tavily <key> · /search searxng <url> · /search off"},
 	{"/docs", "Open the werkz documentation in your browser"},
 	{"/help", "Show help"},

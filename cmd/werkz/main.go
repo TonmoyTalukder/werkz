@@ -17,6 +17,7 @@ import (
 	"github.com/TonmoyTalukder/werkz/internal/catalog"
 	"github.com/TonmoyTalukder/werkz/internal/config"
 	"github.com/TonmoyTalukder/werkz/internal/llm/claudecode"
+	"github.com/TonmoyTalukder/werkz/internal/termimg"
 	"github.com/TonmoyTalukder/werkz/internal/tools"
 	"github.com/TonmoyTalukder/werkz/internal/tui"
 	"github.com/TonmoyTalukder/werkz/internal/update"
@@ -100,6 +101,10 @@ func run(provider, model string, opts tui.Options) error {
 
 	var p *tea.Program
 	eng := agent.New(cfg, func(v any) { p.Send(v) })
+	// Ask the terminal what pictures it can show, before the full-screen UI takes it over.
+	pctx, pcancel := context.WithTimeout(context.Background(), time.Second)
+	opts.Images = termimg.Probe(pctx)
+	pcancel()
 	m := tui.New(cfg, eng, opts)
 	popts := []tea.ProgramOption{tea.WithAltScreen()}
 	if !opts.NoMouse {

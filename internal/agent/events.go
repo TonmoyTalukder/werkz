@@ -17,6 +17,7 @@ type ToolCallMsg struct{ ID, Name, Summary string }
 type ToolResultMsg struct {
 	ID, Name, Summary string
 	Detail            []string // extra lines, e.g. diff
+	Image             string   // a picture to show (a screenshot's path)
 	IsError           bool
 }
 type UsageMsg struct {

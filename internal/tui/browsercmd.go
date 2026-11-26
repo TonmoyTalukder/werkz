@@ -38,11 +38,13 @@ func (m *model) browserCommand(args []string) tea.Cmd {
 		return m.browserAsync(true, "werkz's browser window is shown; werkz works in it as you watch.")
 	case "hide", "headless":
 		return m.browserAsync(false, "werkz's browser runs in the background.")
+	case "view", "see", "look":
+		return m.openLiveView()
 	case "close", "stop":
 		m.eng.CloseBrowser()
 		return m.printS(renderNotice("info", "Closed werkz's browser. It opens again when werkz needs it."))
 	}
-	return m.printS(renderNotice("warn", "Usage: /browser · /browser show · /browser hide · /browser close"))
+	return m.printS(renderNotice("warn", "Usage: /browser · /browser view · /browser show · /browser hide · /browser close"))
 }
 
 // browserAsync switches the window in the background: relaunching Chrome takes a moment.
@@ -90,7 +92,7 @@ func (m *model) browserText() string {
 		}
 	}
 	lines = append(lines, "")
-	add(sDim.Render("/browser show · /browser hide · /browser close"))
+	add(sDim.Render("/browser view (see the page here) · /browser show (its window) · /browser hide · /browser close"))
 	add(sDim.Render("Pages on this machine open freely; other sites ask. Form submits, uploads and downloads always ask, and password fields are never typed into."))
 	return box(gradient("Browser", 0)+"\n"+strings.Join(lines, "\n"), cSky, m.w)
 }

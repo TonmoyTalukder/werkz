@@ -230,6 +230,17 @@ func (e *Engine) dropBrowser(b *browser.Browser) {
 	_ = b.Close()
 }
 
+// BrowserCapture returns a picture of the open page for the live view, without starting the
+// browser (ok is false when nothing is open).
+func (e *Engine) BrowserCapture(ctx context.Context) (png []byte, url string, ok bool, err error) {
+	b, _ := e.current()
+	if b == nil || !b.Alive() {
+		return nil, "", false, nil
+	}
+	png, err = b.Capture(ctx)
+	return png, b.URL(), true, err
+}
+
 // CloseBrowser closes werkz's browser (it starts again when a browser tool is used).
 func (e *Engine) CloseBrowser() {
 	e.br.mu.Lock()
@@ -480,15 +491,7 @@ func (e *Engine) screenshot(ctx context.Context, b *browser.Browser, a browserAr
 			shot.Compared, shot.Changed*100, r.Min.X, r.Max.X, r.Min.Y, r.Max.Y)
 		sum += fmt.Sprintf(" · %.1f%% changed", shot.Changed*100)
 	}
-	return tools.Result{Output: out, Summary: sum, Detail: []string{tildePath(shot.Path)}}
-}
-
-// tildePath shortens a path in the home folder to ~/….
-func tildePath(p string) string {
-	if h, err := os.UserHomeDir(); err == nil && strings.HasPrefix(p, h+string(os.PathSeparator)) {
-		return "~" + p[len(h):]
-	}
-	return p
+	return tools.Result{Output: out, Summary: sum, Image: shot.Path}
 }
 
 func consoleResult(entries []browser.ConsoleEntry) tools.Result {

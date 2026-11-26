@@ -4,6 +4,7 @@ package tui
 import (
 	"github.com/TonmoyTalukder/werkz/internal/agent"
 	"github.com/TonmoyTalukder/werkz/internal/config"
+	"github.com/TonmoyTalukder/werkz/internal/termimg"
 	"github.com/TonmoyTalukder/werkz/internal/update"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -12,12 +13,13 @@ import (
 // Options configure the UI at start-up.
 type Options struct {
 	Version   string
-	Login     bool     // open the API key screen first
-	Workspace string   // open this saved workspace
-	Dirs      []string // or work in these folders (first is the main one)
-	Continue  bool     // continue the latest conversation in this folder
-	Resume    bool     // open the saved-conversation list
-	NoMouse   bool     // start with mouse capture off
+	Login     bool         // open the API key screen first
+	Workspace string       // open this saved workspace
+	Dirs      []string     // or work in these folders (first is the main one)
+	Continue  bool         // continue the latest conversation in this folder
+	Resume    bool         // open the saved-conversation list
+	NoMouse   bool         // start with mouse capture off
+	Images    termimg.Caps // what the terminal can show (screenshots)
 	// Updates: Updater replaces the release source/executable (tests); nil = GitHub releases
 	// and the running executable.
 	Updater *update.Updater
@@ -51,6 +53,7 @@ func New(cfg *config.Config, eng *agent.Engine, opts Options) tea.Model {
 		m.onStart = func() tea.Cmd { return m.activateDirs(dirs, "", nil) }
 	}
 	m.mouseOff = opts.NoMouse
+	m.img.caps = opts.Images
 	if opts.Continue || opts.Resume {
 		prev := m.onStart
 		m.onStart = func() tea.Cmd {

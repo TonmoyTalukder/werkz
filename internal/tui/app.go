@@ -43,6 +43,7 @@ const (
 	stateResume // /resume: choosing a saved conversation
 	stateCopy   // choosing what of a response to copy
 	stateSelect // moving between messages to copy one (alt+↑)
+	stateLive   // /browser view: the browser's page, full screen
 )
 
 type tickMsg time.Time
@@ -125,6 +126,7 @@ type model struct {
 	toast     string   // a short confirmation in the status line, until the next key
 	sel       textSel  // text selected with the mouse
 	lines     []string // the transcript as last drawn (for copying a selection)
+	img       gfx      // pictures in the terminal (screenshots, /browser view)
 }
 
 // sessionInfo identifies the saved conversation.
@@ -329,6 +331,13 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
 		m.sel = textSel{} // the text reflows: the selection no longer fits it
+		if m.state == stateLive {
+			if m.inlineImages() {
+				m.transmitLive(false)
+				return m, tea.ClearScreen
+			}
+			return m, tea.Batch(tea.ClearScreen, m.drawLiveSoon())
+		}
 		m.input.SetWidth(max(m.w-4, 10))
 		return m, tea.ClearScreen
 
@@ -401,7 +410,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case agent.ToolResultMsg:
-		it := session.Item{Kind: "tool", Call: msg.Name, Text: msg.Summary, Detail: msg.Detail, IsError: msg.IsError}
+		it := session.Item{Kind: "tool", Call: msg.Name, Text: msg.Summary, Detail: msg.Detail, Image: msg.Image, IsError: msg.IsError}
 		if m.turn.pending != nil {
 			it.Call, it.Args = m.turn.pending.Name, m.turn.pending.Summary
 		}
@@ -419,6 +428,16 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handleCopied(msg)
 	case browserDoneMsg:
 		return m, m.handleBrowserDone(msg)
+	case liveFrameMsg:
+		return m, m.handleLiveFrame(msg)
+	case liveTickMsg:
+		if m.state == stateLive {
+			return m, m.captureLive()
+		}
+		return m, nil
+	case liveDrawMsg:
+		m.drawLive()
+		return m, nil
 
 	case agent.PermReqMsg:
 		mm := msg

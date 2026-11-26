@@ -20,6 +20,9 @@ func (m *model) View() string {
 	if m.state == stateLogin {
 		return clipLines(m.login.view(m.w, m.h), m.w, m.h)
 	}
+	if m.state == stateLive {
+		return m.browserView()
+	}
 	bottom := clipLines(m.bottomView(), m.w, 0)
 	if lines := strings.Split(bottom, "\n"); len(lines) >= m.h {
 		// tiny window: the dialog/input takes the whole screen, top part first

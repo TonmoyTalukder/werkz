@@ -351,7 +351,7 @@ func (e *Engine) execTool(ctx context.Context, tc llm.ToolCall) tools.Result {
 		res = tools.Run(ctx, tc, e.toolEnv())
 	}
 	e.trackCheck(tc, res)
-	e.send(ToolResultMsg{ID: tc.ID, Name: tc.Name, Summary: res.Summary, Detail: res.Detail, IsError: res.IsError})
+	e.send(ToolResultMsg{ID: tc.ID, Name: tc.Name, Summary: res.Summary, Detail: res.Detail, Image: res.Image, IsError: res.IsError})
 	return res
 }
 
