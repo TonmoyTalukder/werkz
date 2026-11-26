@@ -92,7 +92,9 @@ repository (so ignored files don't show up), or a capped scan of a folder that i
 it. To copy exactly what was written (markdown, or a code block without the frame around it), use **Alt+↑**
 to pick a message, or `/copy`. A response with code blocks lets you choose one, or press **w** to save it to a
 file. werkz copies with your system's clipboard tool (`wl-copy`, `xclip`, `xsel`, `pbcopy`, PowerShell on
-WSL), inside tmux into tmux's buffer, and over SSH with the OSC 52 terminal sequence. If your terminal doesn't
+WSL) or, on a Linux desktop without one, with its own small clipboard helper (it keeps your copy pasteable
+after werkz quits, until you copy something else); inside tmux into tmux's buffer, and over SSH with the OSC 52
+terminal sequence. If your terminal doesn't
 support that, press **Ctrl+S** and select with the terminal itself.
 
 ## Web access

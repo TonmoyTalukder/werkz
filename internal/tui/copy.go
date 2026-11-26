@@ -53,11 +53,13 @@ func (m *model) handleCopied(msg copiedMsg) tea.Cmd {
 		return m.printS(renderNotice("warn", "Couldn't copy "+msg.what+": "+msg.err.Error()+
 			". Press w in the /copy list to write it to a file, or ctrl+s to select it with your terminal."))
 	}
-	how := "via " + msg.res.Via
 	if !msg.res.Confirmed {
-		how = "through the terminal (OSC 52; if nothing was copied, your terminal doesn't allow it: use ctrl+s and select)"
+		// OSC 52 is never acknowledged: say what was tried, and the sure ways.
+		m.toast = fmt.Sprintf("Sent %s (%s characters) to the terminal's clipboard (OSC 52). If it doesn't paste, your terminal "+
+			"ignores that: install wl-clipboard or xclip, or press ctrl+s and select with the terminal.", msg.what, humanInt(msg.n))
+		return nil
 	}
-	m.toast = fmt.Sprintf("✓ Copied %s · %s character%s %s", msg.what, humanInt(msg.n), plural(msg.n), how)
+	m.toast = fmt.Sprintf("✓ Copied %s · %s character%s via %s", msg.what, humanInt(msg.n), plural(msg.n), msg.res.Via)
 	return nil
 }
 

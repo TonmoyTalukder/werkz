@@ -13,6 +13,7 @@ require (
 	github.com/charmbracelet/x/ansi v0.11.6
 	github.com/chromedp/cdproto v0.160.1
 	github.com/chromedp/chromedp v0.24.0
+	github.com/jezek/xgb v1.3.1
 	github.com/lucasb-eyer/go-colorful v1.3.0
 	github.com/yuin/goldmark v1.8.7
 	golang.org/x/image v0.41.0

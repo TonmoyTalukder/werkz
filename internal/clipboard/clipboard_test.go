@@ -58,3 +58,24 @@ func TestCopyChoosesTheRightWay(t *testing.T) {
 		t.Fatalf("screen not wrapped: %q", term.String())
 	}
 }
+
+func TestX11WhenNoTool(t *testing.T) {
+	var got string
+	x11 := func(_ context.Context, s string) error { got = s; return nil }
+	e, _, term := fake(map[string]string{"DISPLAY": ":0", "WAYLAND_DISPLAY": "wayland-0"}) // no wl-copy/xclip installed
+	e.X11 = x11
+	if r, err := CopyWith(e, "hi"); err != nil || r.Via != "the X11 clipboard" || !r.Confirmed || got != "hi" || term.Len() != 0 {
+		t.Fatalf("x11: %+v %v (osc52 %q)", r, err, term.String())
+	}
+	got = ""
+	e, _, _ = fake(map[string]string{"DISPLAY": ":0"}, "xclip") // a tool wins
+	e.X11 = x11
+	if r, _ := CopyWith(e, "hi"); r.Via != "xclip" || got != "" {
+		t.Fatalf("tool not preferred: %+v", r)
+	}
+	e, _, term = fake(map[string]string{"DISPLAY": ":0"})
+	e.X11 = func(context.Context, string) error { return errors.New("no X") }
+	if r, _ := CopyWith(e, "hi"); r.Via != "OSC 52" || term.Len() == 0 {
+		t.Fatalf("failed X11 should fall back to OSC 52: %+v", r)
+	}
+}

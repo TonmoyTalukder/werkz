@@ -32,10 +32,11 @@ type Env struct {
 	Run      func(ctx context.Context, name string, args []string, stdin string) error
 	Terminal io.Writer // where OSC 52 goes (the terminal)
 	GOOS     string
+	X11      func(ctx context.Context, text string) error // werkz's own X11 clipboard (nil = none)
 }
 
 func defaultEnv() Env {
-	return Env{Getenv: os.Getenv, LookPath: exec.LookPath, Run: run, Terminal: os.Stdout, GOOS: runtime.GOOS}
+	return Env{Getenv: os.Getenv, LookPath: exec.LookPath, Run: run, Terminal: os.Stdout, GOOS: runtime.GOOS, X11: x11Copy}
 }
 
 // Copy puts text on the clipboard.
@@ -71,6 +72,16 @@ func CopyWith(e Env, text string) (Result, error) {
 			if err == nil {
 				return Result{Via: t.name, Confirmed: true}, nil
 			}
+		}
+	}
+	// No clipboard tool: on a desktop with X11 (including GNOME and KDE on Wayland, through
+	// XWayland), werkz serves the clipboard itself.
+	if e.X11 != nil && e.Getenv("DISPLAY") != "" && e.GOOS != "darwin" && e.GOOS != "windows" {
+		ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+		err := e.X11(ctx, text)
+		cancel()
+		if err == nil {
+			return Result{Via: "the X11 clipboard", Confirmed: true}, nil
 		}
 	}
 	if tmuxOK {

@@ -15,6 +15,7 @@ import (
 
 	"github.com/TonmoyTalukder/werkz/internal/agent"
 	"github.com/TonmoyTalukder/werkz/internal/catalog"
+	"github.com/TonmoyTalukder/werkz/internal/clipboard"
 	"github.com/TonmoyTalukder/werkz/internal/config"
 	"github.com/TonmoyTalukder/werkz/internal/llm/claudecode"
 	"github.com/TonmoyTalukder/werkz/internal/termimg"
@@ -43,6 +44,13 @@ func main() {
 	// Claude Code starts werkz this way to ask permission questions (see internal/llm/claudecode).
 	if len(os.Args) == 3 && os.Args[1] == claudecode.BridgeArg {
 		if err := claudecode.Bridge(os.Args[2], os.Stdin, os.Stdout); err != nil {
+			os.Exit(1)
+		}
+		return
+	}
+	// werkz serving the clipboard in the background (see internal/clipboard).
+	if len(os.Args) == 2 && os.Args[1] == clipboard.ServeArg {
+		if err := clipboard.Serve(os.Stdin, os.Stdout); err != nil {
 			os.Exit(1)
 		}
 		return
