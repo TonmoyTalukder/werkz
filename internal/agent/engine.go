@@ -6,7 +6,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -46,7 +45,8 @@ type Engine struct {
 	br             browserState // werkz's browser, started on first use
 	defsOnce       sync.Once
 	defs           []llm.ToolDef        // tools offered to the model (fixed per session: keeps the cache)
-	localOK        sync.Map             // WebFetch calls approved to reach the local network (by call ID)
+	localOK        sync.Map             // WebFetch calls approved to reach the local network: call ID -> host
+	grants         sync.Map             // browser actions the user approved: call ID -> browserGrant
 	attached       map[string]time.Time // files attached with @ (path:range -> mtime), to skip unchanged repeats
 	sessionID      string               // prompt_cache_key for OpenAI (routes requests to the same cache)
 	lastProvider   string               // provider of the latest request
@@ -332,8 +332,9 @@ func (e *Engine) execTool(ctx context.Context, tc llm.ToolCall) tools.Result {
 	case "Task":
 		res = e.runTask(ctx, tc)
 	case "WebFetch":
-		_, local := e.localOK.LoadAndDelete(tc.ID) // permit approved a local-network page
-		res = e.webFetch(ctx, tc, local)
+		host, _ := e.localOK.LoadAndDelete(tc.ID) // permit approved this local-network host
+		localHost, _ := host.(string)
+		res = e.webFetch(ctx, tc, localHost)
 	case "WebSearch":
 		res = e.webSearch(ctx, tc)
 	case "DevServer":
@@ -341,7 +342,7 @@ func (e *Engine) execTool(ctx context.Context, tc llm.ToolCall) tools.Result {
 	case "Browse", "ReadPage", "Click", "Type", "Screenshot", "Console", "Network":
 		always := false
 		if a := parseBrowserArgs(tc); tc.Name == "Browse" {
-			if u, err := url.Parse(a.URL); err == nil {
+			if u, err := browseTarget(a.URL); err == nil {
 				always = e.allow["Browse@"+strings.ToLower(u.Hostname())]
 			}
 		}
@@ -385,6 +386,7 @@ func externalSummary(output string, isError bool) string {
 func (e *Engine) permit(ctx context.Context, tc llm.ToolCall, summary string) (tools.Result, bool) {
 	need, kind := tools.NeedsPermission(tc.Name, e.mode())
 	outside := false
+	var grant browserGrant // what a browser action is approved for (form submit, download)
 	if a, err := tools.ParseArgs(tc); err == nil && fileTool(tc.Name) {
 		path := a.Path
 		if tools.Sensitive(path) {
@@ -421,7 +423,7 @@ func (e *Engine) permit(ctx context.Context, tc llm.ToolCall, summary string) (t
 		if e.mode() == config.ModePlan && (tc.Name == "Click" || tc.Name == "Type") {
 			need, kind = true, "plan"
 		} else {
-			ask, why, bkey, blabel, refuse := e.browserCheck(ctx, tc)
+			ask, why, bkey, blabel, g, refuse := e.browserCheck(ctx, tc)
 			if refuse != nil {
 				e.send(ToolResultMsg{ID: tc.ID, Name: tc.Name, Summary: "refused", IsError: true})
 				return tools.Fail("%v", refuse), false
@@ -430,16 +432,15 @@ func (e *Engine) permit(ctx context.Context, tc llm.ToolCall, summary string) (t
 				need, kind, key, always = true, "ask", bkey, blabel
 				summary += "  ⚠ " + why
 			}
+			grant = g
 		}
 	}
 	// A page on the local network asks in every mode but Bypass; "don't ask again" covers the host.
-	if local, host := localFetch(ctx, tc); local {
-		if e.mode() != config.ModeBypass {
-			need, kind = true, "ask"
-			key, always = "WebFetch@"+host, "Yes, and don't ask again for "+host+" this session"
-			summary = localAskSummary(summary, host)
-		}
-		e.localOK.Store(tc.ID, true)
+	local, localHost := localFetch(ctx, tc)
+	if local && e.mode() != config.ModeBypass {
+		need, kind = true, "ask"
+		key, always = "WebFetch@"+localHost, "Yes, and don't ask again for "+localHost+" this session"
+		summary = localAskSummary(summary, localHost)
 	}
 	if need && (key == "" || !e.allow[key]) {
 		if kind == "plan" {
@@ -461,6 +462,13 @@ func (e *Engine) permit(ctx context.Context, tc llm.ToolCall, summary string) (t
 		case <-ctx.Done():
 			return tools.Result{Output: "Interrupted by user.", IsError: true}, false
 		}
+	}
+	// Recorded only now that the call may run: what it was approved for.
+	if local {
+		e.localOK.Store(tc.ID, localHost)
+	}
+	if grant != (browserGrant{}) {
+		e.grants.Store(tc.ID, grant)
 	}
 	return tools.Result{}, true
 }

@@ -303,7 +303,8 @@ const inspectJS = `function(){
   const el=this, tag=(el.tagName||'').toLowerCase();
   const a=n=>(el.getAttribute&&el.getAttribute(n))||'';
   const link=el.closest?el.closest('a[href]'):null;
-  const btn=el.closest?(el.closest('button')||el):el;
+  const lab=(tag==='label')?el:(el.closest?el.closest('label'):null);
+  const btn=(lab&&lab.control)?lab.control:(el.closest?(el.closest('button')||el):el);
   return {tag, type:(typeof el.type==='string'?el.type:a('type')).toLowerCase(),
     autocomplete:a('autocomplete'), name:a('name'), id:el.id||'',
     inForm:!!(el.form||(el.closest&&el.closest('form'))),
@@ -359,7 +360,31 @@ func (b *Browser) Inspect(call context.Context, ref string) (*Element, error) {
 	return b.inspect(ctx, ref)
 }
 
-// center returns the click point of a node, after scrolling it into view.
+// containsJS is true when the hit element is this element, inside it
+// (shadow trees included), or a label that activates it.
+const containsJS = `function(h){
+  for(let n=h,i=0;n&&i<500;i++,n=n.parentNode||n.host){if(n===this)return true;}
+  return !!(h&&h.tagName==='LABEL'&&h.control===this);
+}`
+
+// describeNode names an element for an error message: <tag#id>.
+func (b *Browser) describeNode(ctx context.Context, id cdp.BackendNodeID) string {
+	res, err := chromedp.Call(ctx, dom.DescribeNode, dom.DescribeNodeParams{BackendNodeID: id})
+	if err != nil || res.Node == nil {
+		return "unknown element"
+	}
+	s := strings.ToLower(res.Node.NodeName)
+	for i := 0; i+1 < len(res.Node.Attributes); i += 2 {
+		if res.Node.Attributes[i] == "id" && res.Node.Attributes[i+1] != "" {
+			s += "#" + res.Node.Attributes[i+1]
+		}
+	}
+	return "<" + s + ">"
+}
+
+// center returns the click point of a node, after scrolling it into view,
+// and checks that the point really lands on the node (or inside it) rather
+// than on an overlay.
 func (b *Browser) center(ctx context.Context, ref string, id cdp.BackendNodeID) (x, y float64, err error) {
 	if _, err = chromedp.Call(ctx, dom.ScrollIntoViewIfNeeded, dom.ScrollIntoViewIfNeededParams{BackendNodeID: id}); err != nil {
 		return 0, 0, nodeGone(ref, err)
@@ -368,16 +393,50 @@ func (b *Browser) center(ctx context.Context, ref string, id cdp.BackendNodeID) 
 	if err != nil {
 		return 0, 0, nodeGone(ref, err)
 	}
+	found := false
 	for _, quad := range q.Quads {
 		if len(quad) >= 8 {
-			return (quad[0] + quad[2] + quad[4] + quad[6]) / 4, (quad[1] + quad[3] + quad[5] + quad[7]) / 4, nil
+			x, y, found = (quad[0]+quad[2]+quad[4]+quad[6])/4, (quad[1]+quad[3]+quad[5]+quad[7])/4, true
+			break
 		}
 	}
-	return 0, 0, fmt.Errorf("%s is not visible on the page, so it cannot be clicked", ref)
+	if !found {
+		return 0, 0, fmt.Errorf("%s is not visible on the page, so it cannot be clicked", ref)
+	}
+	// Re-resolve right before clicking: the node may have been replaced.
+	obj, err := chromedp.Call(ctx, dom.ResolveNode, dom.ResolveNodeParams{BackendNodeID: id})
+	if err != nil || obj.Object == nil {
+		if err == nil {
+			err = errors.New("not found")
+		}
+		return 0, 0, nodeGone(ref, err)
+	}
+	hit, err := chromedp.Call(ctx, dom.GetNodeForLocation, dom.GetNodeForLocationParams{X: int64(x), Y: int64(y)})
+	if err != nil {
+		return 0, 0, fmt.Errorf("%s is not visible at its click point: ReadPage again or close the overlay", ref)
+	}
+	hitObj, err := chromedp.Call(ctx, dom.ResolveNode, dom.ResolveNodeParams{BackendNodeID: hit.BackendNodeID})
+	if err != nil || hitObj.Object == nil {
+		return 0, 0, fmt.Errorf("%s is covered by another element: ReadPage again or close the overlay", ref)
+	}
+	res, err := chromedp.Call(ctx, runtime.CallFunctionOn, runtime.CallFunctionOnParams{
+		FunctionDeclaration: containsJS, ObjectID: obj.Object.ObjectID, ReturnByValue: new(true),
+		Arguments: []*runtime.CallArgument{{ObjectID: hitObj.Object.ObjectID}},
+	})
+	if err != nil {
+		return 0, 0, nodeGone(ref, err)
+	}
+	if res.Result == nil || string(res.Result.Value) != "true" {
+		return 0, 0, fmt.Errorf("%s is covered by another element (%s): ReadPage again or close the overlay", ref, b.describeNode(ctx, hit.BackendNodeID))
+	}
+	return x, y, nil
 }
 
-// Click clicks the centre of the element with real mouse events.
-func (b *Browser) Click(call context.Context, ref string) (*Snapshot, error) {
+// Click clicks the centre of the element with real mouse events. The point is
+// checked first: if another element is on top of it, nothing is clicked.
+// allow says what the click may do; without Allow.Submit any form submission
+// it causes is blocked and reported in Snapshot.Blocked.
+func (b *Browser) Click(call context.Context, ref string, allow Allow) (*Snapshot, error) {
 	ctx, done, err := b.begin(call)
 	if err != nil {
 		return nil, err
@@ -387,6 +446,11 @@ func (b *Browser) Click(call context.Context, ref string) (*Snapshot, error) {
 	if err != nil {
 		return nil, err
 	}
+	end, err := b.startAllow(ctx, allow)
+	if err != nil {
+		return nil, err
+	}
+	defer end()
 	x, y, err := b.center(ctx, ref, info.backend)
 	if err != nil {
 		return nil, err
@@ -401,6 +465,7 @@ func (b *Browser) Click(call context.Context, ref string) (*Snapshot, error) {
 		}
 	}
 	b.settle(ctx, 5*time.Second)
+	end()
 	return b.snapshot(ctx)
 }
 
@@ -414,8 +479,53 @@ const focusJS = `function(clear){
   } else if(el.isContentEditable){const r=document.createRange();r.selectNodeContents(el);r.collapse(false);const s=getSelection();s.removeAllRanges();s.addRange(r);}
 }`
 
-// Type enters text into a field. Password and payment fields are refused.
-func (b *Browser) Type(call context.Context, ref, text string, clear, pressEnter bool) (*Snapshot, error) {
+const activeJS = `function(){
+  let a=document.activeElement;
+  while(a&&a.shadowRoot&&a.shadowRoot.activeElement)a=a.shadowRoot.activeElement;
+  let inside=false;
+  for(let n=a,i=0;n&&i<500;i++,n=n.parentNode||n.host){if(n===this){inside=true;break}}
+  const g=n=>(a&&a.getAttribute&&a.getAttribute(n))||'';
+  return {inside, tag:((a&&a.tagName)||'').toLowerCase(), type:((a&&typeof a.type==='string')?a.type:g('type')).toLowerCase(),
+    autocomplete:g('autocomplete'), name:g('name'), id:(a&&a.id)||''};
+}`
+
+// checkFocus verifies the focused element is the ref's (or inside it) and is
+// not a secret field. A ref'd element that has the focus but is not secret is
+// fine; anything else is refused.
+func (b *Browser) checkFocus(ctx context.Context, ref string, id cdp.BackendNodeID) error {
+	obj, err := chromedp.Call(ctx, dom.ResolveNode, dom.ResolveNodeParams{BackendNodeID: id})
+	if err != nil || obj.Object == nil {
+		return staleErr(ref)
+	}
+	res, err := chromedp.Call(ctx, runtime.CallFunctionOn, runtime.CallFunctionOnParams{
+		FunctionDeclaration: activeJS, ObjectID: obj.Object.ObjectID, ReturnByValue: new(true),
+	})
+	if err != nil {
+		return nodeGone(ref, err)
+	}
+	if res.ExceptionDetails != nil || res.Result == nil {
+		return fmt.Errorf("could not check the focus for %s", ref)
+	}
+	var f struct {
+		Inside                            bool
+		Tag, Type, Autocomplete, Name, ID string
+	}
+	if err := json.Unmarshal(res.Result.Value, &f); err != nil {
+		return err
+	}
+	if secretField(f.Tag, f.Type, f.Autocomplete, f.Name, f.ID) {
+		return errors.New("werkz never types into password or payment fields (the focus is in one)")
+	}
+	if !f.Inside {
+		return fmt.Errorf("focus moved to another field, so %s was not typed into: ReadPage again", ref)
+	}
+	return nil
+}
+
+// Type enters text into a field. Password and payment fields are refused,
+// and so is typing when the focus is not on the field (a script moved it).
+// pressEnter may submit a form: that needs allow.Submit.
+func (b *Browser) Type(call context.Context, ref, text string, clear, pressEnter bool, allow Allow) (*Snapshot, error) {
 	ctx, done, err := b.begin(call)
 	if err != nil {
 		return nil, err
@@ -428,6 +538,11 @@ func (b *Browser) Type(call context.Context, ref, text string, clear, pressEnter
 	if el.Password {
 		return nil, errors.New("werkz never types into password or payment fields")
 	}
+	end, err := b.startAllow(ctx, allow)
+	if err != nil {
+		return nil, err
+	}
+	defer end()
 	info, _ := b.lookup(ref)
 	if _, err := chromedp.Call(ctx, dom.ScrollIntoViewIfNeeded, dom.ScrollIntoViewIfNeededParams{BackendNodeID: info.backend}); err != nil {
 		return nil, nodeGone(ref, err)
@@ -445,6 +560,9 @@ func (b *Browser) Type(call context.Context, ref, text string, clear, pressEnter
 	}); err != nil {
 		return nil, err
 	}
+	if err := b.checkFocus(ctx, ref, info.backend); err != nil {
+		return nil, err
+	}
 	if clear {
 		if err := key(ctx, "Backspace", 8, ""); err != nil {
 			return nil, err
@@ -456,11 +574,15 @@ func (b *Browser) Type(call context.Context, ref, text string, clear, pressEnter
 		}
 	}
 	if pressEnter {
+		if err := b.checkFocus(ctx, ref, info.backend); err != nil {
+			return nil, fmt.Errorf("not pressing Enter: %w", err)
+		}
 		if err := key(ctx, "Enter", 13, "\r"); err != nil {
 			return nil, err
 		}
 	}
 	b.settle(ctx, 5*time.Second)
+	end()
 	return b.snapshot(ctx)
 }
 

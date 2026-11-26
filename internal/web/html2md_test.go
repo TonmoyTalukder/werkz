@@ -1,9 +1,12 @@
 package web
 
 import (
+	"context"
+	"errors"
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 )
 
 const realisticPage = `<!doctype html>
@@ -111,5 +114,40 @@ func TestHeadingPermalinksDropped(t *testing.T) {
 	_, md, _ := HTMLToMarkdown(strings.NewReader(`<h2 id="x">Usage<a href="#x">#</a></h2><p><a href="#x">see usage</a></p>`), nil)
 	if strings.Contains(md, "[#]") || !strings.Contains(md, "## Usage") || !strings.Contains(md, "[see usage](#x)") {
 		t.Fatalf("md:\n%s", md)
+	}
+}
+
+func TestManyBlocksLinear(t *testing.T) {
+	doc := "<html><body>" + strings.Repeat("<p>x</p>", 200000) + "</body></html>"
+	start := time.Now()
+	_, md, err := HTMLToMarkdown(strings.NewReader(doc), nil)
+	if err != nil || time.Since(start) > 3*time.Second {
+		t.Fatalf("err = %v, took %v", err, time.Since(start))
+	}
+	if strings.Count(md, "x") != 200000 || strings.Contains(md, "\n\n\n") {
+		t.Errorf("unexpected output shape (len %d)", len(md))
+	}
+}
+
+func TestHTMLToMarkdownCancelled(t *testing.T) {
+	doc := "<html><body>" + strings.Repeat("<p>x</p>", 200000) + "</body></html>"
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	start := time.Now()
+	_, _, err := HTMLToMarkdownContext(ctx, strings.NewReader(doc), nil)
+	if !errors.Is(err, context.Canceled) || time.Since(start) > time.Second {
+		t.Errorf("err = %v, took %v", err, time.Since(start))
+	}
+}
+
+func TestDeepNestingFallsBackToText(t *testing.T) {
+	doc := "<html><head><title>Deep</title><style>X{}</style></head><body>" + strings.Repeat("<div>", 600) +
+		"hello   <script>BAD()</script>world<p>second</p>" + strings.Repeat("</div>", 600) + "</body></html>"
+	title, md, err := HTMLToMarkdown(strings.NewReader(doc), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if title != "Deep" || md != "hello world\n\nsecond" {
+		t.Errorf("title %q, md %q", title, md)
 	}
 }

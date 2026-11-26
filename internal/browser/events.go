@@ -41,13 +41,16 @@ func (b *Browser) Console(errorsOnly, clear bool) []ConsoleEntry {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	var out []ConsoleEntry
-	for _, e := range b.console {
+	if b.console == nil {
+		return nil
+	}
+	for _, e := range b.console.items() {
 		if !errorsOnly || e.Level == "error" {
 			out = append(out, e)
 		}
 	}
 	if clear {
-		b.console = nil
+		b.console.clear()
 	}
 	return out
 }
@@ -58,7 +61,10 @@ func (b *Browser) Network(failedOnly, clear bool, contains string) []Request {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	var out []Request
-	for _, id := range b.reqOrder {
+	if b.reqOrder == nil {
+		return nil
+	}
+	for _, id := range b.reqOrder.items() {
 		r, ok := b.reqs[id]
 		if !ok || (failedOnly && !r.failed()) || (contains != "" && !strings.Contains(r.URL, contains)) {
 			continue
@@ -67,7 +73,7 @@ func (b *Browser) Network(failedOnly, clear bool, contains string) []Request {
 	}
 	if clear {
 		b.reqs = map[network.RequestID]*Request{}
-		b.reqOrder = nil
+		b.reqOrder.clear()
 	}
 	return out
 }
@@ -142,6 +148,10 @@ func (b *Browser) onEvent(ev any) {
 			b.lastURL = e.URL
 		}
 		b.mu.Unlock()
+	case *runtime.EventBindingCalled:
+		if e.Name == "__werkzBlocked" {
+			b.addBlocked(submitNote(e.Payload))
+		}
 	case *browser.EventDownloadWillBegin:
 		b.onDownloadBegin(e)
 	case *browser.EventDownloadProgress:
@@ -152,9 +162,8 @@ func (b *Browser) onEvent(ev any) {
 func (b *Browser) addConsole(level, text, source string, line int, at time.Time) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	b.console = append(b.console, ConsoleEntry{Level: level, Text: text, Source: source, Line: line, At: at})
-	if len(b.console) > ringSize {
-		b.console = append([]ConsoleEntry(nil), b.console[len(b.console)-ringSize:]...)
+	if b.console != nil {
+		b.console.add(ConsoleEntry{Level: level, Text: text, Source: source, Line: line, At: at})
 	}
 	if level == "error" {
 		b.errTotal++
@@ -241,10 +250,8 @@ func (b *Browser) onRequestSent(e *network.EventRequestWillBeSent) {
 		return
 	}
 	b.reqs[e.RequestID] = &Request{Method: e.Request.Method, URL: e.Request.URL, Type: string(e.Type)}
-	b.reqOrder = append(b.reqOrder, e.RequestID)
-	if len(b.reqOrder) > ringSize {
-		delete(b.reqs, b.reqOrder[0])
-		b.reqOrder = b.reqOrder[1:]
+	if old, evicted := b.reqOrder.add(e.RequestID); evicted {
+		delete(b.reqs, old)
 	}
 	if !quietType(e.Type) {
 		b.reqStart[e.RequestID] = e.Timestamp.Float64()
@@ -292,7 +299,7 @@ func (b *Browser) endRequestLocked(id network.RequestID) {
 }
 
 // onPaused is the navigation policy. Every paused request is continued or
-// failed, otherwise the page would hang.
+// answered, otherwise the page would hang.
 func (b *Browser) onPaused(e *fetch.EventRequestPaused) {
 	b.mu.Lock()
 	tab, mainID := b.tab, b.mainID
@@ -301,12 +308,11 @@ func (b *Browser) onPaused(e *fetch.EventRequestPaused) {
 		return
 	}
 	allow := true
-	if e.ResourceType == network.ResourceTypeDocument && e.FrameID == mainID && e.Request != nil {
-		allow = b.navAllowed(e.Request.URL)
-		if !allow {
-			b.mu.Lock()
-			b.blocked = append(b.blocked, truncate(e.Request.URL, 200))
-			b.mu.Unlock()
+	if e.ResourceType == network.ResourceTypeDocument && e.Request != nil {
+		if e.FrameID == mainID {
+			allow = b.mainAllowed(e.Request.URL, e.Request.Method)
+		} else {
+			allow = b.frameAllowed(e.Request.URL, e.Request.Method)
 		}
 	}
 	ctx, cancel := context.WithTimeout(tab, 10*time.Second)
@@ -321,19 +327,56 @@ func (b *Browser) onPaused(e *fetch.EventRequestPaused) {
 	_, _ = chromedp.Call(ctx, fetch.FulfillRequest, fetch.FulfillRequestParams{RequestID: e.RequestID, ResponseCode: 204})
 }
 
-// navAllowed decides one main-frame document request. Navigate() approves its
-// target host (and so redirects within it) for the duration of the call;
-// anything else the page starts goes through AllowHost.
+// mainAllowed decides one main-frame document request and records a block.
+// A POST is a form submission: it needs an armed action, whatever the page
+// script did to get there.
+func (b *Browser) mainAllowed(raw, method string) bool {
+	if method == "POST" && !b.isArmed() {
+		b.addBlocked(submitNote(raw))
+		return false
+	}
+	if !b.navAllowed(raw) {
+		b.addBlocked(truncate(raw, 200))
+		return false
+	}
+	// A history approval covers the first main-frame request only.
+	if u, err := url.Parse(raw); err == nil {
+		b.mu.Lock()
+		if b.onceOnly && hostKey(u) == b.approved {
+			b.approved, b.onceOnly = "", false
+		}
+		b.mu.Unlock()
+	}
+	return true
+}
+
+// addBlocked records something werkz stopped, for the next Snapshot.
+func (b *Browser) addBlocked(note string) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if n := len(b.blocked); n > 0 && b.blocked[n-1] == note {
+		return
+	}
+	b.blocked = append(b.blocked, note)
+	if len(b.blocked) > maxBlocked {
+		b.blocked = capTail(b.blocked, maxBlocked)
+	}
+}
+
+// navAllowed decides whether a document may load at raw. Navigate() approves
+// its target host:port (and so redirects within it) for the duration of the
+// call, a history move approves its entry's host:port once; anything else
+// goes through AllowHost. Hosts are compared as hostKey gives them.
 func (b *Browser) navAllowed(raw string) bool {
 	u, err := url.Parse(raw)
 	if err != nil {
 		return false
 	}
-	host := strings.ToLower(u.Host)
+	host := hostKey(u)
 	b.mu.Lock()
-	approved, any := b.approved, b.approveAny
+	approved := b.approved
 	b.mu.Unlock()
-	if any || (approved != "" && host == approved) {
+	if approved != "" && host == approved {
 		return true
 	}
 	if u.Scheme != "http" && u.Scheme != "https" {
@@ -345,25 +388,32 @@ func (b *Browser) navAllowed(raw string) bool {
 func (b *Browser) onDownloadBegin(e *browser.EventDownloadWillBegin) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	if b.dlSeen[e.GUID] {
+	if b.dlSeen == nil || b.dlSeen[e.GUID] {
 		return
 	}
 	b.dlSeen[e.GUID] = true
+	b.dlOrder = append(b.dlOrder, e.GUID)
+	if len(b.dlOrder) > maxDLSeen {
+		for _, g := range b.dlOrder[:len(b.dlOrder)-maxDLSeen] {
+			delete(b.dlSeen, g)
+		}
+		b.dlOrder = append([]string(nil), b.dlOrder[len(b.dlOrder)-maxDLSeen:]...)
+	}
 	name := e.SuggestedFilename
 	if name == "" {
 		name = filepath.Base(e.URL)
 	}
 	if b.dlDir == "" {
-		b.downloads = append(b.downloads, name+" (blocked: downloads are off)")
+		b.downloads = capTail(append(b.downloads, name+" (blocked: downloads are off)"), maxBlocked)
 		return
 	}
-	b.dlPending[e.GUID] = name
+	b.dlPending[e.GUID] = dlInfo{name: name, dir: b.dlDir}
 }
 
 func (b *Browser) onDownloadProgress(e *browser.EventDownloadProgress) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	name, ok := b.dlPending[e.GUID]
+	info, ok := b.dlPending[e.GUID]
 	if !ok {
 		return
 	}
@@ -371,15 +421,22 @@ func (b *Browser) onDownloadProgress(e *browser.EventDownloadProgress) {
 	case browser.DownloadProgressStateCompleted:
 		where := e.FilePath
 		if where == "" {
-			where = filepath.Join(b.dlDir, name)
+			where = filepath.Join(info.dir, info.name)
 		}
-		b.downloads = append(b.downloads, fmt.Sprintf("%s (saved to %s)", name, where))
+		b.downloads = capTail(append(b.downloads, fmt.Sprintf("%s (saved to %s)", info.name, where)), maxBlocked)
 	case browser.DownloadProgressStateCanceled:
-		b.downloads = append(b.downloads, name+" (canceled)")
+		b.downloads = capTail(append(b.downloads, info.name+" (canceled)"), maxBlocked)
 	default:
 		return
 	}
 	delete(b.dlPending, e.GUID)
+}
+
+func capTail(s []string, n int) []string {
+	if len(s) > n {
+		return append([]string(nil), s[len(s)-n:]...)
+	}
+	return s
 }
 
 func truncate(s string, n int) string {

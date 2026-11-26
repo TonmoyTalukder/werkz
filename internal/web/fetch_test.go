@@ -85,7 +85,7 @@ func TestFetchHTML(t *testing.T) {
 		fmt.Fprint(w, `<title>Hi</title><main><p>Hello <a href="/x">there</a></p></main>`)
 	}))
 	defer s.Close()
-	page, err := (&Fetcher{AllowLocal: true}).Fetch(context.Background(), s.URL+"/a")
+	page, err := (&Fetcher{LocalHost: "127.0.0.1"}).Fetch(context.Background(), s.URL+"/a")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -100,7 +100,7 @@ func TestFetchHTML(t *testing.T) {
 
 func TestFetchTitleNotRepeated(t *testing.T) {
 	s := serveBody(t, "text/html", `<title>Hi</title><main><h1>Hi</h1><p>body</p></main>`)
-	page, err := (&Fetcher{AllowLocal: true}).Fetch(context.Background(), s.URL)
+	page, err := (&Fetcher{LocalHost: "127.0.0.1"}).Fetch(context.Background(), s.URL)
 	if err != nil || page.Markdown != "# Hi\n\nbody" {
 		t.Errorf("got %q, %v", page.Markdown, err)
 	}
@@ -108,7 +108,7 @@ func TestFetchTitleNotRepeated(t *testing.T) {
 
 func TestFetchLatin1(t *testing.T) {
 	s := serveBody(t, "text/plain; charset=iso-8859-1", "caf\xe9")
-	page, err := (&Fetcher{AllowLocal: true}).Fetch(context.Background(), s.URL)
+	page, err := (&Fetcher{LocalHost: "127.0.0.1"}).Fetch(context.Background(), s.URL)
 	if err != nil || page.Markdown != "café" {
 		t.Errorf("got %q, %v", page.Markdown, err)
 	}
@@ -149,7 +149,7 @@ func TestFetchRedirectRules(t *testing.T) {
 		}
 	}))
 	defer s.Close()
-	f := &Fetcher{AllowLocal: true}
+	f := &Fetcher{LocalHost: "127.0.0.1"}
 	if _, err := f.Fetch(context.Background(), s.URL+"/loop"); err == nil || !strings.Contains(err.Error(), "redirects") {
 		t.Errorf("loop error = %v", err)
 	}
@@ -164,7 +164,7 @@ func TestFetchRedirectRules(t *testing.T) {
 
 func TestFetchBodyCap(t *testing.T) {
 	s := serveBody(t, "text/plain", strings.Repeat("x", 100))
-	page, err := (&Fetcher{AllowLocal: true, MaxBytes: 10}).Fetch(context.Background(), s.URL)
+	page, err := (&Fetcher{LocalHost: "127.0.0.1", MaxBytes: 10}).Fetch(context.Background(), s.URL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +175,7 @@ func TestFetchBodyCap(t *testing.T) {
 
 func TestFetchNotText(t *testing.T) {
 	s := serveBody(t, "application/pdf", "%PDF-1.4")
-	_, err := (&Fetcher{AllowLocal: true}).Fetch(context.Background(), s.URL)
+	_, err := (&Fetcher{LocalHost: "127.0.0.1"}).Fetch(context.Background(), s.URL)
 	if err == nil || !strings.Contains(err.Error(), "application/pdf isn't text") {
 		t.Errorf("error = %v", err)
 	}
@@ -184,7 +184,7 @@ func TestFetchNotText(t *testing.T) {
 func TestFetchHTTPError(t *testing.T) {
 	s := httptest.NewServer(http.NotFoundHandler())
 	defer s.Close()
-	_, err := (&Fetcher{AllowLocal: true}).Fetch(context.Background(), s.URL)
+	_, err := (&Fetcher{LocalHost: "127.0.0.1"}).Fetch(context.Background(), s.URL)
 	if err == nil || !strings.Contains(err.Error(), "HTTP 404 Not Found") {
 		t.Errorf("error = %v", err)
 	}
@@ -216,5 +216,70 @@ func TestPaginate(t *testing.T) {
 	}
 	if c, n := Paginate(md, -3, 0); c != md || n != 0 {
 		t.Errorf("whole = %q, %d", c, n)
+	}
+}
+
+func TestLocalHostScopedToApprovedHost(t *testing.T) {
+	other := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { fmt.Fprint(w, "other") }))
+	defer other.Close()
+	_, otherPort, _ := net.SplitHostPort(strings.TrimPrefix(other.URL, "http://"))
+	var self string
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/meta":
+			http.Redirect(w, r, "http://metadata.test/", http.StatusFound)
+		case "/lan":
+			http.Redirect(w, r, "http://lan.test:"+otherPort+"/", http.StatusFound)
+		case "/lo":
+			http.Redirect(w, r, "http://localhost:"+otherPort+"/", http.StatusFound)
+		case "/same":
+			http.Redirect(w, r, self+"/final", http.StatusFound)
+		default:
+			w.Header().Set("Content-Type", "text/plain")
+			fmt.Fprint(w, "done")
+		}
+	}))
+	defer s.Close()
+	self = s.URL
+	f := &Fetcher{LocalHost: "127.0.0.1", Resolver: fakeResolver(map[string]string{
+		"metadata.test": "169.254.169.254", "lan.test": "192.168.1.5", "localhost": "127.0.0.1"})}
+	for _, p := range []string{"/meta", "/lan", "/lo"} {
+		if _, err := f.Fetch(context.Background(), s.URL+p); err == nil || !strings.Contains(err.Error(), "local network") {
+			t.Errorf("%s: error = %v; want a local network refusal", p, err)
+		}
+	}
+	if page, err := f.Fetch(context.Background(), s.URL+"/same"); err != nil || page.Markdown != "done" {
+		t.Errorf("same-host redirect: %+v, %v", page, err)
+	}
+	// Case-insensitive match of the approved name.
+	f.LocalHost = "LOCALHOST"
+	_, port, _ := net.SplitHostPort(strings.TrimPrefix(s.URL, "http://"))
+	if _, err := f.Fetch(context.Background(), "http://localhost:"+port+"/"); err != nil {
+		t.Errorf("approved localhost: %v", err)
+	}
+}
+
+func TestIsLocalIPForms(t *testing.T) {
+	local := []string{
+		"fe80::1%eth0", "::ffff:10.0.0.1", "64:ff9b::a00:1", "64:ff9b::7f00:1", "64:ff9b::a9fe:a9fe",
+		"2002:7f00:1::", "2002:a9fe:a9fe::1", "2002:c0a8:101::", "::10.0.0.1", "::127.0.0.1", "::169.254.169.254",
+		"0.1.2.3", "fd00::1", "::1", "::",
+	}
+	for _, s := range local {
+		ips, err := lookup(context.Background(), nil, s)
+		if err != nil || !isLocalIP(ips[0]) {
+			t.Errorf("%s should be local (%v)", s, err)
+		}
+	}
+	for _, s := range []string{"93.184.216.34", "2606:4700::1111", "64:ff9b::5db8:d822", "2002:5db8:d822::1", "::ffff:93.184.216.34"} {
+		ips, err := lookup(context.Background(), nil, s)
+		if err != nil || isLocalIP(ips[0]) {
+			t.Errorf("%s should not be local (%v)", s, err)
+		}
+	}
+	for _, u := range []string{"http://[fe80::1%25eth0]/", "http://[64:ff9b::a00:1]/", "http://[2002:a00:1::]/"} {
+		if got, err := IsLocal(context.Background(), u, nil); err != nil || !got {
+			t.Errorf("IsLocal(%s) = %v, %v", u, got, err)
+		}
 	}
 }

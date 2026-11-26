@@ -1,6 +1,8 @@
 package web
 
 import (
+	"bytes"
+	"context"
 	"io"
 	"net/url"
 	"strconv"
@@ -29,17 +31,92 @@ var blocks = map[atom.Atom]bool{
 // HTMLToMarkdown converts an HTML page to Markdown, keeping the readable content (headings, text, links,
 // lists, code, tables) and dropping scripts and page chrome. Relative links resolve against base.
 func HTMLToMarkdown(r io.Reader, base *url.URL) (title, md string, err error) {
-	doc, err := html.Parse(r)
+	return HTMLToMarkdownContext(context.Background(), r, base)
+}
+
+// HTMLToMarkdownContext is HTMLToMarkdown that stops with ctx's error when ctx is cancelled. Pages
+// nested too deeply for the HTML parser (over 512 levels) fall back to plain text.
+func HTMLToMarkdownContext(ctx context.Context, r io.Reader, base *url.URL) (title, md string, err error) {
+	if err := ctx.Err(); err != nil {
+		return "", "", err
+	}
+	data, err := io.ReadAll(r)
 	if err != nil {
+		return "", "", err
+	}
+	doc, err := html.Parse(bytes.NewReader(data))
+	if err != nil {
+		return plainText(ctx, data)
+	}
+	if err := ctx.Err(); err != nil { // the parser itself can't be interrupted
 		return "", "", err
 	}
 	if t := find(doc, func(n *html.Node) bool { return n.DataAtom == atom.Title }); t != nil {
 		title = strings.Join(strings.Fields(textOf(t)), " ")
 	}
 	root := contentRoot(doc)
-	c := &conv{base: base}
+	c := &conv{base: base, st: &convState{ctx: ctx}}
 	c.children(root)
+	if c.st.err != nil {
+		return "", "", c.st.err
+	}
 	return title, strings.TrimSpace(c.sb.String()), nil
+}
+
+// plainText is the fallback for pages the parser refuses: tag-stripped text with whitespace collapsed,
+// one paragraph per block-level break, without script and style contents.
+func plainText(ctx context.Context, data []byte) (title, md string, err error) {
+	z := html.NewTokenizer(bytes.NewReader(data))
+	var paras []string
+	var words []string
+	flush := func() {
+		if len(words) > 0 {
+			paras = append(paras, strings.Join(words, " "))
+			words = words[:0]
+		}
+	}
+	skip, inTitle := 0, false
+	for n := 0; ; n++ {
+		if n%1000 == 0 {
+			if err := ctx.Err(); err != nil {
+				return "", "", err
+			}
+		}
+		tt := z.Next()
+		if tt == html.ErrorToken {
+			break
+		}
+		switch tt {
+		case html.TextToken:
+			f := strings.Fields(string(z.Text()))
+			switch {
+			case inTitle:
+				title = strings.Join(append(strings.Fields(title), f...), " ")
+			case skip == 0:
+				words = append(words, f...)
+			}
+		case html.StartTagToken, html.EndTagToken, html.SelfClosingTagToken:
+			name, _ := z.TagName()
+			a := atom.Lookup(name)
+			switch a {
+			case atom.Script, atom.Style, atom.Noscript, atom.Template, atom.Svg:
+				if tt == html.StartTagToken {
+					skip++
+				} else if tt == html.EndTagToken && skip > 0 {
+					skip--
+				}
+			case atom.Title:
+				inTitle = tt == html.StartTagToken
+			default:
+				if blocks[a] || a == atom.Br || a == atom.Li || a == atom.Tr || a == atom.Ul || a == atom.Ol ||
+					a == atom.H1 || a == atom.H2 || a == atom.H3 || a == atom.H4 || a == atom.H5 || a == atom.H6 {
+					flush()
+				}
+			}
+		}
+	}
+	flush()
+	return title, strings.Join(paras, "\n\n"), nil
 }
 
 // contentRoot prefers <main>, then a lone <article>, then <body>.
@@ -136,14 +213,37 @@ func attr(n *html.Node, key string) string {
 type conv struct {
 	base  *url.URL
 	sb    strings.Builder
+	st    *convState // shared with sub-converters
+	trail int        // newlines at the end of sb, capped at 2
 	space bool
 	tight bool // a list starts on the next line instead of after a blank line (inside list items)
 }
 
-func (c *conv) atLineStart() bool {
-	s := c.sb.String()
-	return s == "" || s[len(s)-1] == '\n'
+// convState carries the cancellation check across a conversion and its sub-converters.
+type convState struct {
+	ctx   context.Context
+	nodes int
+	err   error
 }
+
+// w appends s, keeping the trailing-newline count current so block() is O(1).
+func (c *conv) w(s string) {
+	if s == "" {
+		return
+	}
+	c.sb.WriteString(s)
+	k := 0
+	for k < len(s) && s[len(s)-1-k] == '\n' {
+		k++
+	}
+	if k == len(s) {
+		c.trail = min(c.trail+k, 2)
+	} else {
+		c.trail = min(k, 2)
+	}
+}
+
+func (c *conv) atLineStart() bool { return c.sb.Len() == 0 || c.trail > 0 }
 
 // text writes normal text with whitespace collapsed.
 func (c *conv) text(s string) {
@@ -153,23 +253,21 @@ func (c *conv) text(s string) {
 			continue
 		}
 		if c.space && !c.atLineStart() {
-			c.sb.WriteByte(' ')
+			c.w(" ")
 		}
 		c.space = false
-		c.sb.WriteRune(r)
+		c.w(string(r))
 	}
 }
 
 // block ends the current block with a blank line.
 func (c *conv) block() {
 	c.space = false
-	s := c.sb.String()
-	if s == "" {
+	if c.sb.Len() == 0 {
 		return
 	}
-	for n := 0; n < 2 && !strings.HasSuffix(s, strings.Repeat("\n", n+1)); n++ {
-		c.sb.WriteByte('\n')
-		s += "\n"
+	for c.trail < 2 {
+		c.w("\n")
 	}
 }
 
@@ -177,7 +275,7 @@ func (c *conv) block() {
 func (c *conv) line() {
 	c.space = false
 	if !c.atLineStart() {
-		c.sb.WriteByte('\n')
+		c.w("\n")
 	}
 }
 
@@ -189,7 +287,7 @@ func (c *conv) children(n *html.Node) {
 
 // sub converts n's children on their own, for constructs that post-process their content.
 func (c *conv) sub(n *html.Node, tight bool) string {
-	s := &conv{base: c.base, tight: tight}
+	s := &conv{base: c.base, st: c.st, tight: tight}
 	s.children(n)
 	return strings.TrimSpace(s.sb.String())
 }
@@ -200,6 +298,15 @@ func (c *conv) inline(n *html.Node) string {
 }
 
 func (c *conv) node(n *html.Node) {
+	if c.st.err != nil {
+		return
+	}
+	if c.st.nodes++; c.st.nodes%1000 == 0 {
+		if err := c.st.ctx.Err(); err != nil {
+			c.st.err = err
+			return
+		}
+	}
 	switch n.Type {
 	case html.TextNode:
 		c.text(n.Data)
@@ -216,14 +323,14 @@ func (c *conv) node(n *html.Node) {
 		if t := c.inline(n); t != "" {
 			c.block()
 			level := int(n.Data[1] - '0') // h1…h6 (atom values aren't consecutive numbers)
-			c.sb.WriteString(strings.Repeat("#", level) + " " + t)
+			c.w(strings.Repeat("#", level) + " " + t)
 			c.block()
 		}
 	case a == atom.Br:
 		c.line()
 	case a == atom.Hr:
 		c.block()
-		c.sb.WriteString("---")
+		c.w("---")
 		c.block()
 	case a == atom.A:
 		c.link(n)
@@ -334,7 +441,7 @@ func (c *conv) pre(n *html.Node) {
 		fence += "`"
 	}
 	c.block()
-	c.sb.WriteString(fence + lang + "\n" + body + "\n" + fence)
+	c.w(fence + lang + "\n" + body + "\n" + fence)
 	c.block()
 }
 
@@ -369,7 +476,7 @@ func (c *conv) list(n *html.Node) {
 		if n.DataAtom == atom.Ol {
 			marker = strconv.Itoa(i) + ". "
 		}
-		c.sb.WriteString(prefix(body, marker, strings.Repeat(" ", len(marker))) + "\n")
+		c.w(prefix(body, marker, strings.Repeat(" ", len(marker))) + "\n")
 	}
 	c.block()
 }
@@ -380,7 +487,7 @@ func (c *conv) quote(n *html.Node) {
 		return
 	}
 	c.block()
-	c.sb.WriteString(prefix(body, "> ", "> "))
+	c.w(prefix(body, "> ", "> "))
 	c.block()
 }
 
@@ -441,9 +548,9 @@ func (c *conv) table(n *html.Node) {
 		sep[i] = "---"
 	}
 	c.block()
-	c.sb.WriteString(line(rows[0]) + "\n" + line(sep) + "\n")
+	c.w(line(rows[0]) + "\n" + line(sep) + "\n")
 	for _, r := range rows[1:] {
-		c.sb.WriteString(line(r) + "\n")
+		c.w(line(r) + "\n")
 	}
 	c.block()
 }

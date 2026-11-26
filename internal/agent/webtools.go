@@ -85,7 +85,7 @@ func localFetch(ctx context.Context, tc llm.ToolCall) (local bool, host string) 
 	return local, u.Hostname()
 }
 
-func (e *Engine) webFetch(ctx context.Context, tc llm.ToolCall, allowLocal bool) tools.Result {
+func (e *Engine) webFetch(ctx context.Context, tc llm.ToolCall, localHost string) tools.Result {
 	a, err := tools.ParseArgs(tc)
 	if err != nil || strings.TrimSpace(a.URL) == "" {
 		return tools.Fail("WebFetch needs a url")
@@ -94,7 +94,7 @@ func (e *Engine) webFetch(ctx context.Context, tc llm.ToolCall, allowLocal bool)
 	if page == nil || a.Offset == 0 {
 		ctx, cancel := context.WithTimeout(ctx, 45*time.Second)
 		defer cancel()
-		f := &web.Fetcher{AllowLocal: allowLocal}
+		f := &web.Fetcher{LocalHost: localHost}
 		page, err = f.Fetch(ctx, a.URL)
 		if err != nil {
 			return tools.Fail("Couldn't fetch %s: %v", a.URL, err)

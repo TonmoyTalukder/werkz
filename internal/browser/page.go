@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/chromedp/cdproto/cdp"
@@ -20,8 +22,75 @@ type Snapshot struct {
 	Tree       string // accessibility tree text (see ReadPage), capped at 12,000 chars with a "… N more lines" note
 	// Counts since the previous snapshot.
 	NewConsoleErrors, NewFailedRequests int
-	Blocked                             []string // main-frame navigations blocked by AllowHost since the last call
-	Downloads                           []string // downloads blocked or saved since the last call (file name + status)
+	// What werkz stopped since the last call: navigations AllowHost rejected
+	// (the URL), "form submit to <url> (needs the user's approval)",
+	// "popup to <url>", "frame from <url>". At most the last 50.
+	Blocked   []string
+	Downloads []string // downloads blocked or saved since the last call (file name + status)
+}
+
+// Allow is what one action may do beyond looking and clicking.
+type Allow struct {
+	Submit      bool   // the user approved submitting a form with this action
+	DownloadDir string // "" = downloads stay denied; else save downloads into it during this action only
+}
+
+// startAllow applies allow for the running action. The returned func undoes
+// it (it is safe to call twice); call it after the action has settled.
+func (b *Browser) startAllow(ctx context.Context, allow Allow) (func(), error) {
+	var undo []func()
+	var once sync.Once
+	end := func() {
+		once.Do(func() {
+			for i := len(undo) - 1; i >= 0; i-- {
+				undo[i]()
+			}
+		})
+	}
+	if allow.Submit {
+		undo = append(undo, b.arm(ctx))
+	}
+	if dir := allow.DownloadDir; dir != "" {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
+			end()
+			return nil, fmt.Errorf("cannot create the download directory: %w", err)
+		}
+		b.mu.Lock()
+		b.dlDir = dir
+		tab := b.tab
+		b.mu.Unlock()
+		if err := b.setDownloads(ctx, dir); err != nil {
+			end()
+			return nil, fmt.Errorf("could not allow downloads: %w", err)
+		}
+		undo = append(undo, func() {
+			b.waitDownloads(5 * time.Second)
+			b.mu.Lock()
+			b.dlDir = ""
+			b.mu.Unlock()
+			if tab != nil {
+				dctx, cancel := context.WithTimeout(tab, 5*time.Second)
+				defer cancel()
+				_ = b.setDownloads(dctx, "")
+			}
+		})
+	}
+	return end, nil
+}
+
+// waitDownloads gives started downloads a moment to finish, so the snapshot
+// can say where they were saved.
+func (b *Browser) waitDownloads(max time.Duration) {
+	deadline := time.Now().Add(max)
+	for time.Now().Before(deadline) {
+		b.mu.Lock()
+		n := len(b.dlPending)
+		b.mu.Unlock()
+		if n == 0 {
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 }
 
 // Navigate opens url (or goes "back", "forward", "reload"). The caller has
@@ -48,19 +117,16 @@ func (b *Browser) navigateLocked(call context.Context, rawURL string) (*Snapshot
 	b.mu.Lock()
 	b.refs, b.refNode = nil, nil
 	b.mainStatus = 0
-	b.approved, b.approveAny = "", false
+	b.approved, b.onceOnly = "", false
 	b.mu.Unlock()
 	defer func() {
 		b.mu.Lock()
-		b.approved, b.approveAny = "", false
+		b.approved, b.onceOnly = "", false
 		b.mu.Unlock()
 	}()
 
 	switch cmd {
 	case "back", "forward", "reload":
-		b.mu.Lock()
-		b.approveAny = true // history entries were approved when first opened
-		b.mu.Unlock()
 		if err := b.history(ctx, cmd); err != nil {
 			return nil, err
 		}
@@ -70,7 +136,7 @@ func (b *Browser) navigateLocked(call context.Context, rawURL string) (*Snapshot
 			return nil, err
 		}
 		b.mu.Lock()
-		b.approved = strings.ToLower(u.Host)
+		b.approved = hostKey(u)
 		b.mu.Unlock()
 		res, err := chromedp.Call(ctx, page.Navigate, page.NavigateParams{URL: u.String()})
 		if err != nil {
@@ -84,23 +150,32 @@ func (b *Browser) navigateLocked(call context.Context, rawURL string) (*Snapshot
 	return b.snapshot(ctx)
 }
 
+// history moves through the session history. Only the host:port of the
+// entry being opened is approved, and only for its first main-frame request,
+// so the page cannot use the move to navigate anywhere else.
 func (b *Browser) history(ctx context.Context, cmd string) error {
-	if cmd == "reload" {
-		_, err := chromedp.Call(ctx, page.Reload, page.ReloadParams{})
-		return err
-	}
 	h, err := chromedp.Call(ctx, page.GetNavigationHistory, cdp.Empty{})
 	if err != nil {
 		return err
 	}
 	i := int(h.CurrentIndex)
-	if cmd == "back" {
+	switch cmd {
+	case "back":
 		i--
-	} else {
+	case "forward":
 		i++
 	}
 	if i < 0 || i >= len(h.Entries) {
 		return fmt.Errorf("cannot go %s: no such history entry", cmd)
+	}
+	if host := hostOf(h.Entries[i].URL); host != "" {
+		b.mu.Lock()
+		b.approved, b.onceOnly = host, true
+		b.mu.Unlock()
+	}
+	if cmd == "reload" {
+		_, err = chromedp.Call(ctx, page.Reload, page.ReloadParams{})
+		return err
 	}
 	_, err = chromedp.Call(ctx, page.NavigateToHistoryEntry, page.NavigateToHistoryEntryParams{EntryID: h.Entries[i].ID})
 	return err
@@ -150,7 +225,7 @@ func (b *Browser) settle(ctx context.Context, max time.Duration) {
 	b.mu.Unlock()
 	for time.Since(start) < max {
 		b.mu.Lock()
-		busy := b.loading || b.inflight > 0
+		busy := b.loading || b.inflight > 0 || b.popups > 0
 		since := time.Since(b.lastNet)
 		b.mu.Unlock()
 		if !busy && since >= quiet {

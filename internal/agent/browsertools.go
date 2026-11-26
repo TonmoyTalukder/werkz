@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -93,15 +94,22 @@ func isBrowserTool(name string) bool {
 	return false
 }
 
-// browserState is the session's browser, started on first use.
+// browserState is the session's browser, started on first use. Starting or relaunching Chrome
+// takes seconds, so it never happens under mu: /browser and the page's host checks stay quick.
 type browserState struct {
-	mu      sync.Mutex
+	mu      sync.Mutex // guards b, visible, avail
+	startMu sync.Mutex // one start or relaunch at a time
 	b       *browser.Browser
-	visible bool     // the user asked to see it (/browser show)
-	site    string   // host of the last approved Browse: the page may move around that site
-	hosts   sync.Map // hosts approved for the session ("don't ask again")
-	avail   *bool    // a browser is installed (checked once)
+	visible bool  // the user asked to see it (/browser show)
+	avail   *bool // a browser is installed (checked once)
+
+	hostMu sync.Mutex
+	site   string   // host of the last approved Browse: the page may move around that site
+	hosts  sync.Map // hosts approved for the session ("don't ask again")
 }
+
+// browserGrant is what the user approved a browser action for.
+type browserGrant struct{ Submit, Download bool }
 
 // browserAvailable reports whether werkz can offer the browser tools.
 func (e *Engine) browserAvailable() bool {
@@ -145,9 +153,9 @@ func (e *Engine) allowHost(host string) bool {
 	if loopbackHost(host) {
 		return true
 	}
-	e.br.mu.Lock()
+	e.br.hostMu.Lock()
 	site := e.br.site
-	e.br.mu.Unlock()
+	e.br.hostMu.Unlock()
 	if strings.EqualFold(host, site) {
 		return true
 	}
@@ -155,116 +163,180 @@ func (e *Engine) allowHost(host string) bool {
 	return ok
 }
 
-// session returns the browser, starting it if needed.
-func (e *Engine) session(ctx context.Context) (*browser.Browser, error) {
+func (e *Engine) current() (*browser.Browser, bool) {
 	e.br.mu.Lock()
 	defer e.br.mu.Unlock()
-	if e.br.b != nil {
-		return e.br.b, nil
+	return e.br.b, e.br.visible
+}
+
+// session returns the browser, starting it if needed, or again if it crashed or the user closed
+// its window.
+func (e *Engine) session(ctx context.Context) (*browser.Browser, error) {
+	if b, _ := e.current(); b != nil && b.Alive() {
+		return b, nil
 	}
-	b, err := browser.Start(ctx, browser.Options{Headless: !e.br.visible, AllowHost: e.allowHost})
-	if err != nil {
-		return nil, err
+	e.br.startMu.Lock()
+	defer e.br.startMu.Unlock()
+	b, visible := e.current()
+	if b != nil && b.Alive() {
+		return b, nil // started by someone else meanwhile
 	}
-	e.br.b = b
-	return b, nil
+	if b != nil {
+		_ = b.Close() // dead: clear it up before starting another
+	}
+	nb, err := browser.Start(ctx, browser.Options{Headless: !visible, AllowHost: e.allowHost})
+	e.br.mu.Lock()
+	e.br.b = nil
+	if err == nil {
+		e.br.b = nb
+	}
+	e.br.mu.Unlock()
+	return nb, err
 }
 
 // BrowserStatus describes the browser for /browser.
 func (e *Engine) BrowserStatus() (running, visible bool, url string) {
-	e.br.mu.Lock()
-	defer e.br.mu.Unlock()
-	if e.br.b == nil {
-		return false, e.br.visible, ""
+	b, vis := e.current()
+	if b == nil || !b.Alive() {
+		return false, vis, ""
 	}
-	return true, !e.br.b.Headless(), e.br.b.URL()
+	return true, !b.Headless(), b.URL()
 }
 
 // SetBrowserVisible shows the browser window (visible) or runs it in the background.
 func (e *Engine) SetBrowserVisible(ctx context.Context, visible bool) error {
+	e.br.startMu.Lock()
+	defer e.br.startMu.Unlock()
 	e.br.mu.Lock()
-	defer e.br.mu.Unlock()
 	e.br.visible = visible
-	if e.br.b == nil {
-		return nil // applies when it starts
+	b := e.br.b
+	e.br.mu.Unlock()
+	if b == nil || !b.Alive() {
+		return nil // applies when it next starts
 	}
-	return e.br.b.SetHeadless(ctx, !visible)
+	if err := b.SetHeadless(ctx, !visible); err != nil {
+		e.dropBrowser(b) // a failed relaunch leaves it closed: start fresh next time
+		return err
+	}
+	return nil
+}
+
+func (e *Engine) dropBrowser(b *browser.Browser) {
+	e.br.mu.Lock()
+	if e.br.b == b {
+		e.br.b = nil
+	}
+	e.br.mu.Unlock()
+	_ = b.Close()
 }
 
 // CloseBrowser closes werkz's browser (it starts again when a browser tool is used).
 func (e *Engine) CloseBrowser() {
 	e.br.mu.Lock()
-	defer e.br.mu.Unlock()
-	if e.br.b != nil {
-		_ = e.br.b.Close()
-		e.br.b = nil
+	b := e.br.b
+	e.br.b = nil
+	e.br.mu.Unlock()
+	if b != nil {
+		_ = b.Close()
 	}
 }
 
-// browserCheck applies the browser rules before a tool runs: whether to ask, what to say, and
-// whether "don't ask again" is offered (key). refuse is set when the action is never allowed.
-func (e *Engine) browserCheck(ctx context.Context, tc llm.ToolCall) (ask bool, why, key, label string, refuse error) {
+// browserCheck applies the browser rules before a tool runs: whether to ask, what to say, whether
+// "don't ask again" is offered (key), and what a yes grants the action. refuse is set when the
+// action is never allowed.
+func (e *Engine) browserCheck(ctx context.Context, tc llm.ToolCall) (ask bool, why, key, label string, g browserGrant, refuse error) {
 	a := parseBrowserArgs(tc)
 	switch tc.Name {
 	case "Browse":
 		switch a.URL {
 		case "back", "forward", "reload":
-			return false, "", "", "", nil
+			return
 		}
-		u, err := url.Parse(strings.TrimSpace(a.URL))
-		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" {
-			return false, "", "", "", errors.New("Browse opens http(s) URLs only")
+		u, err := browseTarget(a.URL)
+		if err != nil {
+			refuse = err
+			return
 		}
 		host := strings.ToLower(u.Hostname())
 		if loopbackHost(host) {
-			return false, "", "", "", nil
+			return
 		}
 		if _, ok := e.br.hosts.Load(host); ok {
-			return false, "", "", "", nil
+			return
 		}
-		return true, "opens " + host + " in werkz's browser", "Browse@" + host, "Yes, and don't ask again for " + host + " this session", nil
+		return true, "opens " + host + " in werkz's browser", "Browse@" + host, "Yes, and don't ask again for " + host + " this session", g, nil
 	case "Click", "Type":
 		b, err := e.session(ctx)
 		if err != nil {
-			return false, "", "", "", err
+			refuse = err
+			return
 		}
 		el, err := b.Inspect(ctx, a.Ref)
 		if err != nil {
-			return false, "", "", "", err
+			refuse = err
+			return
 		}
-		label := strings.TrimSpace(el.Role + " " + quoteName(el.Name))
+		name := strings.TrimSpace(el.Role + " " + quoteName(el.Name))
 		if tc.Name == "Type" {
 			switch {
 			case el.Password:
-				return false, "", "", "", errors.New("werkz never types into password or payment fields; ask the user to do it")
+				refuse = errors.New("werkz never types into password or payment fields; ask the user to do it")
 			case len(a.Files) > 0:
 				if !el.FileInput {
-					return false, "", "", "", fmt.Errorf("%s isn't a file input", a.Ref)
+					refuse = fmt.Errorf("%s isn't a file input", a.Ref)
+					return
 				}
 				for _, f := range a.Files {
 					if tools.Sensitive(f) {
-						return false, "", "", "", fmt.Errorf("%s is a credential location; it is never uploaded", f)
+						refuse = fmt.Errorf("%s is a credential location; it is never uploaded", f)
+						return
 					}
 					if !tools.InsideDirs(f, e.dirs()) {
-						return false, "", "", "", fmt.Errorf("%s is outside the working folders; only files in them are uploaded", f)
+						refuse = fmt.Errorf("%s is outside the working folders; only files in them are uploaded", f)
+						return
 					}
 				}
-				return true, "uploads " + strings.Join(a.Files, ", ") + " to " + hostOf(b.URL()), "", "", nil
+				return true, "uploads " + strings.Join(a.Files, ", ") + " to " + hostOf(b.URL()), "", "", g, nil
 			case a.Enter && el.InForm:
-				return true, "types into " + label + " and presses Enter, which submits a form on " + hostOf(b.URL()), "", "", nil
+				return true, "types into " + name + " and presses Enter, which submits a form on " + hostOf(b.URL()), "", "", browserGrant{Submit: true}, nil
 			}
-			return false, "", "", "", nil
+			return
 		}
 		switch {
 		case el.FileInput:
-			return false, "", "", "", errors.New("that opens a file chooser: use Type with files instead")
+			refuse = errors.New("that opens a file chooser: use Type with files instead")
 		case el.Download:
-			return true, "downloads a file from " + hostOf(b.URL()) + " (" + label + ")", "", "", nil
+			return true, "downloads a file from " + hostOf(b.URL()) + " (" + name + ")", "", "", browserGrant{Download: true}, nil
 		case el.Submits:
-			return true, "clicks " + label + ", which submits a form on " + hostOf(b.URL()), "", "", nil
+			return true, "clicks " + name + ", which submits a form on " + hostOf(b.URL()), "", "", browserGrant{Submit: true}, nil
 		}
 	}
-	return false, "", "", "", nil
+	return
+}
+
+// browseTarget reads a Browse URL the way the browser does: a missing scheme means http for this
+// machine (localhost:3000/x) and https elsewhere.
+func browseTarget(raw string) (*url.URL, error) {
+	raw = strings.TrimSpace(raw)
+	if !strings.Contains(raw, "://") {
+		host := raw
+		if i := strings.IndexAny(host, "/?#"); i >= 0 {
+			host = host[:i]
+		}
+		if h, _, err := net.SplitHostPort(host); err == nil {
+			host = h
+		}
+		scheme := "https://"
+		if loopbackHost(strings.Trim(host, "[]")) {
+			scheme = "http://"
+		}
+		raw = scheme + raw
+	}
+	u, err := url.Parse(raw)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Hostname() == "" {
+		return nil, errors.New("Browse opens http(s) URLs only")
+	}
+	return u, nil
 }
 
 func quoteName(s string) string {
@@ -296,11 +368,11 @@ func (e *Engine) runBrowserTool(ctx context.Context, tc llm.ToolCall, approvedAl
 	var snap *browser.Snapshot
 	switch tc.Name {
 	case "Browse":
-		if u, err := url.Parse(a.URL); err == nil && u.Hostname() != "" {
+		if u, err := browseTarget(a.URL); err == nil {
 			host := strings.ToLower(u.Hostname())
-			e.br.mu.Lock()
+			e.br.hostMu.Lock()
 			e.br.site = host
-			e.br.mu.Unlock()
+			e.br.hostMu.Unlock()
 			if approvedAlways {
 				e.br.hosts.Store(host, true)
 			}
@@ -313,12 +385,12 @@ func (e *Engine) runBrowserTool(ctx context.Context, tc llm.ToolCall, approvedAl
 		}
 		return tools.Result{Output: web.Untrusted("page", b.URL(), tree), Summary: fmt.Sprintf("%d lines", strings.Count(tree, "\n")+1)}
 	case "Click":
-		snap, err = b.Click(ctx, a.Ref)
+		snap, err = b.Click(ctx, a.Ref, e.allowFor(tc.ID))
 	case "Type":
 		if len(a.Files) > 0 {
 			snap, err = b.SetFiles(ctx, a.Ref, a.Files)
 		} else {
-			snap, err = b.Type(ctx, a.Ref, a.Text, a.Clear, a.Enter)
+			snap, err = b.Type(ctx, a.Ref, a.Text, a.Clear, a.Enter, e.allowFor(tc.ID))
 		}
 	case "Screenshot":
 		return e.screenshot(ctx, b, a)
@@ -331,6 +403,29 @@ func (e *Engine) runBrowserTool(ctx context.Context, tc llm.ToolCall, approvedAl
 		return tools.Fail("%v", err)
 	}
 	return snapshotResult(snap)
+}
+
+// allowFor is what the user approved this action for (nothing unless they were asked and said yes):
+// a form submit, or a download, saved in ~/Downloads.
+func (e *Engine) allowFor(callID string) browser.Allow {
+	v, _ := e.grants.LoadAndDelete(callID)
+	g, _ := v.(browserGrant)
+	allow := browser.Allow{Submit: g.Submit}
+	if g.Download {
+		allow.DownloadDir = downloadDir()
+	}
+	return allow
+}
+
+func downloadDir() string {
+	if h, err := os.UserHomeDir(); err == nil {
+		d := filepath.Join(h, "Downloads")
+		if st, err := os.Stat(d); err == nil && st.IsDir() {
+			return d
+		}
+	}
+	d, _ := os.UserCacheDir()
+	return filepath.Join(d, "werkz", "downloads")
 }
 
 func snapshotResult(s *browser.Snapshot) tools.Result {

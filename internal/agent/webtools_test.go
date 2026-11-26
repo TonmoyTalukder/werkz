@@ -81,11 +81,11 @@ func TestWebFetchPagesThroughLongPages(t *testing.T) {
 	cfg := config.Load()
 	e := New(cfg, func(v any) {})
 	e.SetMode(config.ModeBypass)
-	out := e.webFetch(context.Background(), llm.ToolCall{Name: "WebFetch", Args: fmt.Sprintf(`{"url":%q}`, srv.URL)}, true).Output
+	out := e.webFetch(context.Background(), llm.ToolCall{Name: "WebFetch", Args: fmt.Sprintf(`{"url":%q}`, srv.URL)}, "127.0.0.1").Output
 	if !strings.Contains(out, "offset=20000") {
 		t.Fatalf("no continuation hint:\n%s", out[len(out)-200:])
 	}
-	out = e.webFetch(context.Background(), llm.ToolCall{Name: "WebFetch", Args: fmt.Sprintf(`{"url":%q,"offset":40000}`, srv.URL)}, true).Output
+	out = e.webFetch(context.Background(), llm.ToolCall{Name: "WebFetch", Args: fmt.Sprintf(`{"url":%q,"offset":40000}`, srv.URL)}, "127.0.0.1").Output
 	if strings.Contains(out, "more characters") {
 		t.Fatal("last part still says more follows")
 	}

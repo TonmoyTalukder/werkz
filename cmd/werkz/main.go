@@ -7,8 +7,10 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/signal"
 	"runtime/debug"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/TonmoyTalukder/werkz/internal/agent"
@@ -106,6 +108,22 @@ func run(provider, model string, opts tui.Options) error {
 	p = tea.NewProgram(m, popts...)
 	defer tools.KillAll()    // don't leave commands (and dev servers) started by the agent running after exit
 	defer eng.CloseBrowser() // nor werkz's browser
+	// Closing the terminal sends SIGHUP: quit normally so the cleanup above runs (dev servers run in
+	// their own process groups and wouldn't get the signal). If the program can't quit in time,
+	// clean up and exit anyway.
+	hup := make(chan os.Signal, 1)
+	signal.Notify(hup, syscall.SIGHUP)
+	defer signal.Stop(hup)
+	go func() {
+		if _, ok := <-hup; !ok {
+			return
+		}
+		p.Quit()
+		time.Sleep(3 * time.Second)
+		eng.CloseBrowser()
+		tools.KillAll()
+		os.Exit(129)
+	}()
 	if _, err := p.Run(); err != nil {
 		return err
 	}

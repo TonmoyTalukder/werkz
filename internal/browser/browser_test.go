@@ -119,7 +119,7 @@ func TestNavigateTree(t *testing.T) {
 	if _, err := b.Navigate(ctx5(t), deadURL(t)+"/"); err == nil || !strings.Contains(err.Error(), "connection refused") {
 		t.Errorf("refused navigation error: %v", err)
 	}
-	if _, err := b.Click(ctx5(t), "ref_999"); err == nil || !strings.Contains(err.Error(), "stale") {
+	if _, err := b.Click(ctx5(t), "ref_999", Allow{}); err == nil || !strings.Contains(err.Error(), "stale") {
 		t.Errorf("unknown ref error: %v", err)
 	}
 }
@@ -133,24 +133,24 @@ func TestClickAndType(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	snap, err = b.Click(ctx5(t), refOf(t, snap.Tree, "button", "Go"))
+	snap, err = b.Click(ctx5(t), refOf(t, snap.Tree, "button", "Go"), Allow{})
 	if err != nil || !strings.Contains(snap.Tree, "clicked!") {
 		t.Fatalf("click: %v\n%s", err, snap.Tree)
 	}
-	snap, err = b.Type(ctx5(t), refOf(t, snap.Tree, "textbox", "Email"), "a@b.co", true, false)
+	snap, err = b.Type(ctx5(t), refOf(t, snap.Tree, "textbox", "Email"), "a@b.co", true, false, Allow{})
 	if err != nil || !strings.Contains(snap.Tree, `value="a@b.co"`) {
 		t.Fatalf("type: %v\n%s", err, snap.Tree)
 	}
 	// clear replaces, no clear appends
-	snap, err = b.Type(ctx5(t), refOf(t, snap.Tree, "textbox", "Email"), "x", true, false)
+	snap, err = b.Type(ctx5(t), refOf(t, snap.Tree, "textbox", "Email"), "x", true, false, Allow{})
 	if err != nil || !strings.Contains(snap.Tree, `value="x"`) {
 		t.Fatalf("clear: %v\n%s", err, snap.Tree)
 	}
-	snap, err = b.Type(ctx5(t), refOf(t, snap.Tree, "textbox", "Email"), "yz", false, false)
+	snap, err = b.Type(ctx5(t), refOf(t, snap.Tree, "textbox", "Email"), "yz", false, false, Allow{})
 	if err != nil || !strings.Contains(snap.Tree, `value="xyz"`) {
 		t.Fatalf("append: %v\n%s", err, snap.Tree)
 	}
-	snap, err = b.Type(ctx5(t), refOf(t, snap.Tree, "textbox", "Search"), "q", true, true)
+	snap, err = b.Type(ctx5(t), refOf(t, snap.Tree, "textbox", "Search"), "q", true, true, Allow{})
 	if err != nil || !strings.Contains(snap.Tree, "enter:q") {
 		t.Fatalf("enter: %v\n%s", err, snap.Tree)
 	}
@@ -173,7 +173,7 @@ func TestPasswordRefused(t *testing.T) {
 		if err != nil || !el.Password {
 			t.Errorf("%s: Password=false (%v)", name, err)
 		}
-		if _, err := b.Type(ctx5(t), ref, "secret", true, false); err == nil || !strings.Contains(err.Error(), "never types into password") {
+		if _, err := b.Type(ctx5(t), ref, "secret", true, false, Allow{}); err == nil || !strings.Contains(err.Error(), "never types into password") {
 			t.Errorf("%s: Type error = %v", name, err)
 		}
 	}
@@ -295,7 +295,7 @@ func TestAllowHostBlocksLink(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	snap, err = b.Click(ctx5(t), refOf(t, snap.Tree, "link", "Leave"))
+	snap, err = b.Click(ctx5(t), refOf(t, snap.Tree, "link", "Leave"), Allow{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -313,7 +313,7 @@ func TestAllowHostBlocksLink(t *testing.T) {
 	if snap, err = b.Navigate(ctx5(t), s.URL); err != nil {
 		t.Fatal(err)
 	}
-	snap, err = b.Click(ctx5(t), refOf(t, snap.Tree, "link", "Stay"))
+	snap, err = b.Click(ctx5(t), refOf(t, snap.Tree, "link", "Stay"), Allow{})
 	if err != nil || !strings.HasSuffix(snap.URL, "/same") || len(snap.Blocked) != 0 {
 		t.Errorf("same-host link: %v %+v", err, snap)
 	}
@@ -334,27 +334,25 @@ func TestDownloads(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	snap, err = b.Click(ctx5(t), refOf(t, snap.Tree, "link", "Export"))
+	snap, err = b.Click(ctx5(t), refOf(t, snap.Tree, "link", "Export"), Allow{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(snap.Downloads) != 1 || !strings.Contains(snap.Downloads[0], "data.csv (blocked") {
 		t.Errorf("denied download: %v", snap.Downloads)
 	}
-	dir := t.TempDir()
-	b.AllowDownloads(dir)
-	defer b.AllowDownloads("")
-	snap, err = b.Click(ctx5(t), refOf(t, snap.Tree, "link", "Export"))
+	dir := filepath.Join(t.TempDir(), "dl")
+	snap, err = b.Click(ctx5(t), refOf(t, snap.Tree, "link", "Export"), Allow{DownloadDir: dir})
 	if err != nil {
 		t.Fatal(err)
 	}
-	deadline := time.Now().Add(5 * time.Second)
-	for len(snap.Downloads) == 0 && time.Now().Before(deadline) {
-		time.Sleep(100 * time.Millisecond)
-		snap, _ = b.snapshotFor(t)
-	}
 	if len(snap.Downloads) != 1 || !strings.Contains(snap.Downloads[0], "saved to") {
 		t.Errorf("allowed download: %v", snap.Downloads)
+	}
+	// the allowance ended with that action
+	snap, err = b.Click(ctx5(t), refOf(t, snap.Tree, "link", "Export"), Allow{})
+	if err != nil || len(snap.Downloads) != 1 || !strings.Contains(snap.Downloads[0], "blocked") {
+		t.Errorf("download allowance leaked: %v %v", err, snap)
 	}
 	if _, err := os.Stat(filepath.Join(dir, "data.csv")); err != nil {
 		entries, _ := os.ReadDir(dir)
@@ -412,7 +410,7 @@ func TestScreenshotCompare(t *testing.T) {
 	if err != nil || second.Compared != first.Path || second.Changed > 0.0005 {
 		t.Fatalf("same page: %+v %v", second, err)
 	}
-	if _, err = b.Click(ctx5(t), refOf(t, snap.Tree, "button", "Flip")); err != nil {
+	if _, err = b.Click(ctx5(t), refOf(t, snap.Tree, "button", "Flip"), Allow{}); err != nil {
 		t.Fatal(err)
 	}
 	third, err := b.Screenshot(ctx5(t), false, true)

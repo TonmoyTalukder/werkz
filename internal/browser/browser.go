@@ -7,6 +7,8 @@ package browser
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/url"
@@ -25,11 +27,14 @@ import (
 	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/runtime"
 	"github.com/chromedp/chromedp"
+	"github.com/chromedp/chromedp/remote"
 )
 
 const (
 	opTimeout   = 20 * time.Second // default budget of one operation
 	ringSize    = 500              // console entries and requests kept
+	maxBlocked  = 50               // blocked-action notes kept between snapshots
+	maxDLSeen   = 200              // download GUIDs remembered
 	maxTreeSnap = 12000            // Snapshot.Tree cap, in characters
 )
 
@@ -76,10 +81,11 @@ type Options struct {
 	ProfileDir string // "" = <os.UserCacheDir()>/werkz/browser-profile (a separate werkz profile, never the user's)
 	Headless   bool
 	ShotDir    string // "" = <os.UserCacheDir()>/werkz/screenshots
-	// AllowHost vets main-frame navigations the page starts itself (links,
-	// redirects, JS): hosts it rejects are blocked. The host is the URL's
-	// host including any port ("localhost:3000"). nil = allow all.
-	// Navigate() is pre-approved by the caller.
+	// AllowHost vets navigations the page starts itself (links, redirects,
+	// JS, popups, iframes): hosts it rejects are blocked. The host is the
+	// URL's host including any port ("localhost:3000"), lower-cased, with the
+	// scheme's default port (80, 443) and a trailing dot dropped. nil = allow
+	// all. Navigate() is pre-approved by the caller for the host:port it opens.
 	AllowHost func(host string) bool
 }
 
@@ -99,9 +105,9 @@ type Browser struct {
 	refs    map[string]refInfo
 	refNode map[cdp.BackendNodeID]string
 
-	console    []ConsoleEntry
+	console    *ring[ConsoleEntry]
 	reqs       map[network.RequestID]*Request
-	reqOrder   []network.RequestID
+	reqOrder   *ring[network.RequestID]
 	reqStart   map[network.RequestID]float64 // live requests; start time in seconds
 	errTotal   int                           // cumulative console errors / failed requests, for Snapshot deltas
 	failTotal  int
@@ -116,13 +122,24 @@ type Browser struct {
 	blocked    []string
 	downloads  []string
 	dlSeen     map[string]bool
-	dlPending  map[string]string // guid -> file name, for allowed downloads
-	dlDir      string
-	approved   string // host approved by the current Navigate call
-	approveAny bool   // back/forward/reload: history entries were allowed once
+	dlOrder    []string
+	dlPending  map[string]dlInfo // guid -> file, for allowed downloads
+	dlDir      string            // download directory of the running action ("" = denied)
+	approved   string            // host:port approved by the current Navigate call
+	onceOnly   bool              // approved is for the first main-frame request only (history)
+	armed      bool              // the running action may submit forms
+	popups     int               // popups being vetted
+	frameSeen  map[string]bool   // hosts of blocked iframes already reported
 	lastShots  map[string]string
 	closed     bool
+
+	guardKey string
+	g        *guard
+	profile  string // profile directory in use
+	tempProf bool   // profile is a per-process fallback to remove on Close
 }
+
+type dlInfo struct{ name, dir string }
 
 // Start launches the browser and opens the single werkz tab.
 func Start(ctx context.Context, o Options) (*Browser, error) {
@@ -146,8 +163,16 @@ func Start(ctx context.Context, o Options) (*Browser, error) {
 		}
 		o.ShotDir = filepath.Join(cache, "werkz", "screenshots")
 	}
-	b := &Browser{opts: o, headless: o.Headless, lastShots: map[string]string{}}
+	var kb [8]byte
+	_, _ = rand.Read(kb[:])
+	b := &Browser{opts: o, headless: o.Headless, lastShots: map[string]string{}, guardKey: "__wz" + hex.EncodeToString(kb[:])}
+	if err := os.MkdirAll(filepath.Dir(o.ProfileDir), 0o700); err == nil {
+		b.profile, b.tempProf = pickProfile(o.ProfileDir)
+	} else {
+		b.profile = o.ProfileDir
+	}
 	if err := b.launch(ctx, o.Headless); err != nil {
+		b.removeTempProfile()
 		return nil, err
 	}
 	return b, nil
@@ -155,7 +180,7 @@ func Start(ctx context.Context, o Options) (*Browser, error) {
 
 // launch starts a browser process and prepares the tab. Callers hold no locks.
 func (b *Browser) launch(ctx context.Context, headless bool) error {
-	if err := os.MkdirAll(b.opts.ProfileDir, 0o700); err != nil {
+	if err := os.MkdirAll(b.profile, 0o700); err != nil {
 		return fmt.Errorf("cannot create the browser profile directory: %w", err)
 	}
 	opts := append([]chromedp.ExecAllocatorOption{}, chromedp.DefaultExecAllocatorOptions[:]...)
@@ -166,7 +191,8 @@ func (b *Browser) launch(ctx context.Context, headless bool) error {
 	}
 	opts = append(opts,
 		chromedp.ExecPath(b.opts.ExecPath),
-		chromedp.UserDataDir(b.opts.ProfileDir),
+		chromedp.UserDataDir(b.profile),
+		remote.WebSocket, // the guard connection needs a debugging port
 		chromedp.WindowSize(1280, 800),
 		chromedp.Flag("disable-extensions", true),
 		chromedp.Flag("disable-sync", true),
@@ -175,6 +201,7 @@ func (b *Browser) launch(ctx context.Context, headless bool) error {
 		chromedp.Flag("disable-features", "Translate,AutofillServerCommunication,PasswordManagerOnboarding"),
 		chromedp.Flag("enable-automation", headless),
 	)
+	_ = os.Remove(filepath.Join(b.profile, "DevToolsActivePort"))
 	// The browser must outlive the individual tool calls, so it hangs off
 	// Background rather than ctx.
 	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
@@ -201,13 +228,14 @@ func (b *Browser) launch(ctx context.Context, headless bool) error {
 	b.alloc, b.tab, b.tabStop = allocCancel, tab, tabStop
 	b.headless = headless
 	b.refs, b.refNode = map[string]refInfo{}, map[cdp.BackendNodeID]string{}
-	b.console, b.reqs, b.reqOrder = nil, map[network.RequestID]*Request{}, nil
+	b.console, b.reqs, b.reqOrder = newRing[ConsoleEntry](ringSize), map[network.RequestID]*Request{}, newRing[network.RequestID](ringSize)
 	b.reqStart = map[network.RequestID]float64{}
 	b.errTotal, b.failTotal, b.errMark, b.failMark = 0, 0, 0, 0
 	b.inflight, b.loading, b.mainStatus = 0, false, 0
 	b.blocked, b.downloads = nil, nil
-	b.dlSeen, b.dlPending = map[string]bool{}, map[string]string{}
-	b.approved, b.approveAny = "", false
+	b.dlSeen, b.dlOrder, b.dlPending, b.dlDir = map[string]bool{}, nil, map[string]dlInfo{}, ""
+	b.frameSeen, b.popups, b.armed = map[string]bool{}, 0, false
+	b.approved, b.onceOnly = "", false
 	b.closed = false
 	b.mu.Unlock()
 
@@ -240,6 +268,8 @@ func (b *Browser) setup(ctx context.Context, tab context.Context) error {
 			return err
 		},
 		func() error { return b.setDownloads(octx, "") },
+		func() error { return b.installSubmitGuard(octx) },
+		func() error { return b.startGuard(octx, tab) },
 		func() error {
 			ft, err := chromedp.Call(octx, page.GetFrameTree, cdp.Empty{})
 			if err == nil && ft.FrameTree != nil && ft.FrameTree.Frame != nil {
@@ -294,14 +324,48 @@ func (b *Browser) begin(call context.Context) (context.Context, func(), error) {
 	return ctx, func() { cancel(); b.opMu.Unlock() }, nil
 }
 
+// startGuard connects the raw guard connection that pauses popups and
+// iframes before they load.
+func (b *Browser) startGuard(ctx context.Context, tab context.Context) error {
+	c := chromedp.FromContext(tab)
+	if c == nil || c.Target == nil {
+		return errors.New("the browser tab is not attached")
+	}
+	ws, err := readActivePort(b.profile)
+	if err != nil {
+		return err
+	}
+	g, err := dialGuard(ctx, b, ws, c.Target.TargetID)
+	if err != nil {
+		return fmt.Errorf("could not connect to the browser: %w", err)
+	}
+	b.mu.Lock()
+	b.g = g
+	b.mu.Unlock()
+	if err := g.start(); err != nil {
+		return fmt.Errorf("could not watch for popups: %w", err)
+	}
+	// The tab is attached asynchronously; wait so the first navigation is
+	// already watched.
+	select {
+	case <-g.tabReady:
+	case <-time.After(3 * time.Second):
+	case <-ctx.Done():
+	}
+	return nil
+}
+
 // shutdown stops the browser process and waits for it, so the profile lock is
 // released before a relaunch.
 func (b *Browser) shutdown() {
 	b.mu.Lock()
-	tab, stop, alloc := b.tab, b.tabStop, b.alloc
-	b.tab, b.tabStop, b.alloc = nil, nil, nil
+	tab, stop, alloc, g := b.tab, b.tabStop, b.alloc, b.g
+	b.tab, b.tabStop, b.alloc, b.g = nil, nil, nil, nil
 	b.closed = true
 	b.mu.Unlock()
+	if g != nil {
+		g.close()
+	}
 	if tab != nil {
 		_ = chromedp.Cancel(tab)
 	}
@@ -313,10 +377,39 @@ func (b *Browser) shutdown() {
 	}
 }
 
-// Close shuts the browser down.
+func (b *Browser) removeTempProfile() {
+	if b.tempProf && b.profile != "" {
+		_ = os.RemoveAll(b.profile)
+	}
+}
+
+// Close shuts the browser down and removes a fallback profile directory.
 func (b *Browser) Close() error {
 	b.shutdown()
+	b.removeTempProfile()
 	return nil
+}
+
+// Alive reports whether the browser can still be driven: not closed, the tab
+// and the browser process are up. When it is false, call SetHeadless with
+// the current mode (or Start a new Browser) to bring it back.
+func (b *Browser) Alive() bool {
+	b.mu.Lock()
+	tab, closed, g := b.tab, b.closed, b.g
+	b.mu.Unlock()
+	if closed || tab == nil || tab.Err() != nil || g == nil || !g.alive() {
+		return false
+	}
+	c := chromedp.FromContext(tab)
+	if c == nil || c.Browser == nil {
+		return false
+	}
+	select {
+	case <-c.Browser.LostConnection:
+		return false
+	default:
+	}
+	return true
 }
 
 // Headless reports whether the browser runs without a window.
@@ -327,28 +420,22 @@ func (b *Browser) Headless() bool {
 }
 
 // SetHeadless relaunches the browser in the other mode and reopens the
-// current URL. Page state (form input, scroll) is lost.
+// current URL. Page state (form input, scroll) is lost. If the relaunch
+// fails the Browser is left closed (Alive() == false) and the error says so.
+// Called with the current mode on a dead browser, it restarts it.
 func (b *Browser) SetHeadless(ctx context.Context, headless bool) error {
 	b.opMu.Lock()
 	defer b.opMu.Unlock()
 	b.mu.Lock()
-	cur, same, dlDir := b.currentURLLocked(), b.headless == headless && !b.closed, b.dlDir
+	cur, headlessNow := b.currentURLLocked(), b.headless
 	b.mu.Unlock()
-	if same {
+	if headlessNow == headless && b.Alive() {
 		return nil
 	}
 	b.shutdown()
 	if err := b.launch(ctx, headless); err != nil {
-		return err
-	}
-	if dlDir != "" {
-		b.mu.Lock()
-		b.dlDir = dlDir
-		tab := b.tab
-		b.mu.Unlock()
-		octx, cancel := b.opContext(ctx, tab)
-		defer cancel()
-		_ = b.setDownloads(octx, dlDir)
+		b.shutdown() // never leave a half-open browser
+		return fmt.Errorf("the browser could not be relaunched and is now closed: %w", err)
 	}
 	if cur == "" || cur == "about:blank" {
 		return nil
@@ -365,30 +452,30 @@ func (b *Browser) URL() string {
 	return b.currentURLLocked()
 }
 
-// AllowDownloads saves downloads into dir until reset; "" denies them again.
-func (b *Browser) AllowDownloads(dir string) {
-	b.mu.Lock()
-	b.dlDir = dir
-	tab := b.tab
-	b.mu.Unlock()
-	if tab == nil {
-		return
-	}
-	if dir != "" {
-		_ = os.MkdirAll(dir, 0o700)
-	}
-	ctx, cancel := context.WithTimeout(tab, opTimeout)
-	defer cancel()
-	_ = b.setDownloads(ctx, dir)
-}
-
 func (b *Browser) currentURLLocked() string { return b.lastURL }
 
-// hostOf returns the URL's host with port, lower-cased.
+// hostOf returns the URL's host as AllowHost and the approval logic see it:
+// lower-cased "host:port" with the scheme's default port and a trailing dot
+// dropped.
 func hostOf(raw string) string {
 	u, err := url.Parse(raw)
 	if err != nil {
 		return ""
 	}
-	return strings.ToLower(u.Host)
+	return hostKey(u)
+}
+
+func hostKey(u *url.URL) string {
+	name := strings.TrimSuffix(strings.ToLower(u.Hostname()), ".")
+	if strings.Contains(name, ":") {
+		name = "[" + name + "]"
+	}
+	port := u.Port()
+	if (u.Scheme == "http" && port == "80") || (u.Scheme == "https" && port == "443") {
+		port = ""
+	}
+	if port == "" {
+		return name
+	}
+	return name + ":" + port
 }

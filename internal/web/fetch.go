@@ -9,6 +9,7 @@ import (
 	"mime"
 	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"strings"
 	"time"
@@ -26,11 +27,11 @@ const (
 
 // Fetcher downloads web pages as readable text.
 type Fetcher struct {
-	AllowLocal bool                                                     // the user approved fetching a local-network address
-	Client     *http.Client                                             // nil = built per call with the safety dialer; a custom client brings its own checks
-	UserAgent  string                                                   // "" = defaultUserAgent
-	MaxBytes   int64                                                    // body cap, 0 = 5 MB
-	Resolver   func(ctx context.Context, host string) ([]net.IP, error) // nil = net.DefaultResolver
+	LocalHost string                                                   // the one hostname the user approved on the local network ("" = none); redirects to other hosts stay refused
+	Client    *http.Client                                             // nil = built per call with the safety dialer; a custom client brings its own checks
+	UserAgent string                                                   // "" = defaultUserAgent
+	MaxBytes  int64                                                    // body cap, 0 = 5 MB
+	Resolver  func(ctx context.Context, host string) ([]net.IP, error) // nil = net.DefaultResolver
 }
 
 // Fetch gets rawURL and returns it as Markdown (HTML) or text.
@@ -92,7 +93,7 @@ func (f *Fetcher) Fetch(ctx context.Context, rawURL string) (*Page, error) {
 	switch {
 	case mediaType == "text/html" || mediaType == "application/xhtml+xml":
 		r := decode(body, header, params["charset"], true)
-		title, md, err := HTMLToMarkdown(r, resp.Request.URL)
+		title, md, err := HTMLToMarkdownContext(ctx, r, resp.Request.URL)
 		if err != nil {
 			return nil, fmt.Errorf("reading %s: %w", u, err)
 		}
@@ -196,14 +197,15 @@ func (f *Fetcher) dial(ctx context.Context, network, addr string) (net.Conn, err
 	if err != nil {
 		return nil, err
 	}
-	if !f.AllowLocal && isLocalName(host) {
+	approved := f.LocalHost != "" && strings.EqualFold(strings.TrimSuffix(host, "."), strings.TrimSuffix(f.LocalHost, "."))
+	if !approved && isLocalName(host) {
 		return nil, localErr(host)
 	}
 	ips, err := lookup(ctx, f.Resolver, host)
 	if err != nil {
 		return nil, err
 	}
-	if !f.AllowLocal {
+	if !approved {
 		for _, ip := range ips {
 			if isLocalIP(ip) {
 				return nil, localErr(host)
@@ -228,8 +230,8 @@ func localErr(host string) error {
 
 // lookup resolves host; IP literals skip the resolver.
 func lookup(ctx context.Context, resolve func(context.Context, string) ([]net.IP, error), host string) ([]net.IP, error) {
-	if ip := net.ParseIP(host); ip != nil {
-		return []net.IP{ip}, nil
+	if a, err := netip.ParseAddr(host); err == nil {
+		return []net.IP{net.IP(a.WithZone("").AsSlice())}, nil
 	}
 	var ips []net.IP
 	var err error
@@ -280,15 +282,43 @@ func isLocalName(host string) bool {
 		strings.HasSuffix(h, ".local") || strings.HasSuffix(h, ".internal")
 }
 
-var cgnat = &net.IPNet{IP: net.IPv4(100, 64, 0, 0), Mask: net.CIDRMask(10, 32)}
+var (
+	cgnat     = netip.MustParsePrefix("100.64.0.0/10")
+	thisNet   = netip.MustParsePrefix("0.0.0.0/8")
+	reserved  = netip.MustParsePrefix("240.0.0.0/4")
+	nat64     = netip.MustParsePrefix("64:ff9b::/96")
+	sixToFour = netip.MustParsePrefix("2002::/16")
+)
 
 func isLocalIP(ip net.IP) bool {
-	// An IPv4 address written as IPv6 (::ffff:10.0.0.1) must be judged as the IPv4 address.
-	if v4 := ip.To4(); v4 != nil {
-		ip = v4
+	a, ok := netip.AddrFromSlice(ip)
+	if !ok {
+		return true // not an address we can judge: refuse
 	}
-	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() ||
-		ip.IsInterfaceLocalMulticast() || ip.IsMulticast() || ip.IsUnspecified() || cgnat.Contains(ip)
+	return localAddr(a)
+}
+
+func localAddr(a netip.Addr) bool {
+	a = a.WithZone("").Unmap() // an IPv4 address written as IPv6 (::ffff:10.0.0.1) is judged as IPv4
+	if a.Is4() {
+		return a.IsLoopback() || a.IsPrivate() || a.IsLinkLocalUnicast() || a.IsLinkLocalMulticast() ||
+			a.IsMulticast() || a.IsUnspecified() || cgnat.Contains(a) || thisNet.Contains(a) || reserved.Contains(a)
+	}
+	if a.IsLoopback() || a.IsPrivate() || a.IsLinkLocalUnicast() || a.IsLinkLocalMulticast() ||
+		a.IsInterfaceLocalMulticast() || a.IsMulticast() || a.IsUnspecified() {
+		return true
+	}
+	// IPv6 forms that carry an IPv4 address: judge the IPv4 address inside.
+	b := a.As16()
+	switch {
+	case nat64.Contains(a): // 64:ff9b::/96, last 32 bits
+		return localAddr(netip.AddrFrom4([4]byte(b[12:16])))
+	case sixToFour.Contains(a): // 2002::/16, bits 16-48
+		return localAddr(netip.AddrFrom4([4]byte(b[2:6])))
+	case [12]byte(b[:12]) == [12]byte{}: // IPv4-compatible ::a.b.c.d
+		return localAddr(netip.AddrFrom4([4]byte(b[12:16])))
+	}
+	return false
 }
 
 // Paginate returns up to limit characters of md starting at the character (rune) offset, and the

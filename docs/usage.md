@@ -117,7 +117,7 @@ library's latest version.
   /search off               # no web search
   ```
 
-  `/search provider` uses only the model's own search; `/search auto` (the default) prefers it and falls back
+  Search is allowed in plan mode too: it only reads. `/search provider` uses only the model's own search; `/search auto` (the default) prefers it and falls back
   to a service. Keys can also come from `BRAVE_API_KEY`, `TAVILY_API_KEY` and `SEARXNG_URL`.
 
 Everything read from the web reaches the model marked as untrusted: it is told to use it as information and
@@ -138,19 +138,22 @@ and after a change. For example: "the signup button does nothing, fix it and che
 - The model reads pages through their accessibility tree (the structure screen readers use), with ids it
   clicks and types by. Screenshots are saved under `~/.cache/werkz/screenshots/`; comparing two says how much
   of the page changed and where.
-- Dev servers keep running in the background until stopped, and werkz stops them when you quit. At most four
-  run at once.
+- Dev servers keep running in the background until stopped, and werkz stops them when you quit or close the
+  terminal. At most four run at once.
+- Links that open a new tab or window open in werkz's tab instead (if the site is allowed). Two werkz windows
+  can each use a browser at the same time. If Chrome crashes or you close its window, werkz starts it again
+  when needed.
 
 What asks first:
 
 | Action | Asks? |
 |---|---|
 | Opening a page on this machine (`localhost`, `127.0.0.1`) | No |
-| Opening any other site | Yes, with "don't ask again" for that domain. The page can't move itself to a site you haven't approved |
+| Opening any other site | Yes (not in bypass), with "don't ask again" for that domain. The page can't move itself, open a popup or load a frame from a site you haven't approved |
 | Clicking and typing | No, except as below. Blocked in plan mode |
-| Submitting a form (submit button, or Enter in a form) | Always, in every mode |
+| Submitting a form (a submit button, Enter in a form, or the page's own script) | Always, in every mode. Any submit werkz wasn't approved for is blocked in the page |
 | Uploading a file (only files in your working folders) | Always |
-| Downloading a file | Always |
+| Downloading a file | Always; it's saved in `~/Downloads` |
 | Typing into a password or payment field | Never done |
 | Starting a dev server | Like any command (`Bash` rules) |
 
