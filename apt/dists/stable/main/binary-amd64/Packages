@@ -1,16 +1,16 @@
 Package: werkz
 Architecture: amd64
-Version: 0.1.5
+Version: 0.1.6
 Priority: optional
 Section: devel
 Maintainer: Tonmoy Talukder
-Installed-Size: 38516
-Filename: pool/main/werkz_0.1.5_amd64.deb
-Size: 10772526
-MD5sum: ecaab3ed6928b73365a3b9604f466f13
-SHA1: 72a750f9333c0f0a10a2e8d1d3d72bae5fc43773
-SHA256: 604da7f9c4391251d30b08df6d69e273d07b647f88a41dda8ca119c0e5d8470b
-SHA512: d5ea7088a98546cced68c4a5094723a4b40d1024f3c517e6c4e9765aeba18b20b2442ba606f0d73e089ee9769b6a22a9f14f04228ab5ec3eff545f0d43f2439a
+Installed-Size: 38596
+Filename: pool/main/werkz_0.1.6_amd64.deb
+Size: 10802840
+MD5sum: be36351e422fca83dd6620262c955dce
+SHA1: b53e11f14580e648ef88d6effa3ca9f90ef7396e
+SHA256: 8bc3a5f4efa8b6a33b6eca8282c295e94fafa507c16d6bc61f272b7ad8b200ec
+SHA512: 092b3259004d72c384a0873173b943ae80540d284c41fe133dda429e65f9080d6d96d9b30f2656a9570bbab5daddbfb4cbab95ad95f220e044d2415f16f12c03
 Homepage: https://github.com/TonmoyTalukder/werkz
 Description: Agentic coding tool for the terminal.
  werkz reads your codebase, edits files and runs commands, using a paid API key
