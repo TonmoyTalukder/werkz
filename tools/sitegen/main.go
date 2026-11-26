@@ -40,7 +40,7 @@ type doc struct {
 var docs = []doc{
 	{"installation", "Installation", "Installer, Homebrew, apt, dnf, package files, updating, uninstalling", ""},
 	{"getting-started", "Getting started", "First run and your first task", ""},
-	{"usage", "Usage", "Commands, keyboard shortcuts, command-line flags, tools", ""},
+	{"usage", "Usage", "Commands, @ mentions, copying, saved conversations, web access, the browser, MCP", ""},
 	{"providers-and-models", "Providers and models", "API keys, subscriptions, free and local models, effort", ""},
 	{"safety", "Safety and privacy", "Permission modes and the rules that always apply", ""},
 	{"fallback", "Fallback", "What happens when a model fails", ""},
@@ -148,7 +148,9 @@ type navLink struct {
 }
 
 func navLinks(cur string) []navLink {
+	// the same menu as the home page, in the same order
 	return []navLink{
+		{"../#features", "Features", false},
 		{"./", "Docs", cur != "releases" && cur != "contributing"},
 		{"../#install", "Install", false},
 		{"../#subscriptions", "Subscriptions", false},

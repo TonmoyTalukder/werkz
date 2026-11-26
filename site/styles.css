@@ -204,25 +204,39 @@ kbd {
 /* wide screens: one row, the words and install on the left, werkz itself on the right (it gets the larger
    share: the replay is a 100-column terminal that scales with its width) */
 @media (min-width: 1240px) { /* below this the replay would get too small beside the text: stacked */
-  /* the hero fills the screen under the sticky header (65px), its row centred vertically */
+  /* the hero fills the screen under the sticky header (65px): its row centred in the space above the
+     "Works with" strip */
   .hero {
     text-align: left; display: flex; flex-direction: column; justify-content: center;
     min-height: calc(100vh - 65px); padding: 32px 0 40px; box-sizing: border-box;
   }
-  @media (max-height: 760px) { .hero { padding: 18px 0 20px; } } /* laptops: keep it to one screen */
   .hero-grid {
+    flex: 1; /* the row takes the space above the "Works with" strip, centred in it */
     display: grid; grid-template-columns: minmax(0, 0.84fr) minmax(0, 1.16fr); align-items: center;
     gap: clamp(36px, 3.4vw, 56px); width: var(--page); margin: 0 auto; /* lines up with the header */
   }
   .hero-grid > .wrap { width: auto; max-width: none; margin: 0; padding: 0; }
   .hero h1 { margin: 0; max-width: 17ch; font-size: clamp(2.1rem, 2.9vw, 3.1rem); text-wrap: balance; }
   .hero .lede { margin: 16px 0 0; max-width: 48ch; font-size: 1.06rem; }
-  .hero .install { font-size: 0.97em; }
+  .hero .install { margin: 26px 0 0; max-width: none; font-size: 0.97em; }
   .hero .install .cmd pre { font-size: 0.8rem; }
-  .hero .install { margin: 26px 0 0; max-width: none; }
   .hero .btn-row { justify-content: flex-start; }
   .hero-grid > .shot { width: auto; margin: 0; }
   .shot figcaption { margin-left: auto; margin-right: auto; }
+  .hero .works { padding: clamp(20px, 3vh, 40px) 0 0; }
+  .hero .works p { margin-bottom: 12px; }
+}
+/* short laptop screens (up to 880px tall): the same hero, tighter, so it and "Works with" fit one screen */
+@media (min-width: 1240px) and (max-height: 880px) {
+  .hero { padding: 18px 0 20px; }
+  .hero h1 { max-width: 21ch; font-size: clamp(2.1rem, 2.6vw, 2.5rem); }
+  .hero .lede { margin-top: 12px; font-size: 1rem; line-height: 1.55; }
+  .hero .install { margin-top: 18px; }
+  .hero .install .panel > p { display: none; } /* the footnote; the command and tabs stay */
+  .hero .btn-row { margin-top: 16px; }
+  .hero .works { padding-top: 16px; }
+  .hero .works p { margin-bottom: 10px; font-size: 0.86rem; }
+  .hero .works li { padding: 5px 12px; font-size: 0.86rem; }
 }
 .shot::before {
   content: ""; position: absolute; inset: -6% -5% -8%; z-index: 0;
@@ -278,6 +292,12 @@ kbd {
 }
 .tabs [role="tab"]:hover { color: var(--ink); }
 .tabs [role="tab"][aria-selected="true"] { color: var(--ink); border-bottom-color: var(--blue); }
+/* phones: the four install tabs fit the card, and long URLs break rather than scroll sideways */
+@media (max-width: 480px) {
+  .tabs { gap: 0; padding: 6px 4px 0; }
+  .tabs [role="tab"] { padding-left: 9px; padding-right: 9px; }
+  .cmd pre { overflow-wrap: anywhere; }
+}
 .panel { padding: 16px; }
 .panel[hidden] { display: none; }
 .panel > p { margin: 10px 2px 0; font-size: 0.92rem; color: var(--ink-3); }
@@ -314,7 +334,7 @@ kbd {
 .section-head p { margin: 16px 0 0; font-size: 1.12rem; color: var(--ink-2); text-wrap: pretty; }
 
 /* works with */
-.works { padding: 56px 0 8px; text-align: center; }
+.works { padding: 56px 0 8px; text-align: center; position: relative; z-index: 2; }
 .works p { margin: 0 0 18px; color: var(--ink-3); font-size: 0.92rem; }
 .works ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px 12px; }
 .works li { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink-2); font-size: 0.92rem; font-weight: 500; }
@@ -564,6 +584,7 @@ kbd {
 
 /* footer */
 .foot { border-top: 1px solid var(--line); margin-top: clamp(72px, 10vw, 112px); }
+.section.closing { padding-bottom: 0; } /* the footer's own margin is the space below it */
 .foot-inner { width: var(--page); margin: 0 auto; padding: 48px 0 40px; display: grid; grid-template-columns: 2fr repeat(3, 1fr); gap: 32px; }
 .foot-brand p { margin: 12px 0 0; color: var(--ink-3); font-size: 0.92rem; max-width: 34ch; }
 .foot h2 { margin: 0 0 12px; font-size: 0.85rem; font-weight: 600; color: var(--ink); }
