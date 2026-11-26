@@ -331,6 +331,15 @@ This is the signature workhorse. It is a Code Wash panel (10px radius, Hairline 
 ### Product Window (signature)
 A dark window (Tile Deep body, 16px radius, 14% ink border, Window shadow) holds a real capture of the werkz TUI. It has a 40px Tile title bar with three 11px dots in saffron, red and blue and a centred `~/code/my-app — werkz` title. It sits over the One Glow and rises into place on load (0.9s, 18px translate and 0.985 scale, `cubic-bezier(0.16, 1, 0.3, 1)`, 0.15s delay). A full-round caption pill sits below it. The image is always a genuine capture with alt text describing what the session shows.
 
+### Feature Tour
+
+The features section is a tour, not a card grid: a list of features beside a sticky product window that plays
+each feature the way it looks in werkz (scenes written in Term Mono with werkz's own terminal colours). The
+selected feature expands with its description and a docs link; a 2px line in its tone fills while its scene
+plays, then the next one starts. Picking a feature stops the auto-advance. Scenes are 54 columns and 15 rows,
+sized to the window; below 1080px the window sits above the list, and reduced motion shows each scene's last
+frame, still. This is the page's one authored motion after the hero.
+
 ### Release Timeline
 A 2px Hairline spine runs through 14px circular nodes. The newest node is filled blue with a 4px 18%-blue halo. Each release is a `details` card (14px radius, Hairline border) with a rotating chevron. Its summary holds the version (600/1.08rem), a full-round ink "Latest" badge and a tabular `ink-3` date.
 

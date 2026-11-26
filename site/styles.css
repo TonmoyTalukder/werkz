@@ -291,18 +291,95 @@ kbd {
 .works li { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--card); color: var(--ink-2); font-size: 0.92rem; font-weight: 500; }
 .works li.plan { border-color: color-mix(in srgb, var(--blue) 35%, var(--line)); color: var(--ink); }
 
-/* features */
-.features { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); column-gap: clamp(28px, 4vw, 56px); row-gap: 40px; }
-.feature { padding-top: 20px; border-top: 1px solid var(--line); }
-.feature h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 10px; font-size: 1.1rem; font-weight: 600; letter-spacing: -0.01em; }
-.feature h3 svg { width: 20px; height: 20px; flex: none; color: var(--tone); }
-.feature p { margin: 0; color: var(--ink-2); font-size: 0.98rem; }
+/* features: a tour. The list on the left, a werkz window on the right playing each feature as it
+   looks in the terminal (site.js). Without JavaScript the first feature's final frame shows. */
+#features { overflow-x: clip; } /* the glow behind the window may not widen the page */
+.tour { display: grid; grid-template-columns: minmax(0, 0.78fr) minmax(0, 1.22fr); gap: clamp(28px, 4.5vw, 64px); align-items: start; }
+.tour-list { display: flex; flex-direction: column; }
+.tour-item { position: relative; border-top: 1px solid var(--line); }
+.tour-item:last-child { border-bottom: 1px solid var(--line); }
+.tour-tab {
+  display: flex; gap: 14px; width: 100%; padding: 17px 4px 17px 2px; margin: 0; border: 0; background: none;
+  color: var(--ink-2); font: inherit; text-align: left; cursor: pointer; border-radius: 8px;
+}
+.tour-tab svg { width: 20px; height: 20px; flex: none; margin-top: 2px; color: var(--ink-3); transition: color 0.3s var(--ease); }
+.tour-tab b { display: block; font-size: 1.06rem; font-weight: 600; letter-spacing: -0.01em; color: var(--ink-2); transition: color 0.3s var(--ease); }
+.tour-tab em {
+  display: block; max-height: 0; overflow: hidden; font-style: normal; color: var(--ink-2); font-size: 0.97rem;
+  line-height: 1.55; transition: max-height 0.5s var(--ease), margin 0.5s var(--ease), opacity 0.4s var(--ease); opacity: 0;
+}
+.tour-tab:hover b, .tour-tab[aria-selected="true"] b { color: var(--ink); }
+.tour-tab:hover svg, .tour-tab[aria-selected="true"] svg { color: var(--tone); }
+.tour-tab[aria-selected="true"] em { max-height: 8em; margin-top: 8px; opacity: 1; }
+.tour-tab:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.tour-more {
+  display: none; margin: -6px 0 16px 36px; font-size: 0.92rem; font-weight: 500; color: var(--link);
+  text-decoration: none; text-underline-offset: 3px;
+}
+.tour-more::after { content: " →"; }
+.tour-more:hover { text-decoration: underline; }
+.tour-item:has([aria-selected="true"]) .tour-more { display: inline-block; }
+/* the active feature's line fills while it plays, then the next one starts */
+.tour-item::before {
+  content: ""; position: absolute; left: 0; right: 0; top: -1px; height: 2px; background: var(--tone);
+  transform: scaleX(var(--p, 0)); transform-origin: left; opacity: 0; transition: opacity 0.3s;
+}
+.tour-item:has([aria-selected="true"])::before { opacity: 1; }
+
+.tour-stage { position: sticky; top: 88px; }
+.tour-stage::before {
+  content: ""; position: absolute; inset: 8% -4% -6%; z-index: 0; pointer-events: none;
+  background: var(--brand); filter: blur(72px); opacity: calc(var(--glow) * 0.55); border-radius: 40%;
+}
+.tour-window { animation: none; }
+.tour-screen { position: relative; background: var(--tile-deep); }
+.scene pre.frame {
+  margin: 0; padding: 18px 22px 10px; color: #e5e7eb; background: none; text-align: left;
+  font-family: "Term Mono", "DejaVu Sans Mono", ui-monospace, monospace;
+  /* 54 columns across the window (a Term Mono cell is 0.603em wide), at most 15px */
+  font-size: min(calc((100cqw - 44px) / 32.6), 15px); line-height: 1.32; white-space: pre; overflow: hidden;
+  height: calc(15 * 1.32em + 28px); box-sizing: border-box;
+}
+.scene pre.frame > div { width: max-content; min-height: 1.32em; }
+.scene pre.frame[hidden] { display: none; }
+.scene i { font-style: normal; }
+.scene .p { color: #ff9933; }
+.scene .s, .scene .sk { color: #6fa0ff; }
+.scene .d { color: #7c8193; }
+.scene .f { color: #5d6072; }
+.scene .g { color: #4ade80; }
+.scene .r { color: #f87171; }
+.scene .rd { color: #e8344e; }
+.scene .y { color: #facc15; }
+.scene .b { font-weight: 700; color: #ffffff; }
+.scene .p.b { color: #ff9933; }
+.scene .r.b { color: #f87171; }
+.scene .v { color: #3b6cf6; }
+.scene .sd { color: #3b6cf6; }
+.scene .gr { color: #ff9933; font-weight: 700; }
+.scene .cd { color: #ffb86b; }
+.scene .m { color: #ffb86b; background: #3a2a1a; border-radius: 2px; }
+.scene .shot { color: #3b6cf6; }
+.scene .hl { color: #ffffff; background: linear-gradient(#2b4c9b, #2b4c9b) no-repeat; background-size: 100% 100%; }
+.scene .status { margin-top: 0.3em; }
+.tour-status {
+  display: flex; gap: 6px; align-items: baseline; padding: 10px 22px 12px; border-top: 1px solid rgba(255, 255, 255, 0.07);
+  font: 0.78rem/1.4 "Term Mono", "DejaVu Sans Mono", ui-monospace, monospace; color: #7c8193; white-space: nowrap; overflow: hidden;
+}
+.tour-status b { color: #6fa0ff; }
+.tour-status i { color: #3b6cf6; font-style: normal; }
 .t-saffron { --tone: #e07a10; }
 .t-red { --tone: var(--red); }
 .t-blue { --tone: var(--blue); }
 :root[data-theme="dark"] .t-saffron { --tone: var(--saffron); }
-@media (max-width: 960px) { .features { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media (max-width: 620px) { .features { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 600px) {
+  .scene pre.frame { padding: 14px 10px 8px; font-size: calc((100cqw - 20px) / 32.6); }
+  .tour-status { padding: 8px 10px 10px; font-size: 0.7rem; }
+}
+@media (max-width: 1080px) {
+  .tour { grid-template-columns: minmax(0, 1fr); }
+  .tour-stage { position: relative; top: 0; order: -1; }
+}
 
 /* subscriptions */
 .plans { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }

@@ -52,6 +52,7 @@
   <div class="top-inner">
     <a class="brand" href="./" aria-label="werkz home"><img src="assets/werkz.png" alt="" width="28" height="28">werkz</a>
     <nav id="topnav" aria-label="Main">
+      <a href="#features">Features</a>
       <a href="docs/">Docs</a>
       <a href="#install">Install</a>
       <a href="#subscriptions">Subscriptions</a>
@@ -133,19 +134,87 @@ sudo dnf install werkz</code></pre><button class="copy" type="button"><svg class
 <section class="section" id="features" aria-labelledby="features-title">
   <div class="wrap">
     <div class="section-head center">
-      <h2 id="features-title">Everything a coding agent needs. Nothing you didn't choose.</h2>
-      <p>Describe a task in plain words. werkz plans it, searches and reads your code, makes the change and checks it with your own tests and tools.</p>
+      <h2 id="features-title">See what werkz does</h2>
+      <p>Describe a task in plain words. werkz plans it, works through your code, your browser and your tools, and checks the result. Pick a feature to watch it.</p>
     </div>
-    <div class="features">
-      <article class="feature t-saffron"><h3><svg aria-hidden="true"><use href="#i-plug"/></svg>Bring your own model</h3><p>Claude, OpenAI, Grok, Gemini, OpenRouter, Groq, or fully offline with Ollama. Switch with <code>/model</code> and keep the conversation.</p></article>
-      <article class="feature t-red"><h3><svg aria-hidden="true"><use href="#i-card"/></svg>Use your subscription</h3><p>Sign in with ChatGPT to use your plan, or run your own Claude Code on your Claude subscription. <code>/usage</code> shows your limits.</p></article>
-      <article class="feature t-blue"><h3><svg aria-hidden="true"><use href="#i-shield"/></svg>You stay in control</h3><p>Edits and commands ask first. Anything outside your project or on your local network asks, and credential files are never opened.</p></article>
-      <article class="feature t-blue"><h3><svg aria-hidden="true"><use href="#i-gauge"/></svg>Built to save tokens</h3><p>Prompt caching with keep-alive, automatic compaction, trimmed tool output, and a context window you can set yourself.</p></article>
-      <article class="feature t-saffron"><h3><svg aria-hidden="true"><use href="#i-folders"/></svg>Several repos at once</h3><p>Optional workspaces group folders and their environment variables, so one task can span a frontend and its API.</p></article>
-      <article class="feature t-red"><h3><svg aria-hidden="true"><use href="#i-browser"/></svg>Checks its own web UI</h3><p>Starts your dev server, opens the page in Chrome, clicks, types, scrolls and fills forms, and reads console errors, failed requests and screenshots, shown in your terminal. Opt in to use your own signed-in Chrome.</p></article>
-      <article class="feature t-blue"><h3><svg aria-hidden="true"><use href="#i-at"/></svg>Files, the web and your tools</h3><p>Type <code>@</code> to attach a file or folder (across repos: <code>@api/main.go</code>). werkz reads and searches the web, and uses your MCP servers, set up as in Claude Code.</p></article>
-      <article class="feature t-saffron"><h3><svg aria-hidden="true"><use href="#i-copy"/></svg>Select and copy</h3><p>Drag over any text in the conversation to copy it, or copy a response's markdown or a single code block exactly.</p></article>
-      <article class="feature t-red"><h3><svg aria-hidden="true"><use href="#i-history"/></svg>Pick up where you left off</h3><p>Conversations are saved on your machine. Search them with <code>/resume</code>, or run <code>werkz -c</code> to continue the latest.</p></article>
+    <div class="tour" data-tour>
+      <div class="tour-list" role="tablist" aria-label="Features" aria-orientation="vertical">
+        <div class="tour-item t-saffron">
+          <button class="tour-tab" role="tab" id="tt-mentions" aria-controls="ts-mentions" aria-selected="true" tabindex="0"><svg aria-hidden="true"><use href="#i-at"/></svg><span><b>Point at files with @</b><em>Type <code>@</code> and pick a file or folder, searched as you type, across every repo you have open. Its contents go with your message.</em></span></button>
+          <a class="tour-more" href="docs/usage.html#mentioning-files">How mentions work</a>
+        </div>
+        <div class="tour-item t-red">
+          <button class="tour-tab" role="tab" id="tt-browser" aria-controls="ts-browser" aria-selected="false" tabindex="-1"><svg aria-hidden="true"><use href="#i-browser"/></svg><span><b>Checks its own web UI</b><em>Starts your dev server, opens the page in Chrome, clicks and types through it, reads console errors and failed requests, and compares screenshots.</em></span></button>
+          <a class="tour-more" href="docs/usage.html#the-browser">The browser</a>
+        </div>
+        <div class="tour-item t-blue">
+          <button class="tour-tab" role="tab" id="tt-chrome" aria-controls="ts-chrome" aria-selected="false" tabindex="-1"><svg aria-hidden="true"><use href="#i-plug"/></svg><span><b>Works in your own Chrome</b><em>Opt in for a session and werkz works on sites where you're signed in, in a window of its own. It never touches your other tabs.</em></span></button>
+          <a class="tour-more" href="docs/usage.html#using-your-own-chrome">Using your own Chrome</a>
+        </div>
+        <div class="tour-item t-saffron">
+          <button class="tour-tab" role="tab" id="tt-web" aria-controls="ts-web" aria-selected="false" tabindex="-1"><svg aria-hidden="true"><use href="#i-gauge"/></svg><span><b>Reads and searches the web</b><em>Current docs, changelogs and error messages, with your model's own search or Brave, Tavily or SearXNG. Pages on your network ask first.</em></span></button>
+          <a class="tour-more" href="docs/usage.html#web-access">Web access</a>
+        </div>
+        <div class="tour-item t-red">
+          <button class="tour-tab" role="tab" id="tt-mcp" aria-controls="ts-mcp" aria-selected="false" tabindex="-1"><svg aria-hidden="true"><use href="#i-folders"/></svg><span><b>Uses your MCP tools</b><em>GitHub, databases, issue trackers: any MCP server, configured as in Claude Code. A project's servers start only once you approve them.</em></span></button>
+          <a class="tour-more" href="docs/usage.html#mcp-servers">MCP servers</a>
+        </div>
+        <div class="tour-item t-blue">
+          <button class="tour-tab" role="tab" id="tt-safety" aria-controls="ts-safety" aria-selected="false" tabindex="-1"><svg aria-hidden="true"><use href="#i-shield"/></svg><span><b>Asks before anything risky</b><em>Edits and commands ask first, with the exact change shown. Choose how much it may do on its own with <code>shift+tab</code>.</em></span></button>
+          <a class="tour-more" href="#safety">Permission modes</a>
+        </div>
+        <div class="tour-item t-saffron">
+          <button class="tour-tab" role="tab" id="tt-resume" aria-controls="ts-resume" aria-selected="false" tabindex="-1"><svg aria-hidden="true"><use href="#i-history"/></svg><span><b>Picks up where you left off</b><em>Every conversation is saved on your machine. Search them with <code>/resume</code>, or run <code>werkz -c</code> to continue the latest.</em></span></button>
+          <a class="tour-more" href="docs/usage.html#saved-conversations">Saved conversations</a>
+        </div>
+        <div class="tour-item t-red">
+          <button class="tour-tab" role="tab" id="tt-copy" aria-controls="ts-copy" aria-selected="false" tabindex="-1"><svg aria-hidden="true"><use href="#i-copy"/></svg><span><b>Select anything to copy it</b><em>Drag over any text and it's on your clipboard, or copy a whole answer or one code block exactly as written.</em></span></button>
+          <a class="tour-more" href="docs/usage.html#copying-text">Copying text</a>
+        </div>
+        <div class="tour-item t-blue">
+          <button class="tour-tab" role="tab" id="tt-repos" aria-controls="ts-repos" aria-selected="false" tabindex="-1"><svg aria-hidden="true"><use href="#i-check-shield"/></svg><span><b>Several repos at once</b><em>A workspace groups a frontend, its API and their settings, so one request can change both. Mentions name the repo: <code>@api/…</code>.</em></span></button>
+          <a class="tour-more" href="docs/workspaces.html">Workspaces</a>
+        </div>
+      </div>
+      <div class="tour-stage">
+        <div class="window tour-window">
+          <div class="window-bar"><i class="d1"></i><i class="d2"></i><i class="d3"></i><span>~/code/my-app — werkz</span></div>
+          <div class="tour-screen">
+<div class="scene" id="ts-mentions" role="tabpanel" aria-labelledby="tt-mentions">
+<pre class="frame"><div data-a="type"><i class="p">❯ </i>fix the login bug in @src/au</div><div> </div><div data-a="in">  <i class="p">❯ src/auth/</i><i class="p b">login.ts</i></div><div data-a="in">    <i class="f">src/auth/</i>logout.ts</div><div data-a="in">    <i class="f">src/auth/</i>session.ts</div><div data-a="in">  <i class="f">↑↓ move · enter choose · tab open folder</i></div></pre>
+<pre class="frame"><div><i class="p">❯ </i>fix the login bug in <i class="m">@src/auth/login.ts</i></div><div data-a="in"><i class="d">  ⎿  attached </i><i class="m">src/auth/login.ts (84 lines)</i></div><div> </div><div data-a="in"><i class="v">⏺</i> The form posts before it checks the password.</div><div data-a="in">  I'll check it first and add a test.</div><div data-a="in"><i class="g">⏺</i> <i class="b">Edit</i><i class="d">(src/auth/login.ts)</i></div><div data-a="in"><i class="d">  ⎿  </i><i class="g">+6</i> <i class="r">−1</i><i class="d"> lines</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">Bash</i><i class="d">(npm test -- login)</i></div><div data-a="in"><i class="d">  ⎿  12 passed</i></div></pre>
+</div>
+<div class="scene" id="ts-browser" role="tabpanel" aria-labelledby="tt-browser" hidden>
+<pre class="frame"><div><i class="p">❯ </i>the signup button does nothing, fix it and check</div><div data-a="in"><i class="g">⏺</i> <i class="b">DevServer</i><i class="d">(npm run dev)</i></div><div data-a="in"><i class="d">  ⎿  #1 serving http://localhost:5173/</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">Browse</i><i class="d">(localhost:5173/signup)</i></div><div data-a="in"><i class="d">  ⎿  Sign up · </i><i class="r">1 console error</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">Console</i></div><div data-a="in"><i class="d">  ⎿  </i><i class="r">TypeError: onSubmit is not a function</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">Edit</i><i class="d">(src/pages/Signup.tsx)</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">Click</i><i class="d">(Create account)</i></div><div data-a="in"><i class="d">  ⎿  </i><i class="g">Welcome, Ada · no console errors</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">Screenshot</i><i class="d">(compare)</i></div><div data-a="in"><i class="d">     ┌──────────────────────────┐</i></div><div data-a="in"><i class="d">     │</i> <i class="shot">▇▇▇</i>  <i class="b">Welcome, Ada</i>        <i class="d">│</i></div><div data-a="in"><i class="d">     └──────────────────────────┘  4.2% changed</i></div></pre>
+</div>
+<div class="scene" id="ts-chrome" role="tabpanel" aria-labelledby="tt-chrome" hidden>
+<pre class="frame"><div data-a="type"><i class="p">❯ </i>/browser connect</div><div data-a="in"><i class="rd">╭───────────────────────────────────────────────╮</i></div><div data-a="in"><i class="rd">│</i> <i class="r b">Connect werkz to your own Chrome?</i>             <i class="rd">│</i></div><div data-a="in"><i class="rd">│</i> werkz opens a window of its own there and     <i class="rd">│</i></div><div data-a="in"><i class="rd">│</i> uses only its tabs, never your other tabs.    <i class="rd">│</i></div><div data-a="in"><i class="rd">│</i>   <i class="f">No (esc)</i>                                    <i class="rd">│</i></div><div data-a="in"><i class="rd">│</i> <i class="p">❯ Yes, connect to my Chrome for this session</i>  <i class="rd">│</i></div><div data-a="in"><i class="rd">╰───────────────────────────────────────────────╯</i></div></pre>
+<pre class="frame"><div><i class="s">✦ </i>Connected to your Chrome at 127.0.0.1:9222.</div><div data-a="type"><i class="p">❯ </i>export last week's report from the admin</div><div data-a="in"><i class="g">⏺</i> <i class="b">Browse</i><i class="d">(admin.staging.acme.dev/reports)</i></div><div data-a="in"><i class="d">  ⎿  Reports · signed in as ada</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">Click</i><i class="d">(Export CSV)</i><i class="y">  ⚠ downloads a file: asked</i></div><div data-a="in"><i class="d">  ⎿  report-2026-W47.csv saved by Chrome</i></div><div> </div><div> </div><div> </div><div class="banner"><i class="r b">● werkz is connected to your Chrome</i><i class="d"> · /browser disconnect</i></div></pre>
+</div>
+<div class="scene" id="ts-web" role="tabpanel" aria-labelledby="tt-web" hidden>
+<pre class="frame"><div data-a="type"><i class="p">❯ </i>how do I add an MCP server to werkz? check the docs</div><div data-a="in"><i class="g">⏺</i> <i class="b">WebSearch</i><i class="d">(werkz MCP servers setup)</i></div><div data-a="in"><i class="d">  ⎿  6 results · Claude web search</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">WebFetch</i><i class="d">(tonmoytalukder.github.io/werkz/docs/…)</i></div><div data-a="in"><i class="d">  ⎿  Usage · werkz · 18 KB</i></div><div data-a="in"><i class="v">⏺</i> Add it to <i class="cd">~/.config/werkz/mcp.json</i>, in the same</div><div data-a="in">  format as Claude Code, then run <i class="cd">/mcp</i> to see it</div><div data-a="in">  start. A project's servers go in <i class="cd">.werkz/mcp.json</i>.</div></pre>
+</div>
+<div class="scene" id="ts-mcp" role="tabpanel" aria-labelledby="tt-mcp" hidden>
+<pre class="frame"><div data-a="type"><i class="p">❯ </i>/mcp</div><div data-a="in"><i class="sd">╭───────────────────────────────────────────────╮</i></div><div data-a="in"><i class="sd">│</i> <i class="gr">MCP servers</i>                                   <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i>   github    <i class="d">user</i>     <i class="g">✓ connected · 38 tools</i>   <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i>   postgres  <i class="d">project</i>  <i class="y">needs your approval</i>      <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i>     <i class="f">npx -y @modelcontextprotocol/server-pg…</i>   <i class="sd">│</i></div><div data-a="in"><i class="sd">╰───────────────────────────────────────────────╯</i></div></pre>
+<pre class="frame"><div data-a="type"><i class="p">❯ </i>label the open issues about checkout</div><div data-a="in"><i class="g">⏺</i> <i class="b">github · search_issues</i><i class="d">(checkout is:open)</i></div><div data-a="in"><i class="d">  ⎿  2 issues: #412, #418</i></div><div data-a="in"><i class="y">⏺</i> <i class="b">github · add_labels</i><i class="d">(#412 #418 → checkout)</i></div><div data-a="in">  <i class="sd">Do you want to proceed?</i></div><div data-a="in">  <i class="p">❯ Yes, and don't ask again for github's add_labels</i></div><div data-a="in"><i class="v">⏺</i> Labelled #412 and #418 as checkout.</div></pre>
+</div>
+<div class="scene" id="ts-safety" role="tabpanel" aria-labelledby="tt-safety" hidden>
+<pre class="frame"><div><i class="p">❯ </i>clean the build and rebuild</div><div data-a="in"><i class="y">⏺</i> <i class="b">Bash</i><i class="d">(rm -rf dist &amp;&amp; npm run build)</i></div><div data-a="in"><i class="sd">╭───────────────────────────────────────────────╮</i></div><div data-a="in"><i class="sd">│</i> <i class="b">Bash</i> rm -rf dist &amp;&amp; npm run build             <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i>                                               <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i> Do you want to proceed?                       <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i>   Yes                                         <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i> <i class="p">❯ No, and tell werkz what to do differently</i>   <i class="sd">│</i></div><div data-a="in"><i class="sd">╰───────────────────────────────────────────────╯</i></div><div> </div><div data-a="in"><i class="sk">⏵⏵ accept edits on</i><i class="d"> (shift+tab to cycle)</i></div></pre>
+</div>
+<div class="scene" id="ts-resume" role="tabpanel" aria-labelledby="tt-resume" hidden>
+<pre class="frame"><div data-a="type"><i class="p">❯ </i>/resume login</div><div data-a="in"><i class="sd">╭───────────────────────────────────────────────╮</i></div><div data-a="in"><i class="sd">│</i> <i class="gr">Resume a conversation</i><i class="d">  ·  2 in this folder</i>    <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i> <i class="p">⌕ </i>login                                       <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i> <i class="p b">❯ fix the login form and add a test</i>           <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i>     <i class="d">2h ago · 4 requests</i>                       <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i>   why does login redirect twice?              <i class="sd">│</i></div><div data-a="in"><i class="sd">│</i>     <i class="d">yesterday · 2 requests</i>                    <i class="sd">│</i></div><div data-a="in"><i class="sd">╰───────────────────────────────────────────────╯</i></div></pre>
+<pre class="frame"><div><i class="s">✦ </i>Resumed “fix the login form and add a test”</div><div><i class="d">  · 4 requests · last active 2h ago</i></div><div> </div><div><i class="p">❯ </i>fix the login form and add a test</div><div><i class="g">⏺</i> <i class="b">Edit</i><i class="d">(src/auth/login.ts)</i></div><div><i class="v">⏺</i> Empty passwords are rejected, with a test.</div><div data-a="type"><i class="p">❯ </i>now the same for the signup form</div><div data-a="in"><i class="g">⏺</i> <i class="b">Read</i><i class="d">(src/auth/signup.ts)</i></div></pre>
+</div>
+<div class="scene" id="ts-copy" role="tabpanel" aria-labelledby="tt-copy" hidden>
+<pre class="frame"><div><i class="v">⏺</i> Run the migration on staging first:</div><div> </div><div>  <i class="hl" data-a="sweep">go run ./cmd/migrate --env staging</i></div><div> </div><div>  then restart the API so it picks up the new</div><div>  columns.</div><div> </div><div> </div><div> </div><div> </div><div data-a="in" class="status"><i class="g">✓ Copied the selection · 34 characters via wl-copy</i></div></pre>
+</div>
+<div class="scene" id="ts-repos" role="tabpanel" aria-labelledby="tt-repos" hidden>
+<pre class="frame"><div data-a="type"><i class="p">❯ </i>/workspace shop</div><div data-a="in"><i class="s">✦ </i>Workspace shop · 2 folders · main: ~/code/shop-web</div><div data-a="type"><i class="p">❯ </i>prices come in cents: fix <i class="m">@web/src/Price.tsx</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">Grep</i><i class="d">(price_cents in api)</i></div><div data-a="in"><i class="d">  ⎿  3 files</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">Edit</i><i class="d">(web/src/Price.tsx)</i></div><div data-a="in"><i class="d">  ⎿  </i><i class="g">+3</i> <i class="r">−1</i><i class="d"> lines</i></div><div data-a="in"><i class="v">⏺</i> Prices now show as dollars, from the API's cents.</div></pre>
+</div>
+          </div>
+          <div class="tour-status"><b>Opus 5.5</b> <i>[medium]</i> <span>│ anthropic │ 4% of 1M │ $0.03</span></div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
