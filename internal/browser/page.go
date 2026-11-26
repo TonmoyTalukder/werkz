@@ -162,12 +162,26 @@ func (b *Browser) navigateLocked(call context.Context, rawURL string) (*Snapshot
 		b.mu.Lock()
 		b.approved = hostKey(u)
 		b.mu.Unlock()
-		res, err := chromedp.Call(ctx, page.Navigate, page.NavigateParams{URL: u.String()})
-		if err != nil {
-			return nil, fmt.Errorf("navigation failed: %w", err)
+		var failed string
+		for try := 0; ; try++ {
+			res, err := chromedp.Call(ctx, page.Navigate, page.NavigateParams{URL: u.String()})
+			if err != nil {
+				return nil, fmt.Errorf("navigation failed: %w", err)
+			}
+			failed = res.ErrorText
+			if !transientNetError(failed) || try == 2 {
+				break
+			}
+			// Chrome reloaded its certificate checker or saw the network change mid-load (a
+			// fresh profile's first page often hits this): the page itself is fine, so retry.
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(400 * time.Millisecond):
+			}
 		}
-		if res.ErrorText != "" {
-			return nil, fmt.Errorf("could not open %s: %s", u, humanNetError(res.ErrorText))
+		if failed != "" {
+			return nil, fmt.Errorf("could not open %s: %s", u, humanNetError(failed))
 		}
 	}
 	b.settle(ctx, 15*time.Second)
@@ -300,4 +314,10 @@ func capLines(lines []string, max int) string {
 		sb.WriteByte('\n')
 	}
 	return strings.TrimRight(sb.String(), "\n")
+}
+
+// transientNetError reports a navigation error that says nothing about the page, only that
+// Chrome's own state changed while loading it.
+func transientNetError(text string) bool {
+	return strings.Contains(text, "ERR_CERT_VERIFIER_CHANGED") || strings.Contains(text, "ERR_NETWORK_CHANGED")
 }

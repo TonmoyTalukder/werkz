@@ -353,3 +353,13 @@ func TestLateDownloadNotesSayWhen(t *testing.T) {
 		t.Fatalf("a note during an action was marked late: %q", during)
 	}
 }
+
+// Chrome's own state changes are retried; real failures are not.
+func TestTransientNetError(t *testing.T) {
+	for text, want := range map[string]bool{"net::ERR_CERT_VERIFIER_CHANGED": true, "net::ERR_NETWORK_CHANGED": true,
+		"net::ERR_NAME_NOT_RESOLVED": false, "net::ERR_CERT_AUTHORITY_INVALID": false, "": false} {
+		if transientNetError(text) != want {
+			t.Errorf("%q: want %v", text, want)
+		}
+	}
+}
