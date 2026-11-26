@@ -232,6 +232,16 @@ func (b *Browser) shutdownConnected() {
 	b.tabs, b.cur, b.root = nil, nil, nil
 	b.closed = true
 	b.mu.Unlock()
+	for _, t := range tabs { // never leave the user's downloads denied
+		if !t.gone.Load() {
+			rctx, rcancel := context.WithTimeout(t.ctx, 3*time.Second)
+			err := b.tabDownloads(rctx, true)
+			rcancel()
+			if err == nil {
+				break
+			}
+		}
+	}
 	if g != nil && g.alive() {
 		for _, id := range b.pol.tabIDs() {
 			_, _ = gcall(g, "", target.CloseTarget, target.CloseTargetParams{TargetID: id})

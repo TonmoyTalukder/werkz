@@ -121,8 +121,7 @@ func (b *Browser) waitDownloads(max time.Duration) {
 // Navigate opens url (or goes "back", "forward", "reload"). The caller has
 // already approved the URL.
 func (b *Browser) Navigate(ctx context.Context, rawURL string) (*Snapshot, error) {
-	b.opMu.Lock()
-	defer b.opMu.Unlock()
+	defer b.lockOp()()
 	return b.navigateLocked(ctx, rawURL)
 }
 

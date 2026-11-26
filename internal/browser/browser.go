@@ -121,6 +121,8 @@ type Browser struct {
 	mainDocID  network.RequestID
 	blocked    []string
 	notes      []string
+	denyGen    int  // counts operations: a pending restore of the download switch yields to a newer one
+	denying    bool // connected mode: downloads are denied by Chrome right now
 	downloads  []string
 	dlSeen     map[string]bool
 	dlOrder    []string
@@ -380,39 +382,88 @@ func (b *Browser) begin(call context.Context) (context.Context, func(), error) {
 	return b.beginFor(call, opTimeout)
 }
 
+// lockOp serializes operations on werkz's tabs and, in connected mode, keeps
+// downloads denied for the whole operation: the switch is profile-wide, so it
+// is on only while an operation runs and is restored when the returned func
+// is called (the user's own tabs download normally while werkz is idle).
+// Every operation takes opMu through here, so none can skip it.
+func (b *Browser) lockOp() func() {
+	b.opMu.Lock()
+	if !b.connected {
+		return b.opMu.Unlock
+	}
+	b.mu.Lock()
+	b.denyGen++
+	b.mu.Unlock()
+	b.setDeny(true)
+	return func() {
+		b.mu.Lock()
+		gen := b.denyGen
+		b.mu.Unlock()
+		b.opMu.Unlock()
+		// A page often downloads a moment after it settled (a script's
+		// timer, a big blob being built), so the deny stays on for a short
+		// grace period unless another operation starts first.
+		time.AfterFunc(denyGrace, func() {
+			b.opMu.Lock()
+			defer b.opMu.Unlock()
+			b.mu.Lock()
+			stale := b.denyGen != gen
+			b.mu.Unlock()
+			if !stale {
+				b.setDeny(false)
+			}
+		})
+	}
+}
+
+const denyGrace = 1500 * time.Millisecond
+
+// setDeny turns the download deny on or off, using any live tab of werkz's.
+// b.denying is true only once Chrome has confirmed the deny.
+func (b *Browser) setDeny(on bool) {
+	b.mu.Lock()
+	var ctx context.Context
+	if b.tab != nil && !b.closed {
+		ctx = b.tab
+	} else {
+		for _, t := range b.tabs {
+			if !t.gone.Load() {
+				ctx = t.ctx
+				break
+			}
+		}
+	}
+	b.mu.Unlock()
+	if ctx == nil {
+		return
+	}
+	c, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	err := b.tabDownloads(c, !on)
+	b.mu.Lock()
+	b.denying = on && err == nil
+	b.mu.Unlock()
+}
+
 // beginFor is begin with a custom time budget.
 func (b *Browser) beginFor(call context.Context, d time.Duration) (context.Context, func(), error) {
-	b.opMu.Lock()
+	unlock := b.lockOp()
 	b.mu.Lock()
 	b.fallbackLocked()
 	tab, closed := b.tab, b.closed
 	b.mu.Unlock()
 	if closed || tab == nil {
-		b.opMu.Unlock()
+		unlock()
 		return nil, nil, errors.New("the browser is closed")
 	}
 	if err := call.Err(); err != nil {
-		b.opMu.Unlock()
+		unlock()
 		return nil, nil, err
 	}
 	ctx, cancel := context.WithTimeout(tab, d)
 	stop := context.AfterFunc(call, cancel)
-	if b.connected {
-		// Downloads are denied only while an action of werkz runs: the switch
-		// is profile-wide, so it must never stay on while werkz is idle (the
-		// user's own tabs download normally then).
-		_ = b.tabDownloads(ctx, false)
-	}
-	return ctx, func() {
-		stop()
-		if b.connected {
-			rctx, rcancel := context.WithTimeout(tab, 3*time.Second)
-			_ = b.tabDownloads(rctx, true)
-			rcancel()
-		}
-		cancel()
-		b.opMu.Unlock()
-	}, nil
+	return ctx, func() { stop(); cancel(); unlock() }, nil
 }
 
 // startGuard connects the raw guard connection that pauses popups and

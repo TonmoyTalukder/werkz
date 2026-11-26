@@ -400,6 +400,7 @@ func (b *Browser) navAllowed(raw string) bool {
 const (
 	dlBlockedNote = " (blocked: downloads are off)"
 	dlSavedNote   = " (saved by Chrome to its download folder)"
+	dlMaybeNote   = " (cancelled, but may have been saved by Chrome to its download folder)"
 )
 
 // connectedDownload judges a download that one of werkz's own targets starts
@@ -419,9 +420,17 @@ func (b *Browser) connectedDownload(name, rawURL string) bool {
 	b.mu.Lock()
 	allowed := b.dlDir != ""
 	b.mu.Unlock()
+	b.mu.Lock()
+	denied := b.denying
+	b.mu.Unlock()
 	note := name + dlBlockedNote
-	if allowed {
+	switch {
+	case allowed:
 		note = name + dlSavedNote
+	case !denied:
+		// Chrome was not refusing downloads at this moment: the fence cancels
+		// it, but a small file may be saved before the cancel arrives.
+		note = name + dlMaybeNote
 	}
 	b.noteDownload(rawURL, note, false)
 	return allowed

@@ -1,6 +1,9 @@
 package textutil
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 // L1: escape sequences and control characters from untrusted text never reach the terminal.
 func TestSanitize(t *testing.T) {
@@ -16,5 +19,12 @@ func TestSanitize(t *testing.T) {
 		if got := Sanitize(in); got != want {
 			t.Errorf("Sanitize(%q) = %q, want %q", in, got, want)
 		}
+	}
+}
+
+func TestExactShowsInvisibleCharacters(t *testing.T) {
+	got := Exact("API_KEY=‮evil‬ ok​\x1b[8mhidden")
+	if strings.ContainsAny(got, "‮‬​\x1b") || !strings.Contains(got, "⟨U+202E⟩") || !strings.Contains(got, "hidden") {
+		t.Fatalf("Exact = %q", got)
 	}
 }

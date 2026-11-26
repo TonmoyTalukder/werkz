@@ -2,7 +2,9 @@
 package textutil
 
 import (
+	"fmt"
 	"strings"
+	"unicode"
 
 	"github.com/charmbracelet/x/ansi"
 )
@@ -41,4 +43,20 @@ func Sanitize(s string) string {
 
 func isControl(r rune) bool {
 	return (r < 0x20 && r != '\n' && r != '\t') || r == 0x7f || (r >= 0x80 && r <= 0x9f)
+}
+
+// Exact is Sanitize for text someone must read exactly before approving it (what a command runs):
+// it also shows invisible format characters (bidi overrides, zero-width marks, which can reorder
+// or hide text) as visible ⟨U+XXXX⟩ tags instead of letting them act.
+func Exact(s string) string {
+	s = Sanitize(s)
+	var b strings.Builder
+	for _, r := range s {
+		if unicode.Is(unicode.Cf, r) {
+			fmt.Fprintf(&b, "⟨U+%04X⟩", r)
+			continue
+		}
+		b.WriteRune(r)
+	}
+	return b.String()
 }

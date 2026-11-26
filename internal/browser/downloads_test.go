@@ -1,6 +1,7 @@
 package browser
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -215,6 +216,7 @@ func TestConnectedUserTabDownloads(t *testing.T) {
 	if _, err := b.Navigate(ctx5(t), s.URL+"/"); err != nil {
 		t.Fatal(err)
 	}
+	time.Sleep(denyGrace + 500*time.Millisecond) // idle: the deny ends shortly after werkz's last operation
 	userEval(t, userCtx, `document.querySelector('button').click()`)
 	eventually(t, "the user's own download", 5*time.Second, func() bool { return len(filesNamed(u.home, "usertab.bin")) > 0 })
 }
@@ -259,5 +261,57 @@ func TestGetFormSubmitIsReported(t *testing.T) {
 	}
 	if next, err := b.Navigate(ctx5(t), s.URL+"/"); err != nil || len(next.Notes) != 0 {
 		t.Errorf("notes leaked into the next call: %v %v", err, next.Notes)
+	}
+}
+
+// A page that downloads by itself 300 ms after it loads, while werkz opens it
+// (Browse, or a new tab), is denied in connected mode, and the note says so.
+func TestConnectedOnLoadDownloads(t *testing.T) {
+	u := startUserChrome(t)
+	mux := http.NewServeMux()
+	for _, c := range []struct {
+		path string
+		size int
+	}{{"small", 10}, {"big", 5 << 20}, {"tabsmall", 10}, {"tabbig", 5 << 20}} {
+		mux.HandleFunc("/"+c.path, html(fmt.Sprintf(`<h1>%s</h1><script>setTimeout(function(){var a=document.createElement('a');a.href=window.URL.createObjectURL(new Blob([new Uint8Array(%d)]));a.download='onload-%s.bin';a.dispatchEvent(new MouseEvent('click'))},300)</script>`, c.path, c.size, c.path)))
+	}
+	s := serve(t, mux.ServeHTTP)
+	b, err := Connect(ctx5(t), u.port, Options{ShotDir: filepath.Join(t.TempDir(), "shots"), AllowHost: func(string) bool { return true }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer b.Close()
+	// A slow page may download after the call returned: its note then shows
+	// in a later call, so notes are collected across all of them.
+	var notes []string
+	for _, n := range []string{"small", "big"} {
+		// a fresh tab each: Chrome throttles repeated automatic downloads in one tab
+		if _, err := b.NewTab(ctx5(t), ""); err != nil {
+			t.Fatal(err)
+		}
+		got, err := b.Navigate(ctx5(t), s.URL+"/"+n)
+		if err != nil {
+			t.Fatal(err)
+		}
+		notes = append(notes, got.Downloads...)
+	}
+	for _, n := range []string{"tabsmall", "tabbig"} {
+		got, err := b.NewTab(ctx5(t), s.URL+"/"+n)
+		if err != nil {
+			t.Fatal(err)
+		}
+		notes = append(notes, got.Downloads...)
+	}
+	time.Sleep(2 * time.Second)
+	if late, _ := b.snapshotFor(t); late != nil {
+		notes = append(notes, late.Downloads...)
+	}
+	for _, n := range []string{"small", "big", "tabsmall", "tabbig"} {
+		if !hasNote(notes, "onload-"+n+".bin (blocked: downloads are off)") {
+			t.Errorf("no blocked note for %s in %v", n, notes)
+		}
+	}
+	if f := filesNamed(u.home, "onload-"); len(f) != 0 {
+		t.Errorf("an on-load download landed: %v", f)
 	}
 }

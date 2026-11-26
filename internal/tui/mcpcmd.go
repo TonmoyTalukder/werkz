@@ -222,7 +222,7 @@ func (m *model) handleMCPLogin(msg mcpLoginMsg) tea.Cmd {
 
 // mcpWhat is what a server runs or where it connects, as written: command, arguments and
 // environment, or URL and headers. Terminal escapes are removed, so the file can't hide any of it.
-func mcpWhat(c mcp.ServerConfig) string { return "`" + textutil.Sanitize(c.Describe()) + "`" }
+func mcpWhat(c mcp.ServerConfig) string { return "`" + textutil.Exact(c.Describe()) + "`" }
 
 func (m *model) mcpApproveKey(k tea.KeyMsg) tea.Cmd {
 	switch k.String() {
@@ -249,7 +249,7 @@ func (m *model) mcpApproveView() string {
 		what = "It connects to this server and sends it these headers:"
 	}
 	b.WriteString(wrapTo(sText.Render(what), w) + "\n")
-	b.WriteString(wrapTo(sPink.Render(textutil.Sanitize(c.Describe())), w) + "\n")
+	b.WriteString(wrapTo(sPink.Render(textutil.Exact(c.Describe())), w) + "\n")
 	b.WriteString(sDim.Render("From "+tildify(c.Source)+". Approve only if you trust this repository.") + "\n\n")
 	opts := []string{"No (esc)", "Yes, approve and start it for this project"}
 	for i, o := range opts {

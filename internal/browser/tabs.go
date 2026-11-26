@@ -146,8 +146,7 @@ func (b *Browser) findTabLocked(id string) *tab {
 
 // Tabs lists werkz's own tabs. Other tabs of the browser are never listed.
 func (b *Browser) Tabs(call context.Context) ([]TabInfo, error) {
-	b.opMu.Lock()
-	defer b.opMu.Unlock()
+	defer b.lockOp()()
 	b.mu.Lock()
 	if b.closed || b.root == nil {
 		b.mu.Unlock()
@@ -180,8 +179,7 @@ func (b *Browser) Tabs(call context.Context) ([]TabInfo, error) {
 // NewTab opens a tab (url "" = about:blank), makes it the active one and
 // navigates it like Navigate does: the caller has already approved the URL.
 func (b *Browser) NewTab(call context.Context, rawURL string) (*Snapshot, error) {
-	b.opMu.Lock()
-	defer b.opMu.Unlock()
+	defer b.lockOp()()
 	return b.newTabLocked(call, rawURL)
 }
 
@@ -260,8 +258,7 @@ func (b *Browser) newTabLocked(call context.Context, rawURL string) (*Snapshot, 
 
 // SwitchTab makes the tab with that ID the active one.
 func (b *Browser) SwitchTab(call context.Context, id string) (*Snapshot, error) {
-	b.opMu.Lock()
-	defer b.opMu.Unlock()
+	defer b.lockOp()()
 	b.mu.Lock()
 	t := b.findTabLocked(id)
 	closed := b.closed
@@ -289,8 +286,7 @@ func (b *Browser) SwitchTab(call context.Context, id string) (*Snapshot, error) 
 // CloseTab closes one of werkz's tabs. Closing the last one opens a blank tab
 // first, so werkz always has a tab.
 func (b *Browser) CloseTab(call context.Context, id string) error {
-	b.opMu.Lock()
-	defer b.opMu.Unlock()
+	defer b.lockOp()()
 	b.mu.Lock()
 	t := b.findTabLocked(id)
 	root, closed, live := b.root, b.closed, 0
