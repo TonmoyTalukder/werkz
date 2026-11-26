@@ -570,21 +570,12 @@ kbd {
 .contribute-links { margin-top: 26px; }
 @media (max-width: 900px) { .contribute { grid-template-columns: minmax(0, 1fr); } }
 
-/* closing call to action */
-.cta { position: relative; overflow: hidden; margin: 0 auto; padding: clamp(48px, 7vw, 72px) clamp(24px, 6vw, 72px); border-radius: 24px; background: var(--tile-deep); color: #f4f4f7; }
-.cta > * { position: relative; }
-.cta h2 { color: #fff; }
-.cta p { color: #c9cbdb; max-width: 54ch; font-size: 1.1rem; margin: 14px 0 24px; }
-.cta .cmd { max-width: 760px; background: rgba(255, 255, 255, 0.06); border-color: rgba(255, 255, 255, 0.14); }
-.cta .cmd pre { color: #fff; }
-.cta .copy { background: rgba(255, 255, 255, 0.08); color: #e8e9f2; border-color: rgba(255, 255, 255, 0.2); }
-.cta .btn-row { margin-top: 22px; }
-.cta .btn-primary { background: #fff; color: var(--tile-deep); }
-.cta .btn-secondary { background: transparent; color: #fff; border-color: rgba(255, 255, 255, 0.3); }
+/* the closing install section: what to do next, after every install method */
+.install-next { margin-top: 36px; }
 
 /* footer */
 .foot { border-top: 1px solid var(--line); margin-top: clamp(72px, 10vw, 112px); }
-.section.closing { padding-bottom: 0; } /* the footer's own margin is the space below it */
+.section.closing + .foot, main:has(> .section.closing:last-child) + .foot { margin-top: 0; } /* the last section runs straight into the footer */
 .foot-inner { width: var(--page); margin: 0 auto; padding: 48px 0 40px; display: grid; grid-template-columns: 2fr repeat(3, 1fr); gap: 32px; }
 .foot-brand p { margin: 12px 0 0; color: var(--ink-3); font-size: 0.92rem; max-width: 34ch; }
 .foot h2 { margin: 0 0 12px; font-size: 0.85rem; font-weight: 600; color: var(--ink); }

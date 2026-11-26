@@ -296,11 +296,68 @@ sudo dnf install werkz</code></pre><button class="copy" type="button"><svg class
   </div>
 </section>
 
-<section class="section" id="install" aria-labelledby="install-title">
+<section class="section" id="releases" aria-labelledby="releases-title">
+  <div class="wrap split">
+    <div class="section-head">
+      <h2 id="releases-title">What's new</h2>
+      <p>The latest releases, newest first. Installed copies pick them up on their own.</p>
+      <p><a class="arrow-link" href="docs/releases.html">All release notes <svg class="icon" viewBox="0 0 22 12" aria-hidden="true"><use href="#i-arrow"/></svg></a></p>
+    </div>
+    <!-- RELEASES -->
+  </div>
+</section>
+
+<section class="section soft" id="docs" aria-labelledby="docs-title">
   <div class="wrap">
     <div class="section-head">
-      <h2 id="install-title">Install werkz</h2>
-      <p>Linux (x86-64, ARM64) and macOS (Apple Silicon, Intel). Every release is signed and checksummed.</p>
+      <h2 id="docs-title">Documentation</h2>
+      <p>Everything about installing, using and configuring werkz, kept in step with each release.</p>
+    </div>
+    <ul class="doclist">
+      <!-- DOCS-LIST -->
+    </ul>
+  </div>
+</section>
+
+<section class="section" id="contribute" aria-labelledby="contribute-title">
+  <div class="wrap">
+    <div class="section-head">
+      <h2 id="contribute-title">Help build werkz</h2>
+      <p>werkz is open source under the Apache 2.0 license. Bug reports, docs fixes and code are all welcome.</p>
+    </div>
+    <ol class="contribute">
+      <li>
+        <h3>Get the code</h3>
+        <p>Fork the repository on GitHub, then clone your fork. The right Go toolchain downloads itself.</p>
+        <div class="cmd"><pre><code>git clone https://github.com/&lt;you&gt;/werkz.git
+cd werkz &amp;&amp; go build ./cmd/werkz</code></pre><button class="copy" type="button"><svg class="icon copy-icon" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button></div>
+      </li>
+      <li>
+        <h3>Make the change, check it</h3>
+        <p>Tests use fake model servers, so they never call a paid API. Lint before you push.</p>
+        <div class="cmd"><pre><code>go test -race ./...
+golangci-lint run ./...</code></pre><button class="copy" type="button"><svg class="icon copy-icon" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button></div>
+      </li>
+      <li>
+        <h3>Open a pull request</h3>
+        <p>Use a short <code>feat:</code>, <code>fix:</code> or <code>docs:</code> title; it becomes the release note. Describe what changed and how you tested it.</p>
+        <div class="cmd"><pre><code>git commit -m "fix: handle empty passwords"
+git push origin my-branch</code></pre><button class="copy" type="button"><svg class="icon copy-icon" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button></div>
+      </li>
+    </ol>
+    <div class="btn-row contribute-links">
+      <a class="btn btn-primary" href="docs/contributing.html">Contributing guide <svg class="icon" viewBox="0 0 22 12" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      <a class="btn btn-secondary" href="https://github.com/TonmoyTalukder/werkz/issues/new">Report a bug</a>
+      <a class="btn btn-secondary" href="https://github.com/TonmoyTalukder/werkz/issues">Open issues</a>
+    </div>
+  </div>
+</section>
+
+<section class="section soft closing" id="install" aria-labelledby="install-title">
+  <div class="wrap">
+    <div class="section-head">
+      <h2 id="install-title">Start in a minute</h2>
+      <p>Install werkz, open a project folder and type <code>werkz</code>. Paste any key you have, sign in with ChatGPT, or press Esc to use a local model. It runs on Linux (x86-64, ARM64) and macOS (Apple Silicon, Intel), and every release is signed and checksummed.</p>
     </div>
 
     <div class="methods" data-tabs>
@@ -365,76 +422,9 @@ sudo dnf install werkz</code></pre><button class="copy" type="button"><svg class
         <tr><th scope="row">Package files</th><td>werkz shows the command with the download link for the new package.</td></tr>
       </tbody>
     </table>
-  </div>
-</section>
-
-<section class="section soft" id="releases" aria-labelledby="releases-title">
-  <div class="wrap split">
-    <div class="section-head">
-      <h2 id="releases-title">What's new</h2>
-      <p>The latest releases, newest first. Installed copies pick them up on their own.</p>
-      <p><a class="arrow-link" href="docs/releases.html">All release notes <svg class="icon" viewBox="0 0 22 12" aria-hidden="true"><use href="#i-arrow"/></svg></a></p>
-    </div>
-    <!-- RELEASES -->
-  </div>
-</section>
-
-<section class="section" id="docs" aria-labelledby="docs-title">
-  <div class="wrap">
-    <div class="section-head">
-      <h2 id="docs-title">Documentation</h2>
-      <p>Everything about installing, using and configuring werkz, kept in step with each release.</p>
-    </div>
-    <ul class="doclist">
-      <!-- DOCS-LIST -->
-    </ul>
-  </div>
-</section>
-
-<section class="section soft" id="contribute" aria-labelledby="contribute-title">
-  <div class="wrap">
-    <div class="section-head">
-      <h2 id="contribute-title">Help build werkz</h2>
-      <p>werkz is open source under the Apache 2.0 license. Bug reports, docs fixes and code are all welcome.</p>
-    </div>
-    <ol class="contribute">
-      <li>
-        <h3>Get the code</h3>
-        <p>Fork the repository on GitHub, then clone your fork. The right Go toolchain downloads itself.</p>
-        <div class="cmd"><pre><code>git clone https://github.com/&lt;you&gt;/werkz.git
-cd werkz &amp;&amp; go build ./cmd/werkz</code></pre><button class="copy" type="button"><svg class="icon copy-icon" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button></div>
-      </li>
-      <li>
-        <h3>Make the change, check it</h3>
-        <p>Tests use fake model servers, so they never call a paid API. Lint before you push.</p>
-        <div class="cmd"><pre><code>go test -race ./...
-golangci-lint run ./...</code></pre><button class="copy" type="button"><svg class="icon copy-icon" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button></div>
-      </li>
-      <li>
-        <h3>Open a pull request</h3>
-        <p>Use a short <code>feat:</code>, <code>fix:</code> or <code>docs:</code> title; it becomes the release note. Describe what changed and how you tested it.</p>
-        <div class="cmd"><pre><code>git commit -m "fix: handle empty passwords"
-git push origin my-branch</code></pre><button class="copy" type="button"><svg class="icon copy-icon" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button></div>
-      </li>
-    </ol>
-    <div class="btn-row contribute-links">
-      <a class="btn btn-primary" href="docs/contributing.html">Contributing guide <svg class="icon" viewBox="0 0 22 12" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-      <a class="btn btn-secondary" href="https://github.com/TonmoyTalukder/werkz/issues/new">Report a bug</a>
-      <a class="btn btn-secondary" href="https://github.com/TonmoyTalukder/werkz/issues">Open issues</a>
-    </div>
-  </div>
-</section>
-
-<section class="section closing" aria-labelledby="cta-title">
-  <div class="wrap">
-    <div class="cta">
-      <h2 id="cta-title">Start in a minute</h2>
-      <p>Install, open a project folder and type <code>werkz</code>. Paste any key you have, sign in with ChatGPT, or press Esc to use a local model.</p>
-      <div class="cmd"><pre><code>curl -fsSL https://raw.githubusercontent.com/TonmoyTalukder/werkz/main/install.sh | sh</code></pre><button class="copy" type="button"><svg class="icon copy-icon" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button></div>
-      <div class="btn-row">
-        <a class="btn btn-primary" href="docs/getting-started.html">Getting started</a>
-        <a class="btn btn-secondary" href="https://github.com/TonmoyTalukder/werkz"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>Star on GitHub</a>
-      </div>
+    <div class="btn-row install-next">
+      <a class="btn btn-primary" href="docs/getting-started.html">Getting started <svg class="icon" viewBox="0 0 22 12" aria-hidden="true"><use href="#i-arrow"/></svg></a>
+      <a class="btn btn-secondary" href="https://github.com/TonmoyTalukder/werkz"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>Star on GitHub</a>
     </div>
   </div>
 </section>
