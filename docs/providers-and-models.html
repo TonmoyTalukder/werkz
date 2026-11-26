@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Providers and models · werkz</title>
+<meta name="description" content="API keys, subscriptions, free and local models, effort">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c0d14" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../assets/favicon.png">
+<link rel="preload" href="../fonts/Geist-300-700.woff2" as="font" type="font/woff2" crossorigin>
+<script>(() => { let t = null; try { t = localStorage.getItem("werkz-theme"); } catch {} const q = new URLSearchParams(location.search).get("theme"); if (q === "light" || q === "dark") t = q; if (t !== "light" && t !== "dark") t = "light"; document.documentElement.dataset.theme = t; })();</script>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body class="docs">
+<a class="skip" href="#doc">Skip to content</a>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-github" viewBox="0 0 16 16"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></g></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+</svg>
+<header class="top">
+  <div class="top-inner">
+    <a class="brand" href="../" aria-label="werkz home"><img src="../assets/werkz.png" alt="" width="28" height="28">werkz</a>
+    <nav id="topnav" aria-label="Main">
+      <a href="./" aria-current="page">Docs</a>
+      <a href="../#install">Install</a>
+      <a href="../#subscriptions">Subscriptions</a>
+      <a href="releases.html">Releases</a>
+      <a href="contributing.html">Contribute</a>
+    </nav>
+    <div class="top-actions">
+      <button class="icon-btn theme-toggle" type="button" aria-label="Switch between light and dark theme"><svg class="icon sun" aria-hidden="true"><use href="#i-sun"/></svg><svg class="icon moon" aria-hidden="true"><use href="#i-moon"/></svg></button>
+      <a class="icon-btn" href="https://github.com/TonmoyTalukder/werkz" aria-label="werkz on GitHub"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg><span class="gh-label">GitHub</span></a>
+      <button class="icon-btn menu-toggle" type="button" aria-expanded="false" aria-controls="topnav" aria-label="Menu"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+    </div>
+  </div>
+</header>
+<div class="docs-shell">
+  <nav class="docs-nav" aria-label="Documentation">
+    <details open><summary class="caps">Documentation</summary>
+    <ol>
+      <li><a href="installation.html">Installation</a></li>
+      <li><a href="getting-started.html">Getting started</a></li>
+      <li><a href="usage.html">Usage</a></li>
+      <li><a href="providers-and-models.html" aria-current="page">Providers and models</a></li>
+      <li><a href="safety.html">Safety and privacy</a></li>
+      <li><a href="fallback.html">Fallback</a></li>
+      <li><a href="workspaces.html">Workspaces</a></li>
+      <li><a href="saving-tokens.html">Saving tokens and money</a></li>
+      <li><a href="configuration.html">Configuration</a></li>
+      <li><a href="troubleshooting.html">Troubleshooting</a></li>
+      <li><a href="development.html">Development</a></li>
+      <li><a href="contributing.html">Contributing</a></li>
+      <li><a href="releases.html">Release notes</a></li>
+    </ol>
+    </details>
+  </nav>
+  <article class="doc" id="doc">
+    <h1>Providers and models</h1>
+    <table>
+<thead>
+<tr>
+<th>Provider</th>
+<th>Cost</th>
+<th>Get a key</th>
+<th>Environment variable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Claude</strong> (Anthropic)</td>
+<td>paid</td>
+<td><a href="https://platform.claude.com/settings/keys">platform.claude.com</a></td>
+<td><code>ANTHROPIC_API_KEY</code></td>
+</tr>
+<tr>
+<td><strong>OpenAI</strong> (GPT / Codex models)</td>
+<td>paid</td>
+<td><a href="https://platform.openai.com/api-keys">platform.openai.com</a></td>
+<td><code>OPENAI_API_KEY</code></td>
+</tr>
+<tr>
+<td><strong>xAI Grok</strong></td>
+<td>paid</td>
+<td><a href="https://console.x.ai">console.x.ai</a></td>
+<td><code>XAI_API_KEY</code></td>
+</tr>
+<tr>
+<td><strong>Google Gemini</strong></td>
+<td>free tier*</td>
+<td><a href="https://aistudio.google.com/apikey">aistudio.google.com</a></td>
+<td><code>GEMINI_API_KEY</code></td>
+</tr>
+<tr>
+<td><strong>OpenRouter</strong></td>
+<td><code>:free</code> models; paid models optional</td>
+<td><a href="https://openrouter.ai/keys">openrouter.ai/keys</a></td>
+<td><code>OPENROUTER_API_KEY</code></td>
+</tr>
+<tr>
+<td><strong>Groq</strong></td>
+<td>free tier*</td>
+<td><a href="https://console.groq.com/keys">console.groq.com</a></td>
+<td><code>GROQ_API_KEY</code></td>
+</tr>
+<tr>
+<td><strong>Ollama</strong></td>
+<td>free, local, offline</td>
+<td><a href="https://ollama.com/download">ollama.com</a> (no key)</td>
+<td><code>OLLAMA_HOST</code></td>
+</tr>
+<tr>
+<td><strong>ChatGPT plan</strong></td>
+<td>your ChatGPT subscription</td>
+<td><code>/login chatgpt</code> (browser sign-in, no key)</td>
+<td></td>
+</tr>
+<tr>
+<td><strong>Claude Code</strong></td>
+<td>your Claude subscription</td>
+<td>install <a href="https://code.claude.com">Claude Code</a> and sign in to it</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>* Gemini and Groq are free only while the key's project has no billing, so werkz labels their models
+&quot;free tier&quot;. OpenRouter's <code>:free</code> models are labelled &quot;free&quot;, and Ollama &quot;local&quot;.</p>
+<p>Add or change keys at any time with <code>/login</code> (or <code>werkz --login</code>). Keys are checked when you save them.</p>
+<h2 id="using-a-subscription-instead-of-an-api-key">Using a subscription instead of an API key<a class="anchor" href="#using-a-subscription-instead-of-an-api-key" aria-label="Link to this section">#</a></h2>
+<p>You can use the API and your subscription side by side: pick either from <code>/model</code>.</p>
+<h3 id="chatgpt-plan-sign-in-with-chatgpt">ChatGPT plan (Sign in with ChatGPT)<a class="anchor" href="#chatgpt-plan-sign-in-with-chatgpt" aria-label="Link to this section">#</a></h3>
+<pre><code class="language-text">/login chatgpt
+</code></pre>
+<p>werkz opens your browser to sign in to ChatGPT (&quot;Continue with ChatGPT&quot;). After you allow werkz to use your
+plan, models marked <strong>plan</strong> appear in <code>/model</code>, and requests to them count toward your ChatGPT plan's usage
+limits instead of being billed to an API key. On Plus that is a five-hour limit shared with your other apps;
+see or cap werkz's share at <a href="https://chatgpt.com/settings/usage">chatgpt.com/settings/usage</a>. The status bar
+says <strong>Using ChatGPT plan</strong> while one of these models is selected.</p>
+<ul>
+<li>This uses OpenAI's official <a href="https://developers.openai.com/siwc/token-sharing-open-source">Sign in with ChatGPT</a>
+for open-source apps. werkz never reads the Codex CLI's login.</li>
+<li>werkz's tools, permission modes and safety rules work exactly as with an API key.</li>
+<li>The sign-in is stored in <code>~/.config/werkz/chatgpt.json</code> (only your user can read it) and refreshed
+automatically. <code>/logout chatgpt</code> revokes it.</li>
+<li>When the plan's limit is reached, werkz says so and links to the usage page; with <a href="fallback.html">fallback</a>
+on, another model can take over.</li>
+<li><strong>Limits:</strong> OpenAI doesn't share plan usage with apps, so werkz can't always show it. <code>/usage</code> shows the
+5-hour and weekly readings when ChatGPT's responses include them (the same readings Codex shows; this isn't
+documented by OpenAI), says clearly when the limit is reached, and otherwise links to
+<a href="https://chatgpt.com/settings/usage">chatgpt.com/settings/usage</a>.</li>
+<li>Over SSH or on a machine without a desktop, werkz shows the sign-in link instead of opening a browser.
+Open it on your computer; if werkz runs on another machine, first forward the port werkz names (for
+example <code>ssh -L 1455:127.0.0.1:1455 your-server</code>) so the sign-in can return to werkz.</li>
+</ul>
+<h3 id="claude-code-your-claude-subscription">Claude Code (your Claude subscription)<a class="anchor" href="#claude-code-your-claude-subscription" aria-label="Link to this section">#</a></h3>
+<p>Anthropic doesn't allow other apps to sign in with a Claude account, so werkz doesn't. Instead it can run
+<strong>your own installed Claude Code</strong> in its headless mode (<code>claude -p</code>): Claude Code uses its own sign-in and
+your subscription, and werkz shows its work.</p>
+<ol>
+<li>Install <a href="https://code.claude.com">Claude Code</a> and run <code>claude</code> once to sign in.</li>
+<li>In werkz, pick a model marked <strong>(Claude Code)</strong> in <code>/model</code> (<code>/login claudecode</code> checks the setup).</li>
+</ol>
+<p>How it differs from the other providers:</p>
+<ul>
+<li><strong>Claude Code does the work with its own tools</strong>, and werkz shows each step. When Claude Code needs
+permission, werkz asks you with its usual dialog and rules (plan mode, folders, credential locations).
+Actions Claude Code's own settings already allow don't ask.</li>
+<li>Claude Code keeps the conversation and compacts it itself; werkz's <code>/compact</code> and caching settings don't
+apply. Switching to Claude Code mid-conversation passes the conversation so far along.</li>
+<li>werkz removes <code>ANTHROPIC_API_KEY</code> from Claude Code's environment, so it uses your subscription rather than
+billing that key.</li>
+<li><strong>Limits:</strong> Claude Code reports your plan's usage windows with every request: the 5-hour window, the weekly
+window, and a model's own weekly window (such as Fable) when your plan has one. The status bar shows them
+(for example <code>5h 23% · weekly 24%</code>), <code>/usage</code> lists each with its reset time, and werkz warns once as a
+window passes 80% and 90%.</li>
+<li>This mode relies on Claude Code's documented headless mode; Anthropic's terms don't say whether running it
+from another app is allowed, so check them if that matters to you.</li>
+</ul>
+<h2 id="claude-models">Claude models<a class="anchor" href="#claude-models" aria-label="Link to this section">#</a></h2>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Best for</th>
+<th>Price per 1M tokens (in / out)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Fable 5.2</td>
+<td>the longest, hardest tasks</td>
+<td>$8 / $40</td>
+</tr>
+<tr>
+<td>Opus 5.5</td>
+<td>complex projects, agents, coding (default)</td>
+<td>$4 / $20</td>
+</tr>
+<tr>
+<td>Sonnet 5.5</td>
+<td>everyday tasks, cost-efficient</td>
+<td>$2 / $10</td>
+</tr>
+<tr>
+<td>Haiku 5.5</td>
+<td>fastest, lowest cost</td>
+<td>$0.10 / $0.50 ($0.50 / $2.50 for prompts over 100K tokens)</td>
+</tr>
+</tbody>
+</table>
+<p>For the other providers, <code>/model</code> lists the models your key can use.</p>
+<h2 id="openrouter-free-and-paid-models">OpenRouter: free and paid models<a class="anchor" href="#openrouter-free-and-paid-models" aria-label="Link to this section">#</a></h2>
+<p>OpenRouter gives one key access to hundreds of models. By default werkz shows only its free (<code>:free</code>)
+models. Run <code>/openrouter paid</code> to also list the paid ones (Claude, GPT, Gemini, Llama and many more) with their
+real per-token prices; they're billed to your OpenRouter credit, which the status bar shows.
+<code>/openrouter free</code> hides them again. Paid models are labelled as paid everywhere werkz offers them, including
+the fallback dialogs.</p>
+<p>Free OpenRouter models are withdrawn from time to time. werkz checks the live list at start-up and, if your
+free model is no longer offered, switches to an available free one and tells you.</p>
+<h2 id="effort-and-fast-mode">Effort and fast mode<a class="anchor" href="#effort-and-fast-mode" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><strong><code>/model</code></strong> switches between every connected provider's models, showing context size and price.</li>
+<li><strong><code>/effort</code></strong> sets how much the model thinks before it answers:
+<ul>
+<li>On Claude the levels are <code>low</code>, <code>medium</code>, <code>high</code>, <code>xhigh</code> and <code>max</code>. Higher is smarter, slower and
+costs more; <code>xhigh</code> suits hard coding work. The defaults are <code>medium</code> on Opus 5.5 and Haiku 5.5, and
+<code>high</code> on Sonnet 5.5 and Fable 5.2.</li>
+<li>On other providers the levels are <code>auto</code>, <code>low</code>, <code>medium</code> and <code>high</code>.</li>
+</ul>
+</li>
+<li><strong>Fast mode</strong> (Opus 5.5 and Fable 5.2) streams output up to about 2.5× faster, at double the price.</li>
+</ul>
+<p>Changing the model, effort or fast mode in the middle of a conversation invalidates the prompt cache, so
+werkz warns you when you make the change, with what re-sending the conversation will cost. See
+<a href="saving-tokens.html">Saving tokens and money</a>.</p>
+
+    <nav class="doc-foot" aria-label="Previous and next">
+      <a href="usage.html"><small class="caps">Previous</small>Usage</a>
+      <a href="safety.html" style="text-align:right"><small class="caps">Next</small>Safety and privacy</a>
+    </nav>
+    <p class="edit"><a href="https://github.com/TonmoyTalukder/werkz/blob/main/docs/providers-and-models.md">Edit this page on GitHub</a></p>
+  </article>
+  <aside class="toc" aria-label="On this page"><p class="caps">On this page</p><ol>
+    <li><a href="#using-a-subscription-instead-of-an-api-key">Using a subscription instead of an API key</a></li>
+    <li><a href="#claude-models">Claude models</a></li>
+    <li><a href="#openrouter-free-and-paid-models">OpenRouter: free and paid models</a></li>
+    <li><a href="#effort-and-fast-mode">Effort and fast mode</a></li>
+  </ol></aside>
+</div>
+<footer class="foot">
+  <div class="foot-base" style="border-top:0;padding-top:24px">
+    <span>© Tonmoy Talukder and contributors · Apache 2.0</span>
+    <a href="https://github.com/TonmoyTalukder/werkz"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>TonmoyTalukder/werkz</a>
+  </div>
+</footer>
+<script src="../site.js" defer></script>
+</body>
+</html>

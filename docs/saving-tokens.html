@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Saving tokens and money · werkz</title>
+<meta name="description" content="Caching, compaction, context window, cost">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c0d14" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../assets/favicon.png">
+<link rel="preload" href="../fonts/Geist-300-700.woff2" as="font" type="font/woff2" crossorigin>
+<script>(() => { let t = null; try { t = localStorage.getItem("werkz-theme"); } catch {} const q = new URLSearchParams(location.search).get("theme"); if (q === "light" || q === "dark") t = q; if (t !== "light" && t !== "dark") t = "light"; document.documentElement.dataset.theme = t; })();</script>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body class="docs">
+<a class="skip" href="#doc">Skip to content</a>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-github" viewBox="0 0 16 16"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></g></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+</svg>
+<header class="top">
+  <div class="top-inner">
+    <a class="brand" href="../" aria-label="werkz home"><img src="../assets/werkz.png" alt="" width="28" height="28">werkz</a>
+    <nav id="topnav" aria-label="Main">
+      <a href="./" aria-current="page">Docs</a>
+      <a href="../#install">Install</a>
+      <a href="../#subscriptions">Subscriptions</a>
+      <a href="releases.html">Releases</a>
+      <a href="contributing.html">Contribute</a>
+    </nav>
+    <div class="top-actions">
+      <button class="icon-btn theme-toggle" type="button" aria-label="Switch between light and dark theme"><svg class="icon sun" aria-hidden="true"><use href="#i-sun"/></svg><svg class="icon moon" aria-hidden="true"><use href="#i-moon"/></svg></button>
+      <a class="icon-btn" href="https://github.com/TonmoyTalukder/werkz" aria-label="werkz on GitHub"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg><span class="gh-label">GitHub</span></a>
+      <button class="icon-btn menu-toggle" type="button" aria-expanded="false" aria-controls="topnav" aria-label="Menu"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+    </div>
+  </div>
+</header>
+<div class="docs-shell">
+  <nav class="docs-nav" aria-label="Documentation">
+    <details open><summary class="caps">Documentation</summary>
+    <ol>
+      <li><a href="installation.html">Installation</a></li>
+      <li><a href="getting-started.html">Getting started</a></li>
+      <li><a href="usage.html">Usage</a></li>
+      <li><a href="providers-and-models.html">Providers and models</a></li>
+      <li><a href="safety.html">Safety and privacy</a></li>
+      <li><a href="fallback.html">Fallback</a></li>
+      <li><a href="workspaces.html">Workspaces</a></li>
+      <li><a href="saving-tokens.html" aria-current="page">Saving tokens and money</a></li>
+      <li><a href="configuration.html">Configuration</a></li>
+      <li><a href="troubleshooting.html">Troubleshooting</a></li>
+      <li><a href="development.html">Development</a></li>
+      <li><a href="contributing.html">Contributing</a></li>
+      <li><a href="releases.html">Release notes</a></li>
+    </ol>
+    </details>
+  </nav>
+  <article class="doc" id="doc">
+    <h1>Saving tokens and money</h1>
+    <p>Every request to a model re-sends the whole conversation, so werkz is designed to keep requests small and
+cached. Its techniques come from Anthropic's prompt-caching guidance and from how Claude Code, Codex CLI,
+OpenCode, Gemini CLI, Aider and others manage context.</p>
+<table>
+<thead>
+<tr>
+<th>Technique</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Prompt caching</strong> (Claude)</td>
+<td>The system prompt and tools never change, so every request starts with the same prefix. That prefix and the growing conversation are cached; cache reads cost 0.05× the input price on Opus and Sonnet 5.5 and 0.025× on Fable 5.2. Things that change (folders, date, workspace) are added after the history, so they never break the cache.</td>
+</tr>
+<tr>
+<td><strong>Cache keep-alive</strong></td>
+<td>While you're idle, a tiny <code>max_tokens: 0</code> ping every ~4½ minutes (billed as a cache read) keeps the cache warm for up to 30 minutes. It stops when you switch model, effort or fast mode.</td>
+</tr>
+<tr>
+<td><strong>Idle warning</strong></td>
+<td>If the cache has expired and the conversation is 150k+ tokens, werkz suggests <code>/compact</code> before re-sending everything.</td>
+</tr>
+<tr>
+<td><strong>Compaction</strong></td>
+<td><code>/compact</code> (or automatically at 300k tokens) replaces the conversation with a structured summary plus the git state. It waits while a test is failing so the error isn't summarized away, and your newest message is always kept word for word.</td>
+</tr>
+<tr>
+<td><strong>Context window limit</strong></td>
+<td><code>/context window 350k</code> caps the window for every model (the model's own window still applies when it's smaller); <code>/context window full</code> removes the cap. Auto-compaction then runs at ~80% of the window (here ~280k) and never later than 92%, so long sessions re-send less. With Claude Code, the limit is passed on as its auto-compact window (at least 100k).</td>
+</tr>
+<tr>
+<td><strong>Quiet test output</strong></td>
+<td>Passing tests and progress lines from <code>go test</code>, vitest, jest, npm test, pytest and <code>cargo test</code> are hidden; failures are kept. Add <code>NO_TRIM=1</code> to a command to see everything.</td>
+</tr>
+<tr>
+<td><strong>Big output to a file</strong></td>
+<td>Command output over 30k characters is cut to its start and end, and the full, untrimmed output is saved to a file the model can search (kept 7 days in <code>~/.cache/werkz/outputs</code>).</td>
+</tr>
+<tr>
+<td><strong>Capped reads and searches</strong></td>
+<td>Read returns at most 2,000 lines and asks for a range on files over 256 KB. Grep returns file names by default.</td>
+</tr>
+<tr>
+<td><strong>Cheap sub-agent</strong></td>
+<td>Broad exploration runs in a separate context on your current provider (Claude Haiku 5.5 at low effort when you're on Claude) and returns only a short report.</td>
+</tr>
+<tr>
+<td><strong>Project files once</strong></td>
+<td><code>AGENTS.md</code> / <code>CLAUDE.md</code> are sent once per session, not with every message.</td>
+</tr>
+<tr>
+<td><strong>Loop guard</strong></td>
+<td>Five identical tool calls in a row stop the turn.</td>
+</tr>
+</tbody>
+</table>
+<p>The status bar shows the <strong>cache hit rate</strong>. <code>/cache</code> and <code>/cost</code> show tokens read from and written to the
+cache, money saved, and whether the cache is still warm. <code>/cache ttl 1h</code> switches to the 1-hour cache, and
+<code>/cache keepalive off</code> turns the keep-alive off.</p>
+<p><strong>Measured</strong> on the live Claude API (Haiku 5.5, three messages): after the first message, each request read
+<strong>97–99%</strong> of its input from the cache and cost about a tenth of the first one.</p>
+<h2 id="cost-and-balance">Cost and balance<a class="anchor" href="#cost-and-balance" aria-label="Link to this section">#</a></h2>
+<p>The status bar shows the session cost:</p>
+<ul>
+<li><strong>OpenRouter:</strong> the cost OpenRouter reports for each request.</li>
+<li><strong>Claude:</strong> estimated from token usage and list prices (including cache reads and writes).</li>
+<li><strong>OpenAI and xAI:</strong> werkz doesn't know their prices, so usage there makes the figure a lower bound, shown
+as <code>$0.42+?</code>.</li>
+</ul>
+<p>Anthropic doesn't expose your prepaid credit to an API key, so set your starting credit once with
+<code>/balance 100</code> and werkz subtracts its estimate as you work; the Console's Billing page is the exact figure.
+OpenRouter credit is read live from its API.</p>
+
+    <nav class="doc-foot" aria-label="Previous and next">
+      <a href="workspaces.html"><small class="caps">Previous</small>Workspaces</a>
+      <a href="configuration.html" style="text-align:right"><small class="caps">Next</small>Configuration</a>
+    </nav>
+    <p class="edit"><a href="https://github.com/TonmoyTalukder/werkz/blob/main/docs/saving-tokens.md">Edit this page on GitHub</a></p>
+  </article>
+  <aside class="toc" aria-label="On this page"><p class="caps">On this page</p><ol>
+    <li><a href="#cost-and-balance">Cost and balance</a></li>
+  </ol></aside>
+</div>
+<footer class="foot">
+  <div class="foot-base" style="border-top:0;padding-top:24px">
+    <span>© Tonmoy Talukder and contributors · Apache 2.0</span>
+    <a href="https://github.com/TonmoyTalukder/werkz"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>TonmoyTalukder/werkz</a>
+  </div>
+</footer>
+<script src="../site.js" defer></script>
+</body>
+</html>

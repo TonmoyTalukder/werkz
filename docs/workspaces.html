@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workspaces · werkz</title>
+<meta name="description" content="Working across several repositories">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c0d14" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../assets/favicon.png">
+<link rel="preload" href="../fonts/Geist-300-700.woff2" as="font" type="font/woff2" crossorigin>
+<script>(() => { let t = null; try { t = localStorage.getItem("werkz-theme"); } catch {} const q = new URLSearchParams(location.search).get("theme"); if (q === "light" || q === "dark") t = q; if (t !== "light" && t !== "dark") t = "light"; document.documentElement.dataset.theme = t; })();</script>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body class="docs">
+<a class="skip" href="#doc">Skip to content</a>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-github" viewBox="0 0 16 16"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></g></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+</svg>
+<header class="top">
+  <div class="top-inner">
+    <a class="brand" href="../" aria-label="werkz home"><img src="../assets/werkz.png" alt="" width="28" height="28">werkz</a>
+    <nav id="topnav" aria-label="Main">
+      <a href="./" aria-current="page">Docs</a>
+      <a href="../#install">Install</a>
+      <a href="../#subscriptions">Subscriptions</a>
+      <a href="releases.html">Releases</a>
+      <a href="contributing.html">Contribute</a>
+    </nav>
+    <div class="top-actions">
+      <button class="icon-btn theme-toggle" type="button" aria-label="Switch between light and dark theme"><svg class="icon sun" aria-hidden="true"><use href="#i-sun"/></svg><svg class="icon moon" aria-hidden="true"><use href="#i-moon"/></svg></button>
+      <a class="icon-btn" href="https://github.com/TonmoyTalukder/werkz" aria-label="werkz on GitHub"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg><span class="gh-label">GitHub</span></a>
+      <button class="icon-btn menu-toggle" type="button" aria-expanded="false" aria-controls="topnav" aria-label="Menu"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+    </div>
+  </div>
+</header>
+<div class="docs-shell">
+  <nav class="docs-nav" aria-label="Documentation">
+    <details open><summary class="caps">Documentation</summary>
+    <ol>
+      <li><a href="installation.html">Installation</a></li>
+      <li><a href="getting-started.html">Getting started</a></li>
+      <li><a href="usage.html">Usage</a></li>
+      <li><a href="providers-and-models.html">Providers and models</a></li>
+      <li><a href="safety.html">Safety and privacy</a></li>
+      <li><a href="fallback.html">Fallback</a></li>
+      <li><a href="workspaces.html" aria-current="page">Workspaces</a></li>
+      <li><a href="saving-tokens.html">Saving tokens and money</a></li>
+      <li><a href="configuration.html">Configuration</a></li>
+      <li><a href="troubleshooting.html">Troubleshooting</a></li>
+      <li><a href="development.html">Development</a></li>
+      <li><a href="contributing.html">Contributing</a></li>
+      <li><a href="releases.html">Release notes</a></li>
+    </ol>
+    </details>
+  </nav>
+  <article class="doc" id="doc">
+    <h1>Workspaces</h1>
+    <p>By default there is <strong>no workspace</strong>: werkz works in the folder you start it from. When a task spans several
+repositories, open a workspace, which is a named set of folders plus optional environment variables.</p>
+<ul>
+<li><strong><code>/workspace</code></strong> opens a picker: No workspace (default), your starred and recent workspaces, and
+<strong>+ New workspace</strong>. In the picker, <strong>Ctrl+S</strong> stars a workspace, <strong>Ctrl+E</strong> edits it and <strong>Ctrl+X</strong>
+(pressed twice) deletes it.</li>
+<li><strong><code>/workspace new</code></strong> asks for a name, the folders (Tab completes paths; the first folder is the main one)
+and any environment variables, such as <code>APP_ENV=dev</code>.</li>
+<li><strong><code>/workspace &lt;name&gt;</code></strong> opens one directly; <strong><code>/workspace none</code></strong> goes back to no workspace.</li>
+<li><strong><code>/add-dir &lt;path&gt;</code></strong> adds a folder on the fly. If a workspace is open, the folder is saved into it.
+<strong><code>/dirs</code></strong> lists the working folders.</li>
+</ul>
+<p>From the command line: <code>werkz -w my-workspace</code>, or <code>werkz ~/code/api ~/code/web</code> for an unsaved set.</p>
+<p>Inside a workspace, the model can read, search and edit in every folder, and <code>Grep</code> and <code>Glob</code> search all of
+them. Shell commands run in the main folder with the workspace's variables. The status bar shows the
+workspace, for example <code>▸ my-app (2)</code>. Anything outside the workspace folders still asks first
+(see <a href="safety.html">Safety and privacy</a>).</p>
+
+    <nav class="doc-foot" aria-label="Previous and next">
+      <a href="fallback.html"><small class="caps">Previous</small>Fallback</a>
+      <a href="saving-tokens.html" style="text-align:right"><small class="caps">Next</small>Saving tokens and money</a>
+    </nav>
+    <p class="edit"><a href="https://github.com/TonmoyTalukder/werkz/blob/main/docs/workspaces.md">Edit this page on GitHub</a></p>
+  </article>
+  
+</div>
+<footer class="foot">
+  <div class="foot-base" style="border-top:0;padding-top:24px">
+    <span>© Tonmoy Talukder and contributors · Apache 2.0</span>
+    <a href="https://github.com/TonmoyTalukder/werkz"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>TonmoyTalukder/werkz</a>
+  </div>
+</footer>
+<script src="../site.js" defer></script>
+</body>
+</html>

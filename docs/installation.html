@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Installation · werkz</title>
+<meta name="description" content="Installer, Homebrew, apt, dnf, package files, updating, uninstalling">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c0d14" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../assets/favicon.png">
+<link rel="preload" href="../fonts/Geist-300-700.woff2" as="font" type="font/woff2" crossorigin>
+<script>(() => { let t = null; try { t = localStorage.getItem("werkz-theme"); } catch {} const q = new URLSearchParams(location.search).get("theme"); if (q === "light" || q === "dark") t = q; if (t !== "light" && t !== "dark") t = "light"; document.documentElement.dataset.theme = t; })();</script>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body class="docs">
+<a class="skip" href="#doc">Skip to content</a>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-github" viewBox="0 0 16 16"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></g></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+</svg>
+<header class="top">
+  <div class="top-inner">
+    <a class="brand" href="../" aria-label="werkz home"><img src="../assets/werkz.png" alt="" width="28" height="28">werkz</a>
+    <nav id="topnav" aria-label="Main">
+      <a href="./" aria-current="page">Docs</a>
+      <a href="../#install">Install</a>
+      <a href="../#subscriptions">Subscriptions</a>
+      <a href="releases.html">Releases</a>
+      <a href="contributing.html">Contribute</a>
+    </nav>
+    <div class="top-actions">
+      <button class="icon-btn theme-toggle" type="button" aria-label="Switch between light and dark theme"><svg class="icon sun" aria-hidden="true"><use href="#i-sun"/></svg><svg class="icon moon" aria-hidden="true"><use href="#i-moon"/></svg></button>
+      <a class="icon-btn" href="https://github.com/TonmoyTalukder/werkz" aria-label="werkz on GitHub"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg><span class="gh-label">GitHub</span></a>
+      <button class="icon-btn menu-toggle" type="button" aria-expanded="false" aria-controls="topnav" aria-label="Menu"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+    </div>
+  </div>
+</header>
+<div class="docs-shell">
+  <nav class="docs-nav" aria-label="Documentation">
+    <details open><summary class="caps">Documentation</summary>
+    <ol>
+      <li><a href="installation.html" aria-current="page">Installation</a></li>
+      <li><a href="getting-started.html">Getting started</a></li>
+      <li><a href="usage.html">Usage</a></li>
+      <li><a href="providers-and-models.html">Providers and models</a></li>
+      <li><a href="safety.html">Safety and privacy</a></li>
+      <li><a href="fallback.html">Fallback</a></li>
+      <li><a href="workspaces.html">Workspaces</a></li>
+      <li><a href="saving-tokens.html">Saving tokens and money</a></li>
+      <li><a href="configuration.html">Configuration</a></li>
+      <li><a href="troubleshooting.html">Troubleshooting</a></li>
+      <li><a href="development.html">Development</a></li>
+      <li><a href="contributing.html">Contributing</a></li>
+      <li><a href="releases.html">Release notes</a></li>
+    </ol>
+    </details>
+  </nav>
+  <article class="doc" id="doc">
+    <h1>Installation</h1>
+    <p>werkz runs on <strong>Linux</strong> (x86-64 and ARM64) and <strong>macOS</strong> (Apple Silicon and Intel).</p>
+<h2 id="one-line-installer-recommended">One-line installer (recommended)<a class="anchor" href="#one-line-installer-recommended" aria-label="Link to this section">#</a></h2>
+<pre><code class="language-bash">curl -fsSL https://raw.githubusercontent.com/TonmoyTalukder/werkz/main/install.sh | sh
+</code></pre>
+<p>The script downloads the latest release for your system from
+<a href="https://github.com/TonmoyTalukder/werkz/releases">GitHub Releases</a>, checks its SHA-256 checksum, and installs:</p>
+<ul>
+<li><strong>Linux:</strong> the <code>werkz</code> command in <code>~/.local/bin</code>, plus a <strong>werkz</strong> icon in your app grid and on your
+Desktop. Set <code>WERKZ_NO_DESKTOP=1</code> to install only the command.</li>
+<li><strong>macOS:</strong> <strong>werkz.app</strong> in <code>/Applications</code> (or <code>~/Applications</code> if that isn't writable), plus a <code>werkz</code>
+command in <code>~/.local/bin</code>.</li>
+</ul>
+<p>To install a specific version: <code>curl -fsSL …/install.sh | WERKZ_VERSION=v0.1.0 sh</code>.</p>
+<p>If <code>~/.local/bin</code> isn't on your <code>PATH</code>, the installer tells you; add this to your shell profile:</p>
+<pre><code class="language-bash">export PATH=&quot;$HOME/.local/bin:$PATH&quot;
+</code></pre>
+<h2 id="download-a-release-manually">Download a release manually<a class="anchor" href="#download-a-release-manually" aria-label="Link to this section">#</a></h2>
+<p>Every <a href="https://github.com/TonmoyTalukder/werkz/releases">release</a> has these files:</p>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>werkz-&lt;version&gt;-linux.tar.gz</code></td>
+<td>Linux package: both architectures, installer, launcher and icons</td>
+</tr>
+<tr>
+<td><code>werkz-&lt;version&gt;-macos.zip</code></td>
+<td>macOS: <code>werkz.app</code> for Apple Silicon and Intel</td>
+</tr>
+<tr>
+<td><code>werkz-&lt;version&gt;-linux-amd64</code>, <code>-linux-arm64</code>, <code>-darwin-amd64</code>, <code>-darwin-arm64</code></td>
+<td>The bare command for one system</td>
+</tr>
+<tr>
+<td><code>SHA256SUMS</code></td>
+<td>Checksums for all of the above</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Linux package:</strong></p>
+<pre><code class="language-bash">tar xzf werkz-0.1.0-linux.tar.gz
+cd werkz-linux &amp;&amp; ./install.sh
+</code></pre>
+<p>The installer adds the command, an app-grid entry and a Desktop icon. If the Desktop icon shows as a plain
+file, right-click it and choose <strong>Allow Launching</strong>. Clicking it opens werkz in a new terminal window
+(ptyxis, GNOME Terminal, Konsole, kitty, Alacritty, WezTerm, foot, Tilix or xterm, whichever is installed);
+set <code>WERKZ_TERMINAL=kitty</code> to choose one.</p>
+<p><strong>macOS app:</strong> unzip <code>werkz-0.1.0-macos.zip</code> and drag <strong>werkz.app</strong> to Applications. The app isn't signed with
+an Apple Developer ID, so the first time you open a <em>browser-downloaded</em> copy, right-click it and choose
+<strong>Open</strong>, or run:</p>
+<pre><code class="language-bash">xattr -dr com.apple.quarantine /Applications/werkz.app
+</code></pre>
+<p>macOS also asks once for permission for werkz to control Terminal. (The one-line installer downloads with
+<code>curl</code>, which doesn't set the quarantine flag.)</p>
+<p><strong>A bare binary:</strong> download the one for your system, then:</p>
+<pre><code class="language-bash">chmod +x werkz-0.1.0-linux-amd64
+mv werkz-0.1.0-linux-amd64 ~/.local/bin/werkz
+</code></pre>
+<p>Verify any download with <code>sha256sum -c SHA256SUMS --ignore-missing</code> (Linux) or
+<code>shasum -a 256 -c SHA256SUMS --ignore-missing</code> (macOS).</p>
+<h2 id="homebrew-macos-and-linux">Homebrew (macOS and Linux)<a class="anchor" href="#homebrew-macos-and-linux" aria-label="Link to this section">#</a></h2>
+<pre><code class="language-bash">brew install --cask ZenixBit/tap/werkz
+</code></pre>
+<p>This installs the <code>werkz</code> command (no app icon). Update with <code>brew upgrade --cask werkz</code>.</p>
+<h2 id="apt-debian-ubuntu">apt (Debian, Ubuntu)<a class="anchor" href="#apt-debian-ubuntu" aria-label="Link to this section">#</a></h2>
+<pre><code class="language-bash">sudo install -d -m 755 /etc/apt/keyrings
+curl -fsSL https://tonmoytalukder.github.io/werkz/werkz.gpg | sudo tee /etc/apt/keyrings/werkz.gpg &gt;/dev/null
+echo &quot;deb [signed-by=/etc/apt/keyrings/werkz.gpg] https://tonmoytalukder.github.io/werkz/apt stable main&quot; | sudo tee /etc/apt/sources.list.d/werkz.list
+sudo apt update
+sudo apt install werkz
+</code></pre>
+<p>The first three lines add the werkz repository once; after that <code>sudo apt upgrade</code> keeps werkz up to date.</p>
+<h2 id="dnf-fedora-rhel">dnf (Fedora, RHEL)<a class="anchor" href="#dnf-fedora-rhel" aria-label="Link to this section">#</a></h2>
+<pre><code class="language-bash">sudo curl -fsSL https://tonmoytalukder.github.io/werkz/rpm/werkz.repo -o /etc/yum.repos.d/werkz.repo
+sudo dnf install werkz
+</code></pre>
+<p><code>sudo dnf upgrade</code> then keeps it up to date. Both repositories are signed with the werkz key
+(fingerprint <code>3148 F0F0 B5B3 55FC 9FC1 9B2C 20A3 4C2D 3430 3C54</code>), served from
+<a href="https://tonmoytalukder.github.io/werkz/">tonmoytalukder.github.io/werkz</a>.</p>
+<h2 id="linux-package-files">Linux package files<a class="anchor" href="#linux-package-files" aria-label="Link to this section">#</a></h2>
+<p>Each release has <code>.deb</code> (Debian, Ubuntu), <code>.rpm</code> (Fedora, RHEL, openSUSE), <code>.apk</code> (Alpine) and Arch Linux
+(<code>.pkg.tar.zst</code>) packages for x86-64 and ARM64. They install <code>werkz</code> in <code>/usr/bin</code> with an app-grid entry and
+icons. Download the one for your system from the <a href="https://github.com/TonmoyTalukder/werkz/releases/latest">releases page</a>, then:</p>
+<pre><code class="language-bash">sudo apt install ./werkz_0.2.0_amd64.deb        # Debian, Ubuntu
+sudo dnf install ./werkz-0.2.0-1.x86_64.rpm     # Fedora, RHEL
+sudo pacman -U ./werkz-0.2.0-1-x86_64.pkg.tar.zst  # Arch
+sudo apk add --allow-untrusted ./werkz_0.2.0_x86_64.apk  # Alpine
+</code></pre>
+<p>Update by installing the newer package the same way.</p>
+<h2 id="with-go">With Go<a class="anchor" href="#with-go" aria-label="Link to this section">#</a></h2>
+<pre><code class="language-bash">go install github.com/TonmoyTalukder/werkz/cmd/werkz@latest
+</code></pre>
+<p>This needs Go 1.26 or later and puts <code>werkz</code> in <code>~/go/bin</code>. It installs the command only (no app icon).</p>
+<h2 id="from-source">From source<a class="anchor" href="#from-source" aria-label="Link to this section">#</a></h2>
+<pre><code class="language-bash">git clone https://github.com/TonmoyTalukder/werkz.git
+cd werkz
+go build -o werkz ./cmd/werkz
+./werkz
+</code></pre>
+<p>To build the Linux and macOS packages yourself, see <a href="development.html">Development</a>.</p>
+<h2 id="updating">Updating<a class="anchor" href="#updating" aria-label="Link to this section">#</a></h2>
+<p>werkz checks GitHub for a new release once a day, in the background. What happens next depends on how you
+installed it, and werkz always tells you the best way for your installation:</p>
+<table>
+<thead>
+<tr>
+<th>Installed with</th>
+<th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>One-line installer or a downloaded file</td>
+<td>werkz downloads the new version, verifies it against <code>SHA256SUMS</code>, and replaces itself; restart to use it</td>
+</tr>
+<tr>
+<td>apt (werkz repository)</td>
+<td><code>sudo apt update &amp;&amp; sudo apt install --only-upgrade werkz</code>; with <a href="#automatic-updates-with-apt">automatic updates</a> on, Ubuntu installs it for you</td>
+</tr>
+<tr>
+<td>dnf (werkz repository)</td>
+<td><code>sudo dnf upgrade werkz</code></td>
+</tr>
+<tr>
+<td>A <code>.deb</code>, <code>.rpm</code>, <code>.apk</code> or Arch package file</td>
+<td>werkz shows the command with the download link for the new package</td>
+</tr>
+<tr>
+<td>Homebrew</td>
+<td><code>brew upgrade --cask werkz</code></td>
+</tr>
+<tr>
+<td>A folder werkz can't write to</td>
+<td>Run the one-line installer again</td>
+</tr>
+</tbody>
+</table>
+<p>While an update is waiting, the status bar shows <strong>↑ werkz X available</strong>, and werkz reminds you when it starts.
+Type <code>/update</code> to see the exact command (or, for copies that update themselves, to install it right away);
+<code>werkz --update</code> does the same from a terminal.</p>
+<ul>
+<li><code>/update auto off</code> stops automatic installs; werkz still tells you when a new version is out.
+<code>/update auto on</code> turns them back on.</li>
+<li><code>WERKZ_NO_UPDATE=1</code> disables checks for a session. Builds made with <code>go build</code> without a version (shown as
+<code>dev</code>) never check.</li>
+<li>Only the <code>werkz</code> command is replaced; app icons and launchers stay as installed. Running the one-line
+installer again also updates everything and keeps your settings.</li>
+</ul>
+<h3 id="automatic-updates-with-apt">Automatic updates with apt<a class="anchor" href="#automatic-updates-with-apt" aria-label="Link to this section">#</a></h3>
+<p>Ubuntu's background updater installs only Ubuntu's own security updates by default. To let it install new
+werkz versions too (usually within a day of a release):</p>
+<pre><code class="language-bash">echo 'Unattended-Upgrade::Origins-Pattern { &quot;origin=werkz&quot;; };' | sudo tee /etc/apt/apt.conf.d/52werkz-unattended
+</code></pre>
+<p>Remove that file to turn it off again.</p>
+<h2 id="uninstalling">Uninstalling<a class="anchor" href="#uninstalling" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><strong>Linux:</strong> run <code>uninstall.sh</code> from the release package, or delete <code>~/.local/bin/werkz</code>,
+<code>~/.local/bin/werkz-launch</code>, <code>~/.local/share/applications/werkz.desktop</code> and the Desktop icon.</li>
+<li><strong>macOS:</strong> delete <code>werkz.app</code> and <code>~/.local/bin/werkz</code>.</li>
+<li><strong>Homebrew:</strong> <code>brew uninstall --cask werkz</code>. <strong>Linux packages:</strong> remove the <code>werkz</code> package with your package
+manager (for example <code>sudo apt remove werkz</code>). To drop the repository too, delete
+<code>/etc/apt/sources.list.d/werkz.list</code> and <code>/etc/apt/keyrings/werkz.gpg</code>, or <code>/etc/yum.repos.d/werkz.repo</code>.</li>
+</ul>
+<p>Your settings and API keys are kept in <code>~/.config/werkz/</code>; delete that folder to remove them too.</p>
+
+    <nav class="doc-foot" aria-label="Previous and next">
+      <span></span>
+      <a href="getting-started.html" style="text-align:right"><small class="caps">Next</small>Getting started</a>
+    </nav>
+    <p class="edit"><a href="https://github.com/TonmoyTalukder/werkz/blob/main/docs/installation.md">Edit this page on GitHub</a></p>
+  </article>
+  <aside class="toc" aria-label="On this page"><p class="caps">On this page</p><ol>
+    <li><a href="#one-line-installer-recommended">One-line installer (recommended)</a></li>
+    <li><a href="#download-a-release-manually">Download a release manually</a></li>
+    <li><a href="#homebrew-macos-and-linux">Homebrew (macOS and Linux)</a></li>
+    <li><a href="#apt-debian-ubuntu">apt (Debian, Ubuntu)</a></li>
+    <li><a href="#dnf-fedora-rhel">dnf (Fedora, RHEL)</a></li>
+    <li><a href="#linux-package-files">Linux package files</a></li>
+    <li><a href="#with-go">With Go</a></li>
+    <li><a href="#from-source">From source</a></li>
+    <li><a href="#updating">Updating</a></li>
+    <li><a href="#uninstalling">Uninstalling</a></li>
+  </ol></aside>
+</div>
+<footer class="foot">
+  <div class="foot-base" style="border-top:0;padding-top:24px">
+    <span>© Tonmoy Talukder and contributors · Apache 2.0</span>
+    <a href="https://github.com/TonmoyTalukder/werkz"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>TonmoyTalukder/werkz</a>
+  </div>
+</footer>
+<script src="../site.js" defer></script>
+</body>
+</html>

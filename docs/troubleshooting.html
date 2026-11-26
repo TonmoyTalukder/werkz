@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Troubleshooting · werkz</title>
+<meta name="description" content="Common problems and fixes">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c0d14" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../assets/favicon.png">
+<link rel="preload" href="../fonts/Geist-300-700.woff2" as="font" type="font/woff2" crossorigin>
+<script>(() => { let t = null; try { t = localStorage.getItem("werkz-theme"); } catch {} const q = new URLSearchParams(location.search).get("theme"); if (q === "light" || q === "dark") t = q; if (t !== "light" && t !== "dark") t = "light"; document.documentElement.dataset.theme = t; })();</script>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body class="docs">
+<a class="skip" href="#doc">Skip to content</a>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-github" viewBox="0 0 16 16"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></g></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+</svg>
+<header class="top">
+  <div class="top-inner">
+    <a class="brand" href="../" aria-label="werkz home"><img src="../assets/werkz.png" alt="" width="28" height="28">werkz</a>
+    <nav id="topnav" aria-label="Main">
+      <a href="./" aria-current="page">Docs</a>
+      <a href="../#install">Install</a>
+      <a href="../#subscriptions">Subscriptions</a>
+      <a href="releases.html">Releases</a>
+      <a href="contributing.html">Contribute</a>
+    </nav>
+    <div class="top-actions">
+      <button class="icon-btn theme-toggle" type="button" aria-label="Switch between light and dark theme"><svg class="icon sun" aria-hidden="true"><use href="#i-sun"/></svg><svg class="icon moon" aria-hidden="true"><use href="#i-moon"/></svg></button>
+      <a class="icon-btn" href="https://github.com/TonmoyTalukder/werkz" aria-label="werkz on GitHub"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg><span class="gh-label">GitHub</span></a>
+      <button class="icon-btn menu-toggle" type="button" aria-expanded="false" aria-controls="topnav" aria-label="Menu"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+    </div>
+  </div>
+</header>
+<div class="docs-shell">
+  <nav class="docs-nav" aria-label="Documentation">
+    <details open><summary class="caps">Documentation</summary>
+    <ol>
+      <li><a href="installation.html">Installation</a></li>
+      <li><a href="getting-started.html">Getting started</a></li>
+      <li><a href="usage.html">Usage</a></li>
+      <li><a href="providers-and-models.html">Providers and models</a></li>
+      <li><a href="safety.html">Safety and privacy</a></li>
+      <li><a href="fallback.html">Fallback</a></li>
+      <li><a href="workspaces.html">Workspaces</a></li>
+      <li><a href="saving-tokens.html">Saving tokens and money</a></li>
+      <li><a href="configuration.html">Configuration</a></li>
+      <li><a href="troubleshooting.html" aria-current="page">Troubleshooting</a></li>
+      <li><a href="development.html">Development</a></li>
+      <li><a href="contributing.html">Contributing</a></li>
+      <li><a href="releases.html">Release notes</a></li>
+    </ol>
+    </details>
+  </nav>
+  <article class="doc" id="doc">
+    <h1>Troubleshooting</h1>
+    <table>
+<thead>
+<tr>
+<th>Problem</th>
+<th>Fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><em>&quot;No provider available&quot;</em></td>
+<td>Add a key with <code>/login</code>, or start Ollama (<code>ollama serve</code>)</td>
+</tr>
+<tr>
+<td><em>&quot;rate limited&quot;</em> on a free model</td>
+<td>Free tiers allow only a few requests per minute. Wait a moment, pick another model with <code>/model</code>, or turn on <a href="fallback.html">fallback</a></td>
+</tr>
+<tr>
+<td><em>&quot;model not found&quot;</em> or <em>&quot;unavailable for free&quot;</em></td>
+<td>That model isn't available to your key (OpenRouter withdraws free models from time to time). Choose one from <code>/model</code></td>
+</tr>
+<tr>
+<td><em>&quot;out of API credits&quot;</em></td>
+<td>Top up in your provider's console, then run <code>/login</code> so werkz uses the provider again. Claude credit is managed at platform.claude.com</td>
+</tr>
+<tr>
+<td><em>&quot;… can't use tools&quot;</em></td>
+<td>That model can't call tools, so it can't read or change files. Choose a tool-capable model with <code>/model</code> for coding work</td>
+</tr>
+<tr>
+<td><em>&quot;fallback is off&quot;</em></td>
+<td>The model failed and fallback is off (the default). Switch model with <code>/model</code>, or choose a mode with <code>/fallback</code></td>
+</tr>
+<tr>
+<td>werkz takes a few seconds to appear in some terminals</td>
+<td>At start-up the UI library asks the terminal for its background colour; terminals that never answer delay it by up to 5 seconds. Wait for the screen before typing</td>
+</tr>
+<tr>
+<td>Every edit asks, even in auto mode</td>
+<td>You're in your home folder, which is never treated as a project. Open a project with <code>/workspace</code> or <code>/add-dir</code>, or start werkz inside the project</td>
+</tr>
+<tr>
+<td><em>&quot;Couldn't load your settings&quot;</em></td>
+<td><code>~/.config/werkz/config.json</code> isn't valid JSON. Fix or delete it; werkz won't overwrite it meanwhile</td>
+</tr>
+<tr>
+<td>The Desktop icon opens as a text file (Linux)</td>
+<td>Right-click it → <strong>Allow Launching</strong></td>
+</tr>
+<tr>
+<td><em>&quot;werkz.app is damaged / can't be opened&quot;</em> (macOS)</td>
+<td>It's the unsigned-app quarantine: right-click → <strong>Open</strong>, or run <code>xattr -dr com.apple.quarantine /Applications/werkz.app</code></td>
+</tr>
+<tr>
+<td>Text can't be selected</td>
+<td>Hold <strong>Shift</strong> while dragging (the mouse is used for scrolling)</td>
+</tr>
+<tr>
+<td><code>werkz: command not found</code> after installing</td>
+<td>Add <code>~/.local/bin</code> to your <code>PATH</code> (see <a href="installation.html">Installation</a>)</td>
+</tr>
+</tbody>
+</table>
+
+    <nav class="doc-foot" aria-label="Previous and next">
+      <a href="configuration.html"><small class="caps">Previous</small>Configuration</a>
+      <a href="development.html" style="text-align:right"><small class="caps">Next</small>Development</a>
+    </nav>
+    <p class="edit"><a href="https://github.com/TonmoyTalukder/werkz/blob/main/docs/troubleshooting.md">Edit this page on GitHub</a></p>
+  </article>
+  
+</div>
+<footer class="foot">
+  <div class="foot-base" style="border-top:0;padding-top:24px">
+    <span>© Tonmoy Talukder and contributors · Apache 2.0</span>
+    <a href="https://github.com/TonmoyTalukder/werkz"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>TonmoyTalukder/werkz</a>
+  </div>
+</footer>
+<script src="../site.js" defer></script>
+</body>
+</html>

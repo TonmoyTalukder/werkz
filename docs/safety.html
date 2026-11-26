@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Safety and privacy · werkz</title>
+<meta name="description" content="Permission modes and the rules that always apply">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0c0d14" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="../assets/favicon.png">
+<link rel="preload" href="../fonts/Geist-300-700.woff2" as="font" type="font/woff2" crossorigin>
+<script>(() => { let t = null; try { t = localStorage.getItem("werkz-theme"); } catch {} const q = new URLSearchParams(location.search).get("theme"); if (q === "light" || q === "dark") t = q; if (t !== "light" && t !== "dark") t = "light"; document.documentElement.dataset.theme = t; })();</script>
+<link rel="stylesheet" href="../styles.css">
+</head>
+<body class="docs">
+<a class="skip" href="#doc">Skip to content</a>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-github" viewBox="0 0 16 16"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></symbol>
+  <symbol id="i-menu" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></g></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+</svg>
+<header class="top">
+  <div class="top-inner">
+    <a class="brand" href="../" aria-label="werkz home"><img src="../assets/werkz.png" alt="" width="28" height="28">werkz</a>
+    <nav id="topnav" aria-label="Main">
+      <a href="./" aria-current="page">Docs</a>
+      <a href="../#install">Install</a>
+      <a href="../#subscriptions">Subscriptions</a>
+      <a href="releases.html">Releases</a>
+      <a href="contributing.html">Contribute</a>
+    </nav>
+    <div class="top-actions">
+      <button class="icon-btn theme-toggle" type="button" aria-label="Switch between light and dark theme"><svg class="icon sun" aria-hidden="true"><use href="#i-sun"/></svg><svg class="icon moon" aria-hidden="true"><use href="#i-moon"/></svg></button>
+      <a class="icon-btn" href="https://github.com/TonmoyTalukder/werkz" aria-label="werkz on GitHub"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg><span class="gh-label">GitHub</span></a>
+      <button class="icon-btn menu-toggle" type="button" aria-expanded="false" aria-controls="topnav" aria-label="Menu"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>
+    </div>
+  </div>
+</header>
+<div class="docs-shell">
+  <nav class="docs-nav" aria-label="Documentation">
+    <details open><summary class="caps">Documentation</summary>
+    <ol>
+      <li><a href="installation.html">Installation</a></li>
+      <li><a href="getting-started.html">Getting started</a></li>
+      <li><a href="usage.html">Usage</a></li>
+      <li><a href="providers-and-models.html">Providers and models</a></li>
+      <li><a href="safety.html" aria-current="page">Safety and privacy</a></li>
+      <li><a href="fallback.html">Fallback</a></li>
+      <li><a href="workspaces.html">Workspaces</a></li>
+      <li><a href="saving-tokens.html">Saving tokens and money</a></li>
+      <li><a href="configuration.html">Configuration</a></li>
+      <li><a href="troubleshooting.html">Troubleshooting</a></li>
+      <li><a href="development.html">Development</a></li>
+      <li><a href="contributing.html">Contributing</a></li>
+      <li><a href="releases.html">Release notes</a></li>
+    </ol>
+    </details>
+  </nav>
+  <article class="doc" id="doc">
+    <h1>Safety and privacy</h1>
+    <h2 id="permission-modes">Permission modes<a class="anchor" href="#permission-modes" aria-label="Link to this section">#</a></h2>
+<p>Press <strong>Shift+Tab</strong> (or type <code>/mode</code>) to cycle through the modes:</p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Reading and searching</th>
+<th>Edits</th>
+<th>Shell commands</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>default</strong></td>
+<td>✓</td>
+<td>asks</td>
+<td>asks</td>
+</tr>
+<tr>
+<td><strong>accept edits</strong></td>
+<td>✓</td>
+<td>✓</td>
+<td>asks</td>
+</tr>
+<tr>
+<td><strong>plan</strong></td>
+<td>✓</td>
+<td>blocked (read-only)</td>
+<td>blocked</td>
+</tr>
+<tr>
+<td><strong>auto</strong></td>
+<td>✓</td>
+<td>✓</td>
+<td>✓</td>
+</tr>
+<tr>
+<td><strong>bypass</strong></td>
+<td>✓</td>
+<td>✓</td>
+<td>✓, and nothing asks, even outside your working folders</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Auto</strong>, <strong>accept edits</strong> and <strong>bypass</strong> last only for the current session; werkz always starts in
+<strong>default</strong> (or <strong>plan</strong>, if you left it in plan mode).</p>
+<p><strong>Bypass</strong> is for sandboxes and projects you fully trust. It works with every model, including Claude Code
+mode. Turning it on (Shift+Tab after auto, or <code>/mode bypass</code>) always asks for confirmation first, with <strong>No</strong>
+preselected; the status bar then shows a red <em>bypass permissions on</em>. It is never saved: closing werkz ends
+it. Credential locations stay blocked even in bypass.</p>
+<h2 id="rules-that-apply-in-every-mode">Rules that apply in every mode<a class="anchor" href="#rules-that-apply-in-every-mode" aria-label="Link to this section">#</a></h2>
+<ul>
+<li>Reading, listing, searching or writing <strong>outside your working folders</strong> asks first (except in bypass). Symlinks are followed,
+so a link inside the project can't point the model elsewhere.</li>
+<li><strong>Credential locations</strong> (<code>~/.ssh</code>, <code>~/.aws</code>, <code>~/.gnupg</code>, <code>~/.config/werkz</code>, <code>.netrc</code>, <code>.git-credentials</code>, …)
+are never opened by the file tools.</li>
+<li>Your <strong>home folder is never treated as a project</strong>: started in <code>~</code> (for example from the desktop icon),
+every file change asks first and searches need a path. Open a project with <code>/workspace</code> or <code>/add-dir</code>.</li>
+<li>Edits are refused if the model hasn't read the file, or if the file changed on disk since it was read.</li>
+<li>Dialogs ignore keys for a moment after they appear and start on <strong>No</strong>, so text you're typing can't answer
+them by accident.</li>
+<li>&quot;Don't ask again&quot; for a shell command covers only that command (for example <code>go test …</code>), and isn't offered
+for compound commands (<code>;</code>, <code>&amp;&amp;</code>, pipes, redirects) or risky ones (<code>rm</code>, <code>sudo</code>, <code>curl</code>, <code>ssh</code>, …).</li>
+<li>Timeouts and <strong>Esc</strong> stop a command together with everything it started, and werkz stops its running
+commands when you quit.</li>
+<li>Text from models, tools and files is cleaned of terminal escape sequences before it's displayed.</li>
+<li>Project instruction files (<code>AGENTS.md</code>, <code>CLAUDE.md</code>) are passed to the model as repository content, not as
+werkz's own instructions, so they can't override these rules.</li>
+</ul>
+<p>In <strong>Claude Code mode</strong>, Claude Code runs its own tools. werkz shows them and answers every permission
+question Claude Code asks with the rules above, but actions Claude Code's own settings already allow (such
+as reading files in the project) don't reach werkz.</p>
+<h2 id="where-your-data-goes">Where your data goes<a class="anchor" href="#where-your-data-goes" aria-label="Link to this section">#</a></h2>
+<ul>
+<li><strong>Your code goes only to the provider you're using.</strong> werkz has no server, telemetry or analytics. Prompts
+and the files the model reads are sent to the model provider you selected (or stay on your machine with
+Ollama). The <code>Task</code> sub-agent uses the same provider.</li>
+<li><strong>Keys stay on your machine</strong>, in a config file only your user can read (see <a href="configuration.html">Configuration</a>).</li>
+<li><strong>No surprise spending or sharing:</strong> fallback is off unless you turn it on (see <a href="fallback.html">Fallback</a>),
+Ask mode labels paid models, and model or effort changes that would re-send the conversation uncached warn
+you first.</li>
+<li><strong>Mind your provider's data policy.</strong> Free tiers (Gemini, OpenRouter <code>:free</code>) may use prompts to improve
+their models. Use a paid key or Ollama for sensitive code.</li>
+</ul>
+
+    <nav class="doc-foot" aria-label="Previous and next">
+      <a href="providers-and-models.html"><small class="caps">Previous</small>Providers and models</a>
+      <a href="fallback.html" style="text-align:right"><small class="caps">Next</small>Fallback</a>
+    </nav>
+    <p class="edit"><a href="https://github.com/TonmoyTalukder/werkz/blob/main/docs/safety.md">Edit this page on GitHub</a></p>
+  </article>
+  <aside class="toc" aria-label="On this page"><p class="caps">On this page</p><ol>
+    <li><a href="#permission-modes">Permission modes</a></li>
+    <li><a href="#rules-that-apply-in-every-mode">Rules that apply in every mode</a></li>
+    <li><a href="#where-your-data-goes">Where your data goes</a></li>
+  </ol></aside>
+</div>
+<footer class="foot">
+  <div class="foot-base" style="border-top:0;padding-top:24px">
+    <span>© Tonmoy Talukder and contributors · Apache 2.0</span>
+    <a href="https://github.com/TonmoyTalukder/werkz"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>TonmoyTalukder/werkz</a>
+  </div>
+</footer>
+<script src="../site.js" defer></script>
+</body>
+</html>
