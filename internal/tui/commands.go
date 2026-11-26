@@ -39,6 +39,7 @@ var commands = []struct{ Name, Desc string }{
 	{"/copy", "Copy the latest response (or a code block) · /copy 2 · /copy prompt · /copy all"},
 	{"/export", "Save the conversation as markdown · /export <file>"},
 	{"/clear", "Start a new conversation (this one stays in /resume)"},
+	{"/mcp", "MCP servers and their tools · /mcp tools · /mcp approve|connect|disconnect|login <name> · /mcp reload"},
 	{"/browser", "werkz's browser for checking web UI · /browser view shows the page here · show|hide|close"},
 	{"/search", "Web search for the model · /search brave|tavily <key> · /search searxng <url> · /search off"},
 	{"/docs", "Open the werkz documentation in your browser"},
@@ -76,6 +77,8 @@ func (m *model) command(line string) tea.Cmd {
 		return m.copyCommand(args)
 	case "/export":
 		return m.exportCommand(args)
+	case "/mcp":
+		return m.mcpCommand(args)
 	case "/browser":
 		return m.browserCommand(args)
 	case "/search":

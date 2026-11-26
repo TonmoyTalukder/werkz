@@ -102,7 +102,7 @@ func oaTools(defs []llm.ToolDef) []map[string]any {
 		}
 		out = append(out, map[string]any{"type": "function", "function": map[string]any{
 			"name": d.Name, "description": d.Description,
-			"parameters": map[string]any{"type": "object", "properties": d.Properties, "required": req},
+			"parameters": schemaFor(d, req),
 		}})
 	}
 	return out
@@ -429,4 +429,16 @@ func OpenRouterCredits(ctx context.Context, key string) (float64, bool) {
 		return 0, false
 	}
 	return cr.Data.Total - cr.Data.Usage, true
+}
+
+// schemaFor is a tool's input schema: werkz's properties and required list, plus any other
+// top-level keys an MCP server gave ($defs, additionalProperties…).
+func schemaFor(d llm.ToolDef, req []string) map[string]any {
+	s := map[string]any{"type": "object", "properties": d.Properties, "required": req}
+	for k, v := range d.Extra {
+		if _, taken := s[k]; !taken {
+			s[k] = v
+		}
+	}
+	return s
 }

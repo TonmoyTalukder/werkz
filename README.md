@@ -61,6 +61,8 @@ changes and checks its work, asking before it does anything risky.
   profile), clicks through it, reads console and network errors, and compares screenshots before and after,
   showing the page right in your terminal where it can (kitty, Ghostty, iTerm2, WezTerm, Sixel). Opt in with
   `/browser connect` to let it work in your own Chrome, in a tab of its own.
+- **MCP servers:** use tools from any MCP server (stdio or HTTP with OAuth sign-in), configured the same way as in
+  Claude Code; a project's servers start only once you approve them.
 - **Made for daily use:** type `@` to attach files (with `@repo/path` across repos), drag to select and copy
   any text, and pick up any earlier conversation with `/resume` or `werkz -c`.
 

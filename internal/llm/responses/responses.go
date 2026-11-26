@@ -457,7 +457,7 @@ func tools(defs []llm.ToolDef) []map[string]any {
 			req = []string{}
 		}
 		out = append(out, map[string]any{"type": "function", "name": d.Name, "description": d.Description,
-			"parameters": map[string]any{"type": "object", "properties": d.Properties, "required": req},
+			"parameters": schemaFor(d, req),
 			"strict":     false})
 	}
 	return out
@@ -512,4 +512,16 @@ func (c *Client) ListModels(ctx context.Context) ([]catalog.ModelInfo, error) {
 		out = append(out, mi)
 	}
 	return out, nil
+}
+
+// schemaFor is a tool's input schema: werkz's properties and required list, plus any other
+// top-level keys an MCP server gave ($defs, additionalProperties…).
+func schemaFor(d llm.ToolDef, req []string) map[string]any {
+	s := map[string]any{"type": "object", "properties": d.Properties, "required": req}
+	for k, v := range d.Extra {
+		if _, taken := s[k]; !taken {
+			s[k] = v
+		}
+	}
+	return s
 }

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"os/signal"
 	"runtime/debug"
@@ -18,6 +19,8 @@ import (
 	"github.com/TonmoyTalukder/werkz/internal/clipboard"
 	"github.com/TonmoyTalukder/werkz/internal/config"
 	"github.com/TonmoyTalukder/werkz/internal/llm/claudecode"
+	"github.com/TonmoyTalukder/werkz/internal/mcp"
+	"github.com/TonmoyTalukder/werkz/internal/mcpauth"
 	"github.com/TonmoyTalukder/werkz/internal/termimg"
 	"github.com/TonmoyTalukder/werkz/internal/tools"
 	"github.com/TonmoyTalukder/werkz/internal/tui"
@@ -113,6 +116,17 @@ func run(provider, model string, opts tui.Options) error {
 	pctx, pcancel := context.WithTimeout(context.Background(), time.Second)
 	opts.Images = termimg.Probe(pctx)
 	pcancel()
+	// MCP servers: HTTP ones go through the OAuth transport (it signs requests once you've signed in).
+	authStore := mcpauth.OpenStore("")
+	mcpMgr := mcp.NewManager(mcp.Options{
+		HTTPClient: func(c mcp.ServerConfig) *http.Client {
+			return &http.Client{Transport: mcpauth.Transport(c.URL, http.DefaultTransport, authStore)}
+		},
+		IsAuthError: func(err error) bool { return errors.Is(err, mcpauth.ErrNeedsAuth) },
+	})
+	defer mcpMgr.StopAll()
+	eng.SetMCP(mcpMgr)
+	opts.MCP = mcpMgr
 	m := tui.New(cfg, eng, opts)
 	popts := []tea.ProgramOption{tea.WithAltScreen()}
 	if !opts.NoMouse {

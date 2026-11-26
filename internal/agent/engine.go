@@ -14,6 +14,7 @@ import (
 	"github.com/TonmoyTalukder/werkz/internal/catalog"
 	"github.com/TonmoyTalukder/werkz/internal/config"
 	"github.com/TonmoyTalukder/werkz/internal/llm"
+	"github.com/TonmoyTalukder/werkz/internal/mcp"
 	"github.com/TonmoyTalukder/werkz/internal/textutil"
 	"github.com/TonmoyTalukder/werkz/internal/tools"
 
@@ -44,7 +45,10 @@ type Engine struct {
 	pages          pageCache    // fetched pages, for reading long ones in parts
 	br             browserState // werkz's browser, started on first use
 	defsOnce       sync.Once
-	defs           []llm.ToolDef        // tools offered to the model (fixed per session: keeps the cache)
+	baseDefs       []llm.ToolDef        // werkz's own tools offered to the model (fixed per session: keeps the cache)
+	defs           []llm.ToolDef        // baseDefs plus the MCP servers' tools
+	mcp            *mcp.Manager         // the user's MCP servers (nil = none)
+	mcpVer         uint64               // MCP tool-set version that defs was built from
 	localOK        sync.Map             // WebFetch calls approved to reach the local network: call ID -> host
 	grants         sync.Map             // browser actions the user approved: call ID -> browserGrant
 	attached       map[string]time.Time // files attached with @ (path:range -> mtime), to skip unchanged repeats
@@ -352,6 +356,10 @@ func (e *Engine) execTool(ctx context.Context, tc llm.ToolCall) tools.Result {
 		}
 		res = e.runBrowserTool(ctx, tc, always)
 	default:
+		if isMCPTool(tc.Name) {
+			res = e.runMCP(ctx, tc)
+			break
+		}
 		res = tools.Run(ctx, tc, e.toolEnv())
 	}
 	e.trackCheck(tc, res)
@@ -389,6 +397,15 @@ func externalSummary(output string, isError bool) string {
 // call may not run, it returns the result to report instead (and has told the UI).
 func (e *Engine) permit(ctx context.Context, tc llm.ToolCall, summary string) (tools.Result, bool) {
 	need, kind := tools.NeedsPermission(tc.Name, e.mode())
+	var key, always string // what "don't ask again" covers, and its label
+	if isMCPTool(tc.Name) {
+		var refuse error
+		need, kind, key, always, refuse = e.mcpCheck(tc)
+		if refuse != nil {
+			e.send(ToolResultMsg{ID: tc.ID, Name: tc.Name, Summary: "unavailable", IsError: true})
+			return tools.Fail("%v", refuse), false
+		}
+	}
 	outside := false
 	var grant browserGrant // what a browser action is approved for (form submit, download)
 	if a, err := tools.ParseArgs(tc); err == nil && fileTool(tc.Name) {
@@ -408,7 +425,9 @@ func (e *Engine) permit(ctx context.Context, tc llm.ToolCall, summary string) (t
 			summary += "  ⚠ outside working folders"
 		}
 	}
-	key, always := allowKey(tc)
+	if !isMCPTool(tc.Name) {
+		key, always = allowKey(tc)
+	}
 	if outside {
 		key, always = "", ""
 	}
@@ -458,7 +477,11 @@ func (e *Engine) permit(ctx context.Context, tc llm.ToolCall, summary string) (t
 			return r, false
 		}
 		reply := make(chan PermDecision, 1)
-		e.send(PermReqMsg{Tool: tc.Name, Summary: summary, Detail: tools.Preview(tc), Always: always, Reply: reply})
+		detail := tools.Preview(tc)
+		if isMCPTool(tc.Name) {
+			detail = mcpPreview(tc)
+		}
+		e.send(PermReqMsg{Tool: tc.Name, Summary: summary, Detail: detail, Always: always, Reply: reply})
 		select {
 		case d := <-reply:
 			if d == PermAlways && key != "" {

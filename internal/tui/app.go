@@ -13,6 +13,7 @@ import (
 	"github.com/TonmoyTalukder/werkz/internal/config"
 	"github.com/TonmoyTalukder/werkz/internal/llm"
 	"github.com/TonmoyTalukder/werkz/internal/llm/openai"
+	"github.com/TonmoyTalukder/werkz/internal/mcp"
 	"github.com/TonmoyTalukder/werkz/internal/session"
 	"github.com/TonmoyTalukder/werkz/internal/textutil"
 	"github.com/TonmoyTalukder/werkz/internal/update"
@@ -121,15 +122,17 @@ type model struct {
 	sess      sessionInfo  // this conversation, as saved for /resume
 	rp        resumePicker
 	cp        copyPicker
-	prevState uiState  // where the copy picker returns to
-	selEntry  int      // selected transcript entry (stateSelect)
-	mouseOff  bool     // mouse capture off: the terminal's own selection works
-	toast     string   // a short confirmation in the status line, until the next key
-	sel       textSel  // text selected with the mouse
-	lines     []string // the transcript as last drawn (for copying a selection)
-	img       gfx      // pictures in the terminal (screenshots, /browser view)
-	connAddr  string   // the Chrome address being confirmed (stateConnect)
-	connSel   int      // highlighted answer (0 = No)
+	prevState uiState            // where the copy picker returns to
+	selEntry  int                // selected transcript entry (stateSelect)
+	mouseOff  bool               // mouse capture off: the terminal's own selection works
+	toast     string             // a short confirmation in the status line, until the next key
+	sel       textSel            // text selected with the mouse
+	lines     []string           // the transcript as last drawn (for copying a selection)
+	img       gfx                // pictures in the terminal (screenshots, /browser view)
+	mcp       *mcp.Manager       // the session's MCP servers (nil = MCP off)
+	mcpCfgs   []mcp.ServerConfig // configured servers, as last read
+	connAddr  string             // the Chrome address being confirmed (stateConnect)
+	connSel   int                // highlighted answer (0 = No)
 }
 
 // sessionInfo identifies the saved conversation.
@@ -276,7 +279,7 @@ func (m *model) Init() tea.Cmd {
 			m.printS(renderNotice("error", "Couldn't load your settings: "+err.Error()+
 				". werkz is running with defaults and won't overwrite the file this session."))
 		}
-		cmds = append(cmds, m.runOnStart())
+		cmds = append(cmds, m.runOnStart(), m.loadMCP(false)) // after the folders are set: a project's servers depend on them
 	} else {
 		cmds = append(cmds, m.login.inputs[0].Focus())
 	}
@@ -408,12 +411,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case agent.ToolCallMsg:
 		m.flushLive("")
-		m.turn.pending = &pendingTool{Name: msg.Name, Summary: msg.Summary}
+		m.turn.pending = &pendingTool{Name: agent.DisplayName(msg.Name), Summary: msg.Summary}
 		m.turn.prepTool = ""
 		return m, nil
 
 	case agent.ToolResultMsg:
-		it := session.Item{Kind: "tool", Call: msg.Name, Text: msg.Summary, Detail: msg.Detail, Image: msg.Image, IsError: msg.IsError}
+		it := session.Item{Kind: "tool", Call: agent.DisplayName(msg.Name), Text: msg.Summary, Detail: msg.Detail, Image: msg.Image, IsError: msg.IsError}
 		if m.turn.pending != nil {
 			it.Call, it.Args = m.turn.pending.Name, m.turn.pending.Summary
 		}
@@ -433,6 +436,10 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handleBrowserDone(msg)
 	case connectDoneMsg:
 		return m, m.handleConnectDone(msg)
+	case mcpStartedMsg:
+		return m, m.handleMCPStarted(msg)
+	case mcpLoginMsg:
+		return m, m.handleMCPLogin(msg)
 	case liveFrameMsg:
 		return m, m.handleLiveFrame(msg)
 	case liveTickMsg:
@@ -446,6 +453,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case agent.PermReqMsg:
 		mm := msg
+		mm.Tool = agent.DisplayName(mm.Tool)
 		m.perm, m.state = &mm, statePerm
 		opts, _ := m.permOptions()
 		m.permSel = len(opts) - 1 // highlight starts on "No"

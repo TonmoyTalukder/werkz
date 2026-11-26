@@ -95,8 +95,9 @@ func claudeTools(defs []llm.ToolDef) []anthropic.BetaToolUnionParam {
 			Name:        d.Name,
 			Description: anthropic.String(d.Description),
 			InputSchema: anthropic.BetaToolInputSchemaParam{
-				Properties: d.Properties,
-				Required:   d.Required,
+				Properties:  d.Properties,
+				Required:    d.Required,
+				ExtraFields: d.Extra,
 			},
 		}
 		out = append(out, anthropic.BetaToolUnionParam{OfTool: &t})

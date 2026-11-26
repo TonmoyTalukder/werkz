@@ -102,25 +102,26 @@ type Config struct {
 	Mode           string            `json:"permission_mode"`
 	Workspaces     []*Workspace      `json:"workspaces,omitempty"`
 
-	loadErr         error           // set when the file existed but couldn't be loaded: Save refuses
-	session         *sessionModel   // a model chosen on the command line: used, but not saved
-	loadedSpent     float64         // Spent as last read from or written to disk (merging across windows)
-	FallbackMode    string          `json:"fallback_mode"`               // off (default) | ask | auto
-	OpenRouterPaid  bool            `json:"openrouter_paid,omitempty"`   // also offer paid OpenRouter models (default: free only)
-	NoAutoUpdate    bool            `json:"auto_update_off,omitempty"`   // don\'t install new releases automatically
-	NoHistory       bool            `json:"history_off,omitempty"`       // don't save conversations for /resume
-	WebSearch       string          `json:"web_search,omitempty"`        // "" (auto) | provider | brave | tavily | searxng | off
-	SearXNGURL      string          `json:"searxng_url,omitempty"`       // a SearXNG instance for WebSearch
-	UpdateCheckedAt time.Time       `json:"update_checked_at,omitempty"` // last time werkz looked for a new release
-	UpdateLatest    string          `json:"update_latest,omitempty"`     // newest release seen by that check
-	CacheTTL        string          `json:"cache_ttl,omitempty"`         // 5m (default) | 1h
-	KeepAliveMin    int             `json:"cache_keepalive_minutes"`     // 0 = default (30)
-	NoKeepAlive     bool            `json:"cache_keepalive_off,omitempty"`
-	FallbackChain   []FallbackModel `json:"fallback_models,omitempty"`     // ordered; empty = one model per provider in FallbackOrder
-	CompactAt       int             `json:"auto_compact_tokens,omitempty"` // 0 = default (300k)
-	NoAutoCompact   bool            `json:"auto_compact_off,omitempty"`
-	PlanNoticeSeen  bool            `json:"chatgpt_plan_notice_seen,omitempty"` // "You're using your ChatGPT plan" shown once
-	ContextWindow   int             `json:"context_window,omitempty"`           // user's limit in tokens; 0 = each model's full window
+	loadErr         error             // set when the file existed but couldn't be loaded: Save refuses
+	session         *sessionModel     // a model chosen on the command line: used, but not saved
+	loadedSpent     float64           // Spent as last read from or written to disk (merging across windows)
+	FallbackMode    string            `json:"fallback_mode"`               // off (default) | ask | auto
+	OpenRouterPaid  bool              `json:"openrouter_paid,omitempty"`   // also offer paid OpenRouter models (default: free only)
+	NoAutoUpdate    bool              `json:"auto_update_off,omitempty"`   // don\'t install new releases automatically
+	NoHistory       bool              `json:"history_off,omitempty"`       // don't save conversations for /resume
+	WebSearch       string            `json:"web_search,omitempty"`        // "" (auto) | provider | brave | tavily | searxng | off
+	SearXNGURL      string            `json:"searxng_url,omitempty"`       // a SearXNG instance for WebSearch
+	MCPApproved     map[string]string `json:"mcp_approved,omitempty"`      // project MCP servers approved: "dir|name" -> config hash
+	UpdateCheckedAt time.Time         `json:"update_checked_at,omitempty"` // last time werkz looked for a new release
+	UpdateLatest    string            `json:"update_latest,omitempty"`     // newest release seen by that check
+	CacheTTL        string            `json:"cache_ttl,omitempty"`         // 5m (default) | 1h
+	KeepAliveMin    int               `json:"cache_keepalive_minutes"`     // 0 = default (30)
+	NoKeepAlive     bool              `json:"cache_keepalive_off,omitempty"`
+	FallbackChain   []FallbackModel   `json:"fallback_models,omitempty"`     // ordered; empty = one model per provider in FallbackOrder
+	CompactAt       int               `json:"auto_compact_tokens,omitempty"` // 0 = default (300k)
+	NoAutoCompact   bool              `json:"auto_compact_off,omitempty"`
+	PlanNoticeSeen  bool              `json:"chatgpt_plan_notice_seen,omitempty"` // "You're using your ChatGPT plan" shown once
+	ContextWindow   int               `json:"context_window,omitempty"`           // user's limit in tokens; 0 = each model's full window
 }
 
 // Window is the context window werkz works with for a model whose full window is modelMax: the

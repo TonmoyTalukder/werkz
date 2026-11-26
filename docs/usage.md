@@ -26,6 +26,7 @@
 | `/copy` | Copy the latest response as markdown, or one of its code blocks exactly; `/copy 2` the one before, `/copy prompt` your last request, `/copy all` the whole conversation |
 | `/export [file]` | Save the conversation as a markdown file |
 | `/search` | Web search for the model: `/search brave\|tavily <key>`, `/search searxng <url>`, `/search off` (see [Web access](#web-access)) |
+| `/mcp` | MCP servers and their tools: `/mcp tools`, `/mcp approve`, `/mcp connect`, `/mcp disconnect`, `/mcp login`, `/mcp reload` (see [MCP servers](#mcp-servers)) |
 | `/browser` | werkz's browser: `/browser view` to see the page in the terminal, `/browser connect` to use your own Chrome, `/browser show` to open its window, `/browser hide`, `/browser close` |
 | `/docs` | Open this documentation in your browser |
 | `/clear` | Start a new conversation (the previous one stays in `/resume`) |
@@ -195,6 +196,37 @@ What asks first:
 | Downloading a file | Always; it's saved in `~/Downloads` |
 | Typing into a password or payment field (by typing, keys, form values or JavaScript) | Never done |
 | Starting a dev server | Like any command (`Bash` rules) |
+
+## MCP servers
+
+werkz can use tools from [MCP](https://modelcontextprotocol.io) servers: databases, issue trackers, design
+tools, internal APIs. Add servers in the format Claude Code and Claude Desktop use, either in
+`~/.config/werkz/mcp.json` (yours, in every project) or in `.werkz/mcp.json` in a project (shared with the
+team):
+
+```json
+{
+  "mcpServers": {
+    "github": { "type": "http", "url": "https://api.githubcopilot.com/mcp/" },
+    "postgres": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-postgres", "${DATABASE_URL}"] },
+    "files": { "command": "my-mcp-server", "env": { "API_KEY": "${MY_API_KEY}" } }
+  }
+}
+```
+
+A server with `command` runs on your machine (stdio); one with `url` is remote (HTTP). `${VAR}` and
+`${VAR:-default}` take values from your environment, so keys stay out of the file.
+
+- **Your servers start with werkz.** `/mcp` shows each one's state and number of tools, `/mcp tools` lists the
+  tools, `/mcp disconnect` and `/mcp connect` stop and restart one, and `/mcp reload` re-reads the files.
+- **A project's servers need your approval first.** werkz tells you when a project has servers and `/mcp` shows
+  exactly what each one runs; `/mcp approve <name>` starts it. The approval is remembered for that project and
+  asked again if the server's command or address changes.
+- **Remote servers that need a sign-in** say so: `/mcp login <name>` opens your browser (OAuth), and werkz keeps
+  the tokens in `~/.config/werkz/mcp-auth.json`, readable only by you. `/mcp logout <name>` forgets them.
+- **Each tool asks the first time it runs**, with "don't ask again" for that tool this session; in auto and bypass
+  mode they don't ask, and in plan mode only tools the server marks read-only run. What a tool returns reaches
+  the model marked as untrusted. The model sees them as `mcp__<server>__<tool>`.
 
 ## Saved conversations
 

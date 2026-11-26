@@ -126,15 +126,23 @@ func (e *Engine) browserAvailable() bool {
 	return *e.br.avail
 }
 
-// toolDefs is the tool list sent to the model: fixed for the session, so the cache holds.
+// toolDefs is the tool list sent to the model. It changes only when the MCP servers' tools do,
+// so the cached prefix holds the rest of the time; MCP tools come last.
 func (e *Engine) toolDefs() []llm.ToolDef {
 	e.defsOnce.Do(func() {
-		e.defs = append(append([]llm.ToolDef(nil), tools.Defs...), devServerDef)
+		e.baseDefs = append(append([]llm.ToolDef(nil), tools.Defs...), devServerDef)
 		if e.browserAvailable() {
-			e.defs = append(e.defs, browserDefs...)
-			e.defs = append(e.defs, actDefs...)
+			e.baseDefs = append(e.baseDefs, browserDefs...)
+			e.baseDefs = append(e.baseDefs, actDefs...)
 		}
 	})
+	if e.mcp == nil {
+		return e.baseDefs
+	}
+	if v := e.mcp.Version(); e.defs == nil || v != e.mcpVer {
+		e.defs = append(append([]llm.ToolDef(nil), e.baseDefs...), mcpDefs(e.mcp.Tools())...)
+		e.mcpVer = v
+	}
 	return e.defs
 }
 
@@ -648,6 +656,9 @@ func devServerStarts(tc llm.ToolCall) (bool, string) {
 
 // toolSummary is the one-line description of a call for the UI.
 func toolSummary(tc llm.ToolCall) string {
+	if isMCPTool(tc.Name) {
+		return mcpSummary(tc)
+	}
 	if isActTool(tc.Name) || tc.Name == "Batch" {
 		return actSummary(tc)
 	}

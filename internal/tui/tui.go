@@ -4,6 +4,7 @@ package tui
 import (
 	"github.com/TonmoyTalukder/werkz/internal/agent"
 	"github.com/TonmoyTalukder/werkz/internal/config"
+	"github.com/TonmoyTalukder/werkz/internal/mcp"
 	"github.com/TonmoyTalukder/werkz/internal/termimg"
 	"github.com/TonmoyTalukder/werkz/internal/update"
 
@@ -20,6 +21,7 @@ type Options struct {
 	Resume    bool         // open the saved-conversation list
 	NoMouse   bool         // start with mouse capture off
 	Images    termimg.Caps // what the terminal can show (screenshots)
+	MCP       *mcp.Manager // the user's MCP servers (nil = none)
 	// Updates: Updater replaces the release source/executable (tests); nil = GitHub releases
 	// and the running executable.
 	Updater *update.Updater
@@ -54,6 +56,7 @@ func New(cfg *config.Config, eng *agent.Engine, opts Options) tea.Model {
 	}
 	m.mouseOff = opts.NoMouse
 	m.img.caps = opts.Images
+	m.mcp = opts.MCP
 	if opts.Continue || opts.Resume {
 		prev := m.onStart
 		m.onStart = func() tea.Cmd {
