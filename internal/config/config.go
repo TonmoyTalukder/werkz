@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -115,6 +116,33 @@ type Config struct {
 	CompactAt       int             `json:"auto_compact_tokens,omitempty"` // 0 = default (300k)
 	NoAutoCompact   bool            `json:"auto_compact_off,omitempty"`
 	PlanNoticeSeen  bool            `json:"chatgpt_plan_notice_seen,omitempty"` // "You're using your ChatGPT plan" shown once
+	ContextWindow   int             `json:"context_window,omitempty"`           // user's limit in tokens; 0 = each model's full window
+}
+
+// Window is the context window werkz works with for a model whose full window is modelMax: the
+// user's limit when it is smaller.
+func (c *Config) Window(modelMax int) int {
+	if c.ContextWindow > 0 && (modelMax <= 0 || c.ContextWindow < modelMax) {
+		return c.ContextWindow
+	}
+	return modelMax
+}
+
+// ParseTokens reads a token count such as "350k", "1m", "1.5M" or "350000".
+func ParseTokens(s string) (int, error) {
+	s = strings.ToLower(strings.TrimSpace(s))
+	mult := 1.0
+	switch {
+	case strings.HasSuffix(s, "k"):
+		mult, s = 1e3, strings.TrimSuffix(s, "k")
+	case strings.HasSuffix(s, "m"):
+		mult, s = 1e6, strings.TrimSuffix(s, "m")
+	}
+	f, err := strconv.ParseFloat(s, 64)
+	if err != nil || f <= 0 {
+		return 0, fmt.Errorf("not a token count: %q (try 350k or 1m)", s)
+	}
+	return int(f * mult), nil
 }
 
 // Permission modes (Config.Mode).

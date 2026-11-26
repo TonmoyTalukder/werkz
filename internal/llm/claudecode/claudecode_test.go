@@ -66,7 +66,7 @@ func TestStreamShowsClaudeCodeWork(t *testing.T) {
 	}
 	work := t.TempDir()
 	extra := t.TempDir()
-	req := llm.Request{Model: "claude-sonnet-5-5", Effort: "high", CacheKey: "w1", Mode: "acceptEdits",
+	req := llm.Request{Model: "claude-sonnet-5-5", Effort: "high", CacheKey: "w1", Mode: "acceptEdits", Window: 350_000,
 		Dirs: []string{work, extra}, History: []llm.Msg{{Role: llm.RoleUser, Text: "what does main.go do?"}}}
 	turn, err := c.Stream(context.Background(), req, h)
 	if err != nil {
@@ -92,7 +92,7 @@ func TestStreamShowsClaudeCodeWork(t *testing.T) {
 	a := string(args)
 	for _, want := range []string{"-p\n", "stream-json", "--session-id\n", "--model\nclaude-sonnet-5-5\n",
 		"--effort\nhigh\n", "--permission-mode\nacceptEdits\n", "--permission-prompt-tool\nmcp__werkz__approve\n",
-		"--add-dir\n" + extra + "\n"} {
+		"--add-dir\n" + extra + "\n", "--autocompact\n350000\n"} {
 		if !strings.Contains(a, want) {
 			t.Fatalf("args missing %q:\n%s", want, a)
 		}

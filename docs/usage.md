@@ -15,7 +15,7 @@
 | `/add-dir <path>` | Add a working folder; `/dirs` lists them |
 | `/compact [focus]` | Summarize the conversation to cut tokens; `/compact auto on\|off\|300k` |
 | `/cache` | Prompt-cache stats; `/cache ttl 5m\|1h`, `/cache keepalive on\|off\|<minutes>` |
-| `/context` | How much of the context window is in use |
+| `/context` | How much of the context window is in use; `/context window 350k\|full` sets or removes your own window limit |
 | `/cost` | Session tokens, cost and cache savings |
 | `/balance 100` | Track your remaining Claude credit |
 | `/update` | Check for a new werkz release and install it; `/update auto on\|off` |

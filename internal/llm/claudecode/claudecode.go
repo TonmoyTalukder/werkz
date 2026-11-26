@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -214,6 +215,10 @@ func (c *Client) run(ctx context.Context, req llm.Request, h llm.Handlers, id st
 	}
 	if req.Effort != "" && req.Effort != "auto" {
 		args = append(args, "--effort", req.Effort)
+	}
+	if req.Window > 0 {
+		// Claude Code's own compaction window, for this run only (its minimum is 100K)
+		args = append(args, "--autocompact", strconv.Itoa(max(req.Window, 100_000)))
 	}
 	for _, d := range req.Dirs[min(1, len(req.Dirs)):] {
 		args = append(args, "--add-dir", d)

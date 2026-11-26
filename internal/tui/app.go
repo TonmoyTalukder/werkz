@@ -219,7 +219,7 @@ func (m *model) selectModel(provider, id string) {
 	if mi.FastIn == 0 {
 		m.cfg.Fast = false
 	}
-	m.stats.ctxMax = mi.Context
+	m.stats.ctxMax = m.cfg.Window(mi.Context)
 }
 
 func (m *model) Init() tea.Cmd {

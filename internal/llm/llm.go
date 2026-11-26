@@ -87,6 +87,9 @@ type Request struct {
 	// and werkz's permission mode.
 	Dirs []string
 	Mode string
+	// Window is the user's context window limit in tokens (0 = the model's full window); Claude
+	// Code receives it as its auto-compact window.
+	Window int
 }
 
 type Provider interface {

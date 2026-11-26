@@ -180,7 +180,7 @@ func (m *model) statusBar() string {
 	}
 	ctxMax := m.stats.ctxMax
 	if ctxMax == 0 {
-		ctxMax = mi.Context
+		ctxMax = m.cfg.Window(mi.Context)
 	}
 	ctxFull := ctxBar(m.stats.ctxUsed, ctxMax)
 	ctxShort := sDim.Render(fmt.Sprintf("ctx %d%%", int(float64(m.stats.ctxUsed)/float64(max(ctxMax, 1))*100)))

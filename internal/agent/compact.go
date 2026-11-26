@@ -41,14 +41,19 @@ const (
 	compactMinHistory = 4
 )
 
-// compactThreshold is the context size that triggers auto-compaction for the current model.
-func (e *Engine) CompactThreshold() (at, hard int64) {
+// CompactThreshold is the context size that triggers auto-compaction for the current model.
+func (e *Engine) CompactThreshold() (at, hard int64) { return CompactThreshold(e.cfg, e.lastWindow) }
+
+// CompactThreshold is the context size that triggers auto-compaction with these settings for a
+// model with this full window (0 if unknown): the /compact auto setting, but always within
+// the context window (the user's limit or the model's), at 80% of it, and never later than 92%.
+func CompactThreshold(cfg *config.Config, modelWindow int) (at, hard int64) {
 	at = int64(defaultCompactAt)
-	if e.cfg.CompactAt > 0 {
-		at = int64(e.cfg.CompactAt)
+	if cfg.CompactAt > 0 {
+		at = int64(cfg.CompactAt)
 	}
 	hard = hardCompactCap
-	if w := int64(e.lastWindow); w > 0 {
+	if w := int64(cfg.Window(modelWindow)); w > 0 {
 		at = min(at, w*8/10)
 		hard = min(hard, w*92/100)
 	}

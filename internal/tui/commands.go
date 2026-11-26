@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TonmoyTalukder/werkz/internal/agent"
 	"github.com/TonmoyTalukder/werkz/internal/catalog"
 	"github.com/TonmoyTalukder/werkz/internal/config"
 	"github.com/TonmoyTalukder/werkz/internal/update"
@@ -26,7 +27,7 @@ var commands = []struct{ Name, Desc string }{
 	{"/update", "Check for and install a new werkz release · /update auto on|off"},
 	{"/openrouter", "OpenRouter models: /openrouter paid (free + paid) or /openrouter free (default)"},
 	{"/cache", "Prompt cache stats · /cache ttl 5m|1h · /cache keepalive on|off|30"},
-	{"/context", "Show context window usage"},
+	{"/context", "Show context window usage · /context window 350k|full limits the window"},
 	{"/cost", "Show session usage and cost"},
 	{"/balance", "Set starting Claude credit, e.g. /balance 100"},
 	{"/mode", "Cycle permission mode (or shift+tab)"},
@@ -198,7 +199,7 @@ func (m *model) command(line string) tea.Cmd {
 				m.cfg.NoAutoCompact, m.cfg.CompactAt = false, n*1000
 			}
 			m.saveConfig()
-			at, _ := m.eng.CompactThreshold()
+			at, _ := agent.CompactThreshold(m.cfg, m.curModelInfo().Context)
 			if m.cfg.NoAutoCompact {
 				return p(renderNotice("info", "Auto-compaction off · /compact still works manually"))
 			}
@@ -277,6 +278,9 @@ func (m *model) command(line string) tea.Cmd {
 		}
 		return pp(m.cacheText)
 	case "/context":
+		if len(args) > 0 && args[0] == "window" {
+			return m.setContextWindow(args[1:])
+		}
 		return pp(m.contextText)
 	case "/cost":
 		return pp(m.costText)

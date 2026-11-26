@@ -254,7 +254,7 @@ func (e *Engine) attemptOnce(ctx context.Context, sys string, a attempt) (*llm.T
 	}
 	fast := e.cfg.Fast && a.provider == e.cfg.Provider && a.model == e.cfg.Model
 	req := llm.Request{Model: a.model, System: sys, History: e.history, Tools: tools.Defs, Effort: effort,
-		Fast: fast, TTL1h: e.cfg.TTL1h(), CacheKey: e.sessionID, Dirs: e.dirs(), Mode: e.mode()}
+		Fast: fast, TTL1h: e.cfg.TTL1h(), CacheKey: e.sessionID, Dirs: e.dirs(), Mode: e.mode(), Window: e.cfg.ContextWindow}
 	e.lastProvider = a.provider
 	reqStart := time.Now()
 	e.send(StreamStartMsg{Provider: a.provider, Model: a.model})
@@ -302,7 +302,7 @@ func (e *Engine) attemptOnce(ctx context.Context, sys string, a attempt) (*llm.T
 	}
 	e.send(UsageMsg{Provider: a.provider, Model: a.model, Usage: turn.Usage, Cost: cost, Unpriced: unpriced,
 		ContextUsed: int(turn.Usage.In + turn.Usage.CacheRead + turn.Usage.CacheWrite + turn.Usage.Out),
-		ContextMax:  mi.Context})
+		ContextMax:  e.cfg.Window(mi.Context)})
 	return turn, nil
 }
 

@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TonmoyTalukder/werkz/internal/agent"
 	"github.com/TonmoyTalukder/werkz/internal/catalog"
 	"github.com/TonmoyTalukder/werkz/internal/config"
 	"github.com/TonmoyTalukder/werkz/internal/textutil"
@@ -129,13 +130,25 @@ func (m *model) fallbackText() string {
 
 func (m *model) contextText() string {
 	mi := m.curModelInfo()
-	ctxMax := m.stats.ctxMax
-	if ctxMax == 0 {
-		ctxMax = mi.Context
-	}
-	body := gradient("Context window", 0) + "\n" + ctxBar(m.stats.ctxUsed, ctxMax) + "\n" +
+	win := m.cfg.Window(mi.Context)
+	body := gradient("Context window", 0) + "\n" + ctxBar(m.stats.ctxUsed, win) + "\n" +
 		sDim.Render(fmt.Sprintf("%s of %s tokens used by the last request · %d messages in history",
-			catalog.HumanTokens(m.stats.ctxUsed), catalog.HumanTokens(ctxMax), m.eng.HistoryLen())) + "\n" + sDim.Render("/clear starts fresh")
+			catalog.HumanTokens(m.stats.ctxUsed), catalog.HumanTokens(win), m.eng.HistoryLen())) + "\n"
+	if win < mi.Context {
+		body += sText.Render("Window: "+catalog.HumanTokens(win)) + sDim.Render(" (your limit; "+mi.Label+" supports "+catalog.HumanTokens(mi.Context)+")")
+	} else {
+		body += sText.Render("Window: "+catalog.HumanTokens(win)) + sDim.Render(" ("+mi.Label+"'s full window)")
+	}
+	switch {
+	case m.cfg.Provider == "claudecode":
+		body += "\n" + sDim.Render("Claude Code compacts its own conversation, within your limit (at least 100k).")
+	case m.cfg.NoAutoCompact:
+		body += "\n" + sDim.Render("Auto-compaction is off (/compact auto on).")
+	default:
+		at, _ := agent.CompactThreshold(m.cfg, m.curModelInfo().Context)
+		body += "\n" + sDim.Render("Auto-compacts at ~"+catalog.HumanTokens(int(at))+" tokens.")
+	}
+	body += "\n" + sDim.Render("/context window 350k sets a limit · /context window full removes it · /clear starts fresh")
 	return box(body, cSky, m.w)
 }
 

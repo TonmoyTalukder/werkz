@@ -147,3 +147,22 @@ func TestClaudeFoundOutsidePath(t *testing.T) {
 		t.Fatalf("found %q, want %q", p, bin)
 	}
 }
+
+func TestContextWindowLimit(t *testing.T) {
+	for in, want := range map[string]int{"350k": 350_000, "1m": 1_000_000, "1.5M": 1_500_000, "200000": 200_000} {
+		if n, err := ParseTokens(in); err != nil || n != want {
+			t.Errorf("ParseTokens(%q) = %d, %v", in, n, err)
+		}
+	}
+	if _, err := ParseTokens("lots"); err == nil {
+		t.Error("expected an error")
+	}
+	c := &Config{}
+	if c.Window(1_000_000) != 1_000_000 {
+		t.Error("no limit: the model's full window")
+	}
+	c.ContextWindow = 350_000
+	if c.Window(1_000_000) != 350_000 || c.Window(128_000) != 128_000 {
+		t.Error("a limit applies only when it is smaller than the model's window")
+	}
+}

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TonmoyTalukder/werkz/internal/agent"
+	"github.com/TonmoyTalukder/werkz/internal/catalog"
 	"github.com/TonmoyTalukder/werkz/internal/chatgpt"
 	"github.com/TonmoyTalukder/werkz/internal/config"
 
@@ -247,4 +249,45 @@ func subscriptionTip(cfg *config.Config) string {
 		opts = append(opts, sText.Render("/model")+sDim.Render(" → a \"plan\" model uses your ChatGPT plan"))
 	}
 	return sDim.Render("Subscriptions: ") + strings.Join(opts, sDim.Render(" · "))
+}
+
+// setContextWindow handles "/context window <size>|full".
+func (m *model) setContextWindow(args []string) tea.Cmd {
+	mi := m.curModelInfo()
+	if len(args) == 0 {
+		return m.printS(renderNotice("info", "Context window: "+catalog.HumanTokens(m.cfg.Window(mi.Context))+
+			". Set a limit with /context window 350k, or /context window full for each model's whole window."))
+	}
+	switch strings.ToLower(args[0]) {
+	case "full", "auto", "off", "max", "default":
+		m.cfg.ContextWindow = 0
+	default:
+		n, err := config.ParseTokens(args[0])
+		if err != nil || n < 32_000 {
+			return m.printS(renderNotice("warn", "Usage: /context window <size> (at least 32k, e.g. 350k or 1m) or /context window full"))
+		}
+		m.cfg.ContextWindow = n
+	}
+	m.saveConfig()
+	win := m.cfg.Window(mi.Context)
+	if m.stats.ctxMax > 0 || m.stats.ctxUsed == 0 {
+		m.stats.ctxMax = win
+	}
+	msg := "Context window: " + catalog.HumanTokens(win)
+	switch {
+	case m.cfg.ContextWindow == 0:
+		msg += " (each model's full window)"
+	case m.cfg.ContextWindow > mi.Context:
+		msg = "Context window limit set to " + catalog.HumanTokens(m.cfg.ContextWindow) + "; " + mi.Label +
+			" supports " + catalog.HumanTokens(mi.Context) + ", so its full window is used"
+	}
+	if m.cfg.Provider == "claudecode" {
+		if m.cfg.ContextWindow > 0 {
+			msg += " · Claude Code gets it as its auto-compact window (at least 100k)"
+		}
+	} else if !m.cfg.NoAutoCompact {
+		at, _ := agent.CompactThreshold(m.cfg, m.curModelInfo().Context)
+		msg += " · conversations are summarized at ~" + catalog.HumanTokens(int(at)) + " tokens to stay within it"
+	}
+	return m.printS(renderNotice("info", msg))
 }
