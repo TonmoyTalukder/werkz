@@ -1,0 +1,733 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-26T04:50:18+00:00",
+  "title": "Design System: werkz",
+  "extensions": {
+    "colorMeta": {
+      "saffron": {
+        "role": "secondary",
+        "displayName": "Logo Saffron",
+        "canonical": "#ff9933",
+        "tonalRamp": [
+          "#4c2600",
+          "#804000",
+          "#b25900",
+          "#f57a00",
+          "#ff9933",
+          "#ffb870",
+          "#ffd6ad",
+          "#fff2e5"
+        ]
+      },
+      "saffron-ink": {
+        "role": "secondary",
+        "displayName": "Burnt Saffron",
+        "canonical": "#e07a10",
+        "tonalRamp": [
+          "#472705",
+          "#774108",
+          "#a75b0c",
+          "#e47c10",
+          "#f19b41",
+          "#f5b97a",
+          "#fad7b3",
+          "#fdf2e7"
+        ]
+      },
+      "red": {
+        "role": "tertiary",
+        "displayName": "Logo Red",
+        "canonical": "#e8344e",
+        "tonalRamp": [
+          "#450811",
+          "#730d1c",
+          "#a01227",
+          "#dc1935",
+          "#ea485f",
+          "#f07f8f",
+          "#f7b6bf",
+          "#fce8eb"
+        ]
+      },
+      "blue": {
+        "role": "primary",
+        "displayName": "Signal Blue",
+        "canonical": "#3b6cf6",
+        "tonalRamp": [
+          "#031649",
+          "#06247a",
+          "#0833ab",
+          "#0b45ea",
+          "#3c6df6",
+          "#7699f9",
+          "#b1c4fb",
+          "#e7edfe"
+        ]
+      },
+      "tile": {
+        "role": "neutral",
+        "displayName": "Tile",
+        "canonical": "#1e1f2c",
+        "tonalRamp": [
+          "#1f202d",
+          "#34354c",
+          "#484b6a",
+          "#636792",
+          "#8688ac",
+          "#aaacc5",
+          "#ced0de",
+          "#f0f0f5"
+        ]
+      },
+      "tile-deep": {
+        "role": "neutral",
+        "displayName": "Tile Deep",
+        "canonical": "#0c0d14",
+        "tonalRamp": [
+          "#1d1f30",
+          "#303450",
+          "#434970",
+          "#5c6399",
+          "#8086b2",
+          "#a6aac9",
+          "#cccfe0",
+          "#eff0f5"
+        ]
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "Paper",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#262626",
+          "#404040",
+          "#595959",
+          "#7a7a7a",
+          "#999999",
+          "#b8b8b8",
+          "#d6d6d6",
+          "#f2f2f2"
+        ]
+      },
+      "bg-soft": {
+        "role": "neutral",
+        "displayName": "Mist",
+        "canonical": "#f6f6f9",
+        "tonalRamp": [
+          "#1f1f2e",
+          "#33334c",
+          "#47476b",
+          "#626293",
+          "#8585ad",
+          "#a9a9c6",
+          "#cecede",
+          "#f0f0f5"
+        ]
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "Card Paper",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#262626",
+          "#404040",
+          "#595959",
+          "#7a7a7a",
+          "#999999",
+          "#b8b8b8",
+          "#d6d6d6",
+          "#f2f2f2"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#0c0d14",
+        "tonalRamp": [
+          "#1d1f30",
+          "#303450",
+          "#434970",
+          "#5c6399",
+          "#8086b2",
+          "#a6aac9",
+          "#cccfe0",
+          "#eff0f5"
+        ]
+      },
+      "ink-2": {
+        "role": "neutral",
+        "displayName": "Ink 2",
+        "canonical": "#4a4c5e",
+        "tonalRamp": [
+          "#22232b",
+          "#383a47",
+          "#4f5164",
+          "#6c6f89",
+          "#8d8fa5",
+          "#afb1c0",
+          "#d1d2db",
+          "#f1f1f4"
+        ]
+      },
+      "ink-3": {
+        "role": "neutral",
+        "displayName": "Ink 3",
+        "canonical": "#6b6e82",
+        "tonalRamp": [
+          "#23242a",
+          "#3a3b46",
+          "#515362",
+          "#6f7286",
+          "#8f92a3",
+          "#b1b2bf",
+          "#d2d3da",
+          "#f1f1f3"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#e6e6ee",
+        "tonalRamp": [
+          "#1f1f2e",
+          "#34344c",
+          "#48486a",
+          "#636392",
+          "#8686ac",
+          "#aaaac5",
+          "#cecede",
+          "#f0f0f5"
+        ]
+      },
+      "line-strong": {
+        "role": "neutral",
+        "displayName": "Rule",
+        "canonical": "#d3d4e0",
+        "tonalRamp": [
+          "#20212d",
+          "#35364b",
+          "#4a4c69",
+          "#656890",
+          "#878aab",
+          "#abadc4",
+          "#cfd0dd",
+          "#f0f0f4"
+        ]
+      },
+      "link": {
+        "role": "primary",
+        "displayName": "Link Blue",
+        "canonical": "#2d5be3",
+        "tonalRamp": [
+          "#091844",
+          "#0f2870",
+          "#15379d",
+          "#1d4cd8",
+          "#4b72e7",
+          "#819dee",
+          "#b7c7f5",
+          "#e9edfc"
+        ]
+      },
+      "code-bg": {
+        "role": "neutral",
+        "displayName": "Code Wash",
+        "canonical": "#f3f3f7",
+        "tonalRamp": [
+          "#1f1f2e",
+          "#33334d",
+          "#47476b",
+          "#626293",
+          "#8585ad",
+          "#a9a9c6",
+          "#cecede",
+          "#f0f0f5"
+        ]
+      },
+      "success": {
+        "role": "status",
+        "displayName": "Allowed Green",
+        "canonical": "#16a34a",
+        "tonalRamp": [
+          "#09431f",
+          "#0f7033",
+          "#159d47",
+          "#1dd862",
+          "#4be785",
+          "#81eea9",
+          "#b7f5ce",
+          "#e9fcf0"
+        ]
+      },
+      "success-ink": {
+        "role": "status",
+        "displayName": "Allowed Ink",
+        "canonical": "#15803d",
+        "tonalRamp": [
+          "#0b421f",
+          "#126e34",
+          "#199949",
+          "#23d264",
+          "#50e287",
+          "#84ebab",
+          "#b9f3cf",
+          "#e9fbf0"
+        ]
+      },
+      "caution-ink": {
+        "role": "status",
+        "displayName": "Asks Amber Ink",
+        "canonical": "#b45309",
+        "tonalRamp": [
+          "#492204",
+          "#793806",
+          "#aa4e08",
+          "#e96c0c",
+          "#f58d3d",
+          "#f8af77",
+          "#fbd1b1",
+          "#fef1e7"
+        ]
+      },
+      "dark-bg": {
+        "role": "neutral",
+        "displayName": "Dark Canvas",
+        "canonical": "#0c0d14",
+        "tonalRamp": [
+          "#1d1f30",
+          "#303450",
+          "#434970",
+          "#5c6399",
+          "#8086b2",
+          "#a6aac9",
+          "#cccfe0",
+          "#eff0f5"
+        ]
+      },
+      "dark-bg-soft": {
+        "role": "neutral",
+        "displayName": "Dark Mist",
+        "canonical": "#11121b",
+        "tonalRamp": [
+          "#1e1f2f",
+          "#31344e",
+          "#45496e",
+          "#5f6496",
+          "#8286b0",
+          "#a7abc8",
+          "#cdcfdf",
+          "#eff0f5"
+        ]
+      },
+      "dark-card": {
+        "role": "neutral",
+        "displayName": "Dark Card",
+        "canonical": "#161722",
+        "tonalRamp": [
+          "#1e1f2e",
+          "#32344d",
+          "#46496c",
+          "#606595",
+          "#8387af",
+          "#a8abc7",
+          "#cdcfdf",
+          "#f0f0f5"
+        ]
+      },
+      "dark-ink": {
+        "role": "neutral",
+        "displayName": "Dark Ink",
+        "canonical": "#f4f4f7",
+        "tonalRamp": [
+          "#20202c",
+          "#36364a",
+          "#4b4b67",
+          "#67678e",
+          "#8989a9",
+          "#acacc3",
+          "#d0d0dd",
+          "#f0f0f4"
+        ]
+      },
+      "dark-ink-2": {
+        "role": "neutral",
+        "displayName": "Dark Ink 2",
+        "canonical": "#b4b6c8",
+        "tonalRamp": [
+          "#20222c",
+          "#36384a",
+          "#4c4e67",
+          "#686b8d",
+          "#898ca9",
+          "#adafc3",
+          "#d0d1dc",
+          "#f0f1f4"
+        ]
+      },
+      "dark-ink-3": {
+        "role": "neutral",
+        "displayName": "Dark Ink 3",
+        "canonical": "#8c8ea3",
+        "tonalRamp": [
+          "#22232a",
+          "#393a47",
+          "#4f5163",
+          "#6d6f88",
+          "#8e90a4",
+          "#b0b1c0",
+          "#d2d2db",
+          "#f1f1f4"
+        ]
+      },
+      "dark-line": {
+        "role": "neutral",
+        "displayName": "Dark Hairline",
+        "canonical": "#24253a",
+        "tonalRamp": [
+          "#1d1e2f",
+          "#31324f",
+          "#44466e",
+          "#5e6097",
+          "#8183b1",
+          "#a7a8c8",
+          "#cdcee0",
+          "#eff0f5"
+        ]
+      },
+      "dark-line-strong": {
+        "role": "neutral",
+        "displayName": "Dark Rule",
+        "canonical": "#33354d",
+        "tonalRamp": [
+          "#1e202e",
+          "#33354d",
+          "#474a6b",
+          "#626593",
+          "#8487ae",
+          "#a9abc6",
+          "#cecfde",
+          "#f0f0f5"
+        ]
+      },
+      "dark-link": {
+        "role": "primary",
+        "displayName": "Pale Link Blue",
+        "canonical": "#8fb0ff",
+        "tonalRamp": [
+          "#00174c",
+          "#002680",
+          "#0035b2",
+          "#0048f5",
+          "#336fff",
+          "#709aff",
+          "#adc5ff",
+          "#e5edff"
+        ]
+      },
+      "dark-code-bg": {
+        "role": "neutral",
+        "displayName": "Dark Code Wash",
+        "canonical": "#1e1f2c",
+        "tonalRamp": [
+          "#1f202d",
+          "#34354c",
+          "#484b6a",
+          "#636792",
+          "#8688ac",
+          "#aaacc5",
+          "#ced0de",
+          "#f0f0f5"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Landing hero headline only; centred, balanced, max 19ch."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Landing section titles and the closing panel title."
+      },
+      "doc-title": {
+        "displayName": "Doc Title",
+        "purpose": "H1 on generated docs pages."
+      },
+      "doc-heading": {
+        "displayName": "Doc Heading",
+        "purpose": "Docs H2, preceded by a hairline rule."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Feature, card, plan and method headings (1.05-1.35rem)."
+      },
+      "lede": {
+        "displayName": "Lede",
+        "purpose": "Hero subhead in ink-2, max 60ch."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text; docs column capped at 74ch."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Buttons, tabs, nav links, copy buttons."
+      },
+      "small": {
+        "displayName": "Small",
+        "purpose": "Sentence-case table headers and group labels; never uppercase-tracked."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Commands, paths, flags and keys only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "rest",
+        "value": "0 1px 2px rgba(12,13,20,0.05), 0 4px 10px -6px rgba(12,13,20,0.12)",
+        "purpose": "Install card, plan cards, tables, methods panel, open releases, hovered doc cards."
+      },
+      {
+        "name": "window",
+        "value": "0 2px 6px rgba(12,13,20,0.06), 0 30px 60px -30px rgba(12,13,20,0.35)",
+        "purpose": "The product window only."
+      },
+      {
+        "name": "rest-dark",
+        "value": "0 1px 2px rgba(0,0,0,0.4), 0 4px 10px -6px rgba(0,0,0,0.6)",
+        "purpose": "Rest in dark theme."
+      },
+      {
+        "name": "window-dark",
+        "value": "0 2px 6px rgba(0,0,0,0.4), 0 30px 60px -30px rgba(0,0,0,0.8)",
+        "purpose": "Window in dark theme."
+      },
+      {
+        "name": "brand-glow",
+        "value": "linear-gradient(100deg, #ff9933 0%, #e8344e 48%, #3b6cf6 100%); filter: blur(64px); opacity: 0.7 (light) / 0.55 (dark)",
+        "purpose": "The single glow behind the product window; nowhere else."
+      },
+      {
+        "name": "focus-ring",
+        "value": "outline: 2px solid #3b6cf6; outline-offset: 3px",
+        "purpose": "Global :focus-visible."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Shared easing for every transition."
+      },
+      {
+        "name": "state",
+        "value": "0.2s",
+        "purpose": "Hover, border, colour and lift changes."
+      },
+      {
+        "name": "theme",
+        "value": "0.3s",
+        "purpose": "Background and colour cross-fade on theme switch; header rule."
+      },
+      {
+        "name": "window-rise",
+        "value": "0.9s ease 0.15s; from opacity 0, translateY(18px) scale(0.985)",
+        "purpose": "Product window entrance; skipped under reduced motion."
+      },
+      {
+        "name": "lift",
+        "value": "translateY(-1px) buttons, translateY(-2px) doc cards",
+        "purpose": "Hover intent."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "toc-hide",
+        "value": "1160px"
+      },
+      {
+        "name": "grid-2col",
+        "value": "960px"
+      },
+      {
+        "name": "split-stack",
+        "value": "900px"
+      },
+      {
+        "name": "nav-collapse",
+        "value": "880px"
+      },
+      {
+        "name": "cards-stack",
+        "value": "860px"
+      },
+      {
+        "name": "docs-single",
+        "value": "820px"
+      },
+      {
+        "name": "facts-stack",
+        "value": "760px"
+      },
+      {
+        "name": "modes-blocks",
+        "value": "640px"
+      },
+      {
+        "name": "grid-1col",
+        "value": "620px"
+      },
+      {
+        "name": "mobile-capture",
+        "value": "600px"
+      }
+    ],
+    "theme": {
+      "default": "light",
+      "mechanism": "data-theme on <html>; saved in localStorage 'werkz-theme'; ?theme=light|dark previews"
+    }
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The main action: ink fill, 11px radius, 46px tall; lifts 1px on hover.",
+      "html": "<a class=\"ds-btn-primary\" href=\"#\">Get started <svg width=\"18\" height=\"10\" viewBox=\"0 0 22 12\" aria-hidden=\"true\"><path fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M1 6h19M15 1l5 5-5 5\"/></svg></a>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;gap:10px;height:46px;padding:0 20px;border-radius:11px;font:500 0.98rem Geist,ui-sans-serif,system-ui,sans-serif;letter-spacing:-0.005em;text-decoration:none;background:#0c0d14;color:#fff;border:1px solid transparent;transition:background .2s cubic-bezier(0.16,1,0.3,1),transform .2s cubic-bezier(0.16,1,0.3,1)}.ds-btn-primary:hover{background:#1e1f2c;transform:translateY(-1px)}.ds-btn-primary:focus-visible{outline:2px solid #3b6cf6;outline-offset:3px}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Companion action: card fill with a Rule border.",
+      "html": "<a class=\"ds-btn-secondary\" href=\"#\">View on GitHub</a>",
+      "css": ".ds-btn-secondary{display:inline-flex;align-items:center;gap:10px;height:46px;padding:0 20px;border-radius:11px;font:500 0.98rem Geist,ui-sans-serif,system-ui,sans-serif;text-decoration:none;background:#fff;color:#0c0d14;border:1px solid #d3d4e0;transition:border-color .2s,transform .2s cubic-bezier(0.16,1,0.3,1)}.ds-btn-secondary:hover{border-color:#6b6e82;transform:translateY(-1px)}.ds-btn-secondary:focus-visible{outline:2px solid #3b6cf6;outline-offset:3px}"
+    },
+    {
+      "name": "Command Block",
+      "kind": "custom",
+      "refersTo": "command-block",
+      "description": "A real command in Geist Mono with a copy button; the site's workhorse.",
+      "html": "<div class=\"ds-cmd\"><pre>curl -fsSL https://raw.githubusercontent.com/TonmoyTalukder/werkz/main/install.sh | sh</pre><button class=\"ds-copy\" type=\"button\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" aria-hidden=\"true\"><g fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.8\" stroke-linejoin=\"round\"><rect x=\"8\" y=\"8\" width=\"12\" height=\"12\" rx=\"2.5\"/><path d=\"M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8\"/></g></svg>Copy</button></div>",
+      "css": ".ds-cmd{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:8px;background:#f3f3f7;border:1px solid #e6e6ee;border-radius:10px}.ds-cmd pre{margin:0;padding:13px 4px 13px 15px;white-space:pre-wrap;font:400 0.88rem/1.6 'Geist Mono',ui-monospace,Menlo,monospace;color:#0c0d14}.ds-copy{display:inline-flex;align-items:center;gap:6px;height:30px;margin:7px 7px 0 0;padding:0 10px;border-radius:8px;border:1px solid #d3d4e0;background:#fff;color:#4a4c5e;font:500 0.8rem Geist,ui-sans-serif,sans-serif;cursor:pointer;transition:color .2s,border-color .2s}.ds-copy:hover{color:#0c0d14;border-color:#6b6e82}.ds-copy:focus-visible{outline:2px solid #3b6cf6;outline-offset:3px}"
+    },
+    {
+      "name": "Install Tabs",
+      "kind": "nav",
+      "refersTo": "tab",
+      "description": "Horizontal tabs: ink-3 labels, selected gets ink and a 2px blue underline.",
+      "html": "<div class=\"ds-tabs\" role=\"tablist\"><button role=\"tab\" aria-selected=\"true\">Linux &amp; macOS</button><button role=\"tab\" aria-selected=\"false\">Homebrew</button><button role=\"tab\" aria-selected=\"false\">apt</button></div>",
+      "css": ".ds-tabs{display:flex;gap:4px;padding:8px 8px 0;border-bottom:1px solid #e6e6ee}.ds-tabs button{appearance:none;border:0;background:transparent;cursor:pointer;padding:9px 12px 11px;font:500 0.9rem Geist,ui-sans-serif,sans-serif;color:#6b6e82;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .2s,border-color .2s}.ds-tabs button:hover{color:#0c0d14}.ds-tabs button[aria-selected=true]{color:#0c0d14;border-bottom-color:#3b6cf6}.ds-tabs button:focus-visible{outline:2px solid #3b6cf6;outline-offset:3px;border-radius:6px}"
+    },
+    {
+      "name": "Header Navigation",
+      "kind": "nav",
+      "refersTo": "nav-link",
+      "description": "Quiet ink-2 links with 8px-radius Mist hover pills; current page uses the hover state.",
+      "html": "<nav class=\"ds-nav\"><a href=\"#\" aria-current=\"page\">Docs</a><a href=\"#\">Install</a><a href=\"#\">Subscriptions</a><a href=\"#\">Releases</a></nav>",
+      "css": ".ds-nav{display:flex;gap:4px}.ds-nav a{color:#4a4c5e;font:400 0.94rem Geist,ui-sans-serif,sans-serif;padding:7px 12px;border-radius:8px;text-decoration:none;transition:color .2s,background .2s}.ds-nav a:hover,.ds-nav a[aria-current=page]{color:#0c0d14;background:#f6f6f9}.ds-nav a:focus-visible{outline:2px solid #3b6cf6;outline-offset:3px}"
+    },
+    {
+      "name": "Provider Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Full-round chip; subscription chips tint the border toward blue.",
+      "html": "<span class=\"ds-chip\">Ollama</span> <span class=\"ds-chip ds-chip-plan\">ChatGPT plan</span>",
+      "css": ".ds-chip{display:inline-block;padding:7px 14px;border-radius:999px;border:1px solid #e6e6ee;background:#fff;color:#4a4c5e;font:500 0.92rem Geist,ui-sans-serif,sans-serif}.ds-chip-plan{border-color:color-mix(in srgb,#3b6cf6 35%,#e6e6ee);color:#0c0d14}"
+    },
+    {
+      "name": "Status Pill",
+      "kind": "chip",
+      "refersTo": "status-pill",
+      "description": "Permission state: dot plus tinted wash; green allowed, amber asks, red blocked.",
+      "html": "<span class=\"ds-pill ds-yes\">Allowed</span> <span class=\"ds-pill ds-ask\">Asks</span> <span class=\"ds-pill ds-no\">Blocked</span>",
+      "css": ".ds-pill{display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font:500 0.82rem Geist,ui-sans-serif,sans-serif}.ds-pill::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}.ds-yes{color:#15803d;background:color-mix(in srgb,#16a34a 12%,transparent)}.ds-ask{color:#b45309;background:color-mix(in srgb,#ff9933 18%,transparent)}.ds-no{color:#e8344e;background:color-mix(in srgb,#e8344e 11%,transparent)}"
+    },
+    {
+      "name": "Doc Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Flat bordered link card that lifts 2px and gains the Rest shadow on hover.",
+      "html": "<a class=\"ds-card\" href=\"#\"><span><b>Getting started</b><span>Install, pick a model and run your first task.</span></span><svg width=\"22\" height=\"12\" viewBox=\"0 0 22 12\" aria-hidden=\"true\"><path fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M1 6h19M15 1l5 5-5 5\"/></svg></a>",
+      "css": ".ds-card{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;max-width:340px;padding:18px 18px 18px 20px;border-radius:14px;border:1px solid #e6e6ee;background:#fff;color:#0c0d14;text-decoration:none;font-family:Geist,ui-sans-serif,sans-serif;transition:border-color .2s,box-shadow .2s,transform .2s cubic-bezier(0.16,1,0.3,1)}.ds-card b{display:block;font-weight:600;margin-bottom:4px}.ds-card span span{display:block;font-size:0.9rem;color:#4a4c5e;line-height:1.5}.ds-card svg{margin-top:6px;color:#6b6e82;transition:transform .2s,color .2s}.ds-card:hover{border-color:#d3d4e0;box-shadow:0 1px 2px rgba(12,13,20,.05),0 4px 10px -6px rgba(12,13,20,.12);transform:translateY(-2px)}.ds-card:hover svg{transform:translateX(3px);color:#0c0d14}.ds-card:focus-visible{outline:2px solid #3b6cf6;outline-offset:3px}"
+    },
+    {
+      "name": "Product Window",
+      "kind": "custom",
+      "refersTo": "product-window",
+      "description": "Dark window frame over the single brand glow; holds the real werkz TUI capture.",
+      "html": "<figure class=\"ds-shot\"><div class=\"ds-window\"><div class=\"ds-bar\"><i style=\"background:#ff9933\"></i><i style=\"background:#e8344e\"></i><i style=\"background:#3b6cf6\"></i><span>~/code/my-app — werkz</span></div><div class=\"ds-screen\"></div></div></figure>",
+      "css": ".ds-shot{position:relative;margin:40px;max-width:560px}.ds-shot::before{content:'';position:absolute;inset:-6% -5% -8%;background:linear-gradient(100deg,#ff9933 0%,#e8344e 48%,#3b6cf6 100%);filter:blur(64px);opacity:.7;border-radius:40%}.ds-window{position:relative;border-radius:16px;overflow:hidden;background:#0c0d14;border:1px solid rgba(12,13,20,.14);box-shadow:0 2px 6px rgba(12,13,20,.06),0 30px 60px -30px rgba(12,13,20,.35)}.ds-bar{display:flex;align-items:center;gap:8px;height:40px;padding:0 16px;background:#1e1f2c;color:#a4a6b8;font:500 0.82rem Geist,ui-sans-serif,sans-serif;border-bottom:1px solid rgba(255,255,255,.06)}.ds-bar i{width:11px;height:11px;border-radius:50%}.ds-bar span{margin:0 auto}.ds-screen{height:220px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Lit Window",
+    "overview": "The werkz site is a calm, professional product site in the category standard set by developer-tool leaders: a white canvas (or a near-black one when the visitor chooses dark), crisp Geist type, quiet zinc-tinted borders, and one real product shot. All the colour lives in that product shot. The logo's saffron, red and blue spread into a single soft glow behind a dark window holding a real capture of the werkz terminal UI. Everything around the window stays neutral so the product is the brightest thing on the page.\n\nThe pages are dense with facts and light on decoration. Commands are shown in full, in mono, with a copy button. Tables say exactly what each mode or install method does. Cards are flat white panels with a 1px border and at most a whisper of shadow. The brand colours appear outside the glow only as small, purposeful marks: the window's three dots, 20px line icons, plan dots, status pills, and blue for focus and selection.\n\nLight is the default. Dark is opt-in through the header toggle (`data-theme` on `<html>`, stored in `localStorage` as `werkz-theme`, previewable with `?theme=dark`). It is a complete theme built on the logo tile's own near-black, not an inverted afterthought. The Silk Canopy world was built, seen and rejected, and nothing from it carries forward.",
+    "keyCharacteristics": [
+      "Neutral white or tile-black canvas; brand colour concentrated behind the product window.",
+      "Geist Sans for everything readable, Geist Mono for every command, path and key. Both are self-hosted.",
+      "1px borders in two strengths, radii from 6px to 24px, quiet layered shadows.",
+      "One real terminal capture, framed as a window, with no illustrations or stock imagery.",
+      "Line icons on a 24px grid at a 1.8 stroke, coloured by a tri-tone rotation.",
+      "Full light and dark themes, with light as the default."
+    ],
+    "rules": [
+      {
+        "name": "The One Glow Rule",
+        "body": "The saffron → red → blue gradient (100deg, red at 48%) appears exactly once per page: blurred 64px behind the product window, at 0.7 opacity in light and 0.55 in dark. Never use it on text, buttons, borders, section backgrounds or the closing panel.",
+        "section": "colors"
+      },
+      {
+        "name": "The Small Marks Rule",
+        "body": "Outside the glow, brand colours appear only at mark size: 11px window dots, 10px plan dots, 20px icons, pill washes and a 2px tab underline. A brand colour never fills a surface larger than a pill.",
+        "section": "colors"
+      },
+      {
+        "name": "The Blue Means Interactive Rule",
+        "body": "Focus, selection, the selected tab and the active table-of-contents entry are blue. Do not use blue for decoration that a visitor might mistake for a control.",
+        "section": "colors"
+      },
+      {
+        "name": "The Sentence Case Rule",
+        "body": "Every label is set in sentence case at normal tracking, including group labels, table headers and the \"Latest\" badge. Nothing is uppercase-tracked, and no label sits above a heading as an eyebrow.",
+        "section": "typography"
+      },
+      {
+        "name": "The Mono Is Literal Rule",
+        "body": "Geist Mono is used only for text a user would type or see in a terminal: commands, paths, flags, slash commands and keys. Never use it for decoration or headings.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular Numbers Rule",
+        "body": "Release dates and table cells use `font-variant-numeric: tabular-nums`.",
+        "section": "typography"
+      },
+      {
+        "name": "The Lift On Intent Rule",
+        "body": "Surfaces rest flat or at Rest. Hover adds at most a 1–2px lift (buttons -1px, doc cards -2px plus Rest shadow). Nothing floats until a visitor points at it, except the product window.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** keep the canvas neutral (`bg` / `bg-soft` in light, `dark-bg` / `dark-bg-soft` in dark) and let the product window carry the colour.",
+      "**Do** show real commands in a command block with a copy button, in Geist Mono at 0.88rem.",
+      "**Do** use line icons on a 24px viewBox with a 1.8 stroke and round caps and joins, at 18–20px, inlined as SVG symbols. Colour feature icons with the saffron/red/blue tone rotation (`saffron-ink` in light mode).",
+      "**Do** separate topics with alternating Mist bands and hairlines before reaching for boxed cards.",
+      "**Do** build every new colour choice for both themes through the `data-theme` custom properties. Light remains the default.",
+      "**Do** respect `prefers-reduced-motion`. The build disables all transitions and animations when it is set.",
+      "**Do** use the shared easing `cubic-bezier(0.16, 1, 0.3, 1)` at 0.2s for state changes and 0.3s for theme changes."
+    ],
+    "donts": [
+      "**Don't** use the brand gradient anywhere except the single glow behind the product window: no gradient text, buttons, borders or section washes.",
+      "**Don't** fill large surfaces with saffron, red or blue. Brand colours stay at mark size.",
+      "**Don't** use red for anything but danger (Blocked, Bypass).",
+      "**Don't** put uppercase tracked eyebrows or kickers above headings. Labels are sentence case.",
+      "**Don't** use fabricated product imagery, mock dashboards, illustrations, stock photos, testimonials, user counts or invented benchmarks. The product shot is a real capture.",
+      "**Don't** use hard offset shadows or heavy drop shadows on cards. Card depth is Rest at most.",
+      "**Don't** use emoji or text glyphs as icons. Icons are stroked SVG symbols.",
+      "**Don't** load fonts from a CDN or fall back to a different display family. Geist and Geist Mono are self-hosted."
+    ]
+  }
+}

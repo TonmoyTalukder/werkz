@@ -1,7 +1,7 @@
 @import url("fonts/fonts.css");
 
 /* werkz website. Colours are the logo's own: saffron #FF9933, red #E8344E, blue #3B6CF6, on the
-   tile's #1E1F2C → #0C0D14. Light by default; dark follows the system or the toggle. */
+   tile's #1E1F2C → #0C0D14. Light by default; dark only when the visitor picks it with the toggle. */
 :root {
   --saffron: #ff9933;
   --red: #e8344e;
@@ -379,8 +379,9 @@ kbd {
 .rgroup li { margin: 4px 0; color: var(--ink-2); font-size: 0.96rem; }
 .rgroup li::marker { color: var(--ink-3); }
 .release .quiet { color: var(--ink-3); }
+.arrow-link { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; }
+.arrow-link .icon { width: 18px; height: 10px; }
 .rlink { display: inline-block; margin: 0 0 14px; font-size: 0.9rem; }
-.caps { font-size: inherit; }
 
 /* documentation */
 .doclist { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
