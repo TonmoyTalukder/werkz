@@ -25,7 +25,7 @@ func TestFreeLabels(t *testing.T) {
 	for _, c := range []struct{ provider, id, want string }{
 		{"openrouter", "meta-llama/llama-3.3-70b-instruct:free", "free"},
 		{"openrouter", "anthropic/claude-sonnet-4.5", ""},
-		{"gemini", "gemini-2.5-flash", "free tier"},
+		{"gemini", "gemini-flash-latest", "free tier"},
 		{"groq", "llama-3.3-70b-versatile", "free tier"},
 		{"ollama", "llama3.2", "local"},
 		{"anthropic", "claude-haiku-5-5", ""},
@@ -34,7 +34,7 @@ func TestFreeLabels(t *testing.T) {
 			t.Errorf("%s/%s = %q, want %q", c.provider, c.id, got, c.want)
 		}
 	}
-	if label, paid := PriceLabel(Lookup("gemini", "gemini-2.5-flash")); paid || label == "free" {
+	if label, paid := PriceLabel(Lookup("gemini", "gemini-flash-latest")); paid || label == "free" {
 		t.Fatalf("Gemini should be labelled as a free tier, got %q", label)
 	}
 }
@@ -43,7 +43,7 @@ func TestFreeLabels(t *testing.T) {
 func TestGuessProvider(t *testing.T) {
 	for id, want := range map[string]string{
 		"claude-opus-5-5": "anthropic", "gpt-5": "openai", "o1": "openai", "o3": "openai", "o4-mini": "openai",
-		"grok-4": "xai", "gemini-2.5-flash": "gemini", "meta-llama/llama-3.3-70b-instruct": "openrouter",
+		"grok-4": "xai", "gemini-flash-latest": "gemini", "meta-llama/llama-3.3-70b-instruct": "openrouter",
 		"llama3.2": "ollama", "openchat": "ollama",
 	} {
 		if got := GuessProvider(id); got != want {

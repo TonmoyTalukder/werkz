@@ -52,7 +52,7 @@ var Providers = []ProviderInfo{
 	{ID: "xai", Name: "xAI Grok", EnvVar: "XAI_API_KEY", BaseURL: "https://api.x.ai/v1",
 		DefaultModel: "grok-4", KeyHint: "xai-…", SignupURL: "console.x.ai", NeedsKey: true},
 	{ID: "gemini", Name: "Google Gemini (free tier)", EnvVar: "GEMINI_API_KEY",
-		BaseURL: "https://generativelanguage.googleapis.com/v1beta/openai", DefaultModel: "gemini-2.5-flash",
+		BaseURL: "https://generativelanguage.googleapis.com/v1beta/openai", DefaultModel: "gemini-flash-latest",
 		KeyHint: "AIza…", SignupURL: "aistudio.google.com/apikey", NeedsKey: true, Free: true},
 	{ID: "openrouter", Name: "OpenRouter", EnvVar: "OPENROUTER_API_KEY", BaseURL: "https://openrouter.ai/api/v1",
 		DefaultModel: "baidu/ernie-5.5-flash-preview:free", KeyHint: "sk-or-…", SignupURL: "openrouter.ai/keys",

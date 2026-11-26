@@ -60,7 +60,7 @@ func TestIsFree(t *testing.T) {
 	cases := map[[2]string]bool{
 		{"openrouter", "meta-llama/llama-3.3-70b-instruct:free"}: true,
 		{"openrouter", "anthropic/claude-sonnet-4"}:              false,
-		{"gemini", "gemini-2.5-flash"}:                           true,
+		{"gemini", "gemini-flash-latest"}:                        true,
 		{"openai", "gpt-5"}:                                      false,
 	}
 	for k, want := range cases {

@@ -44,6 +44,10 @@ func Classify(provider string, err error) (string, bool) {
 		case he.Status == 429:
 			return "rate limited", false
 		case he.Status == 404:
+			// the provider's own words often say why (retired, renamed) and what to use instead
+			if msg := errMessage(he.Body); msg != "" {
+				return "model not found: " + textutil.Truncate(msg, 240) + " (pick another with /model)", false
+			}
 			return "model not found (pick another with /model)", false
 		}
 		return fmt.Sprintf("HTTP %d: %s", he.Status, errMessage(he.Body)), false
@@ -75,7 +79,8 @@ func errMessage(s string) string {
 			} `json:"metadata"`
 		} `json:"error"`
 	}
-	if json.Unmarshal([]byte(s[i:]), &v) != nil {
+	// Decode, not Unmarshal: Gemini wraps the error in an array, so text follows the object
+	if json.NewDecoder(strings.NewReader(s[i:])).Decode(&v) != nil {
 		return textutil.Truncate(s, 160)
 	}
 	msg := v.Error.Message
