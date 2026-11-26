@@ -14,6 +14,7 @@ import (
 	"github.com/TonmoyTalukder/werkz/internal/agent"
 	"github.com/TonmoyTalukder/werkz/internal/catalog"
 	"github.com/TonmoyTalukder/werkz/internal/config"
+	"github.com/TonmoyTalukder/werkz/internal/llm/claudecode"
 	"github.com/TonmoyTalukder/werkz/internal/tools"
 	"github.com/TonmoyTalukder/werkz/internal/tui"
 	"github.com/TonmoyTalukder/werkz/internal/update"
@@ -36,10 +37,17 @@ func init() {
 }
 
 func main() {
+	// Claude Code starts werkz this way to ask permission questions (see internal/llm/claudecode).
+	if len(os.Args) == 3 && os.Args[1] == claudecode.BridgeArg {
+		if err := claudecode.Bridge(os.Args[2], os.Stdin, os.Stdout); err != nil {
+			os.Exit(1)
+		}
+		return
+	}
 	showVersion := flag.Bool("version", false, "print version")
 	login := flag.Bool("login", false, "open the API key screen on start")
 	modelFlag := flag.String("model", "", "model id for this session, e.g. claude-sonnet-5-5 (not saved)")
-	providerFlag := flag.String("provider", "", "provider of --model: anthropic, openai, xai, gemini, openrouter, groq or ollama (default: guessed)")
+	providerFlag := flag.String("provider", "", "provider of --model: anthropic, openai, xai, gemini, openrouter, groq, ollama, chatgpt or claudecode (default: guessed)")
 	wsFlag := flag.String("w", "", "open a saved workspace by name (default: no workspace)")
 	updateFlag := flag.Bool("update", false, "check for a new release, install it and exit")
 	flag.Usage = func() {
