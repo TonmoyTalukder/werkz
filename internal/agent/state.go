@@ -2,10 +2,12 @@ package agent
 
 import (
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 
 	"github.com/TonmoyTalukder/werkz/internal/llm"
+	"github.com/TonmoyTalukder/werkz/internal/tools"
 )
 
 // The UI and the engine run in different goroutines. The engine owns the conversation and
@@ -112,4 +114,24 @@ func (e *Engine) Enable(provider string) {
 	e.stateMu.Lock()
 	delete(e.disabled, provider)
 	e.stateMu.Unlock()
+}
+
+// History returns a copy of the conversation (for saving it).
+func (e *Engine) History() []llm.Msg {
+	e.stateMu.Lock()
+	defer e.stateMu.Unlock()
+	return append([]llm.Msg(nil), e.history...)
+}
+
+// Restore replaces the conversation with a saved one, to continue it. Call it between turns,
+// after the saved conversation's working folders are set: their project instructions are
+// already part of it. Files must be read again before they are edited.
+func (e *Engine) Restore(h []llm.Msg) {
+	e.StopKeepAlive()
+	e.setHistory(append([]llm.Msg(nil), h...))
+	e.envSent, e.lastKA = "", nil
+	e.memDirs = strings.Join(e.dirs(), "\x00")
+	e.reads = tools.NewReadTracker()
+	e.attached = nil
+	e.lastContext = 0
 }

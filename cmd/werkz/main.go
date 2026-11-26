@@ -50,6 +50,11 @@ func main() {
 	providerFlag := flag.String("provider", "", "provider of --model: anthropic, openai, xai, gemini, openrouter, groq, ollama, chatgpt or claudecode (default: guessed)")
 	wsFlag := flag.String("w", "", "open a saved workspace by name (default: no workspace)")
 	updateFlag := flag.Bool("update", false, "check for a new release, install it and exit")
+	var cont, resume bool
+	flag.BoolVar(&cont, "continue", false, "continue the latest conversation in this folder")
+	flag.BoolVar(&cont, "c", false, "short for --continue")
+	flag.BoolVar(&resume, "resume", false, "choose a saved conversation to continue")
+	flag.BoolVar(&resume, "r", false, "short for --resume")
 	flag.Usage = func() {
 		fmt.Fprintln(os.Stderr, "usage: werkz [flags] [folder ...]")
 		fmt.Fprintln(os.Stderr, "  folders: work in these folders (first is the main one); default is the current folder")
@@ -71,13 +76,15 @@ func main() {
 		fmt.Fprintln(os.Stderr, "werkz: unknown provider", *providerFlag)
 		os.Exit(2)
 	}
-	if err := run(*login, *providerFlag, *modelFlag, *wsFlag, flag.Args()); err != nil {
+	opts := tui.Options{Version: version, Login: *login, Workspace: *wsFlag, Dirs: flag.Args(), Continue: cont, Resume: resume && !cont,
+		NoMouse: os.Getenv("WERKZ_NO_MOUSE") == "1"}
+	if err := run(*providerFlag, *modelFlag, opts); err != nil {
 		fmt.Fprintln(os.Stderr, "werkz:", err)
 		os.Exit(1)
 	}
 }
 
-func run(login bool, provider, model, workspace string, dirs []string) error {
+func run(provider, model string, opts tui.Options) error {
 	// Use dark-terminal styles unless WERKZ_THEME=light.
 	lipgloss.SetHasDarkBackground(os.Getenv("WERKZ_THEME") != "light")
 
@@ -91,8 +98,12 @@ func run(login bool, provider, model, workspace string, dirs []string) error {
 
 	var p *tea.Program
 	eng := agent.New(cfg, func(v any) { p.Send(v) })
-	m := tui.New(cfg, eng, tui.Options{Version: version, Login: login, Workspace: workspace, Dirs: dirs})
-	p = tea.NewProgram(m, tea.WithAltScreen(), tea.WithMouseCellMotion())
+	m := tui.New(cfg, eng, opts)
+	popts := []tea.ProgramOption{tea.WithAltScreen()}
+	if !opts.NoMouse {
+		popts = append(popts, tea.WithMouseCellMotion())
+	}
+	p = tea.NewProgram(m, popts...)
 	defer tools.KillAll() // don't leave commands started by the agent running after exit
 	if _, err := p.Run(); err != nil {
 		return err

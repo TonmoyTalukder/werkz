@@ -55,6 +55,8 @@ changes and checks its work, asking before it does anything risky.
   context window you can cap yourself (`/context window 350k`); follow-up requests read 97–99% of their input
   from the cache.
 - **Several repos at once** with optional workspaces, and a full-screen terminal UI that adapts to any size.
+- **Made for daily use:** type `@` to attach files (with `@repo/path` across repos), drag to select and copy
+  any text, and pick up any earlier conversation with `/resume` or `werkz -c`.
 
 ## Install
 

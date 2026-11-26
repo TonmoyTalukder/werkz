@@ -4,7 +4,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/TonmoyTalukder/werkz/internal/session"
 	tea "github.com/charmbracelet/bubbletea"
+
 	"github.com/charmbracelet/glamour"
 	"github.com/charmbracelet/x/ansi"
 )
@@ -13,6 +15,7 @@ type entry struct {
 	render func(w int) string
 	w      int
 	out    string
+	item   *session.Item // a request, answer, tool use... (saved with the conversation); nil for notices
 }
 
 // push adds a transcript entry rendered lazily at the current width.
@@ -34,9 +37,13 @@ func wrapTo(s string, w int) string {
 
 func (m *model) history(w int) string {
 	parts := make([]string, 0, len(m.entries))
-	for _, e := range m.entries {
+	for i, e := range m.entries {
 		if e.w != w {
 			e.out, e.w = e.render(w), w
+		}
+		if m.state == stateSelect && i == m.selEntry {
+			parts = append(parts, markSelected(e.out))
+			continue
 		}
 		parts = append(parts, e.out)
 	}
@@ -65,8 +72,7 @@ func (m *model) flushLive(suffix string) {
 		m.push(func(w int) string { return renderThinking(t, d, w) })
 	}
 	if t := strings.TrimSpace(m.turn.live.String()); t != "" {
-		txt := t + suffix
-		m.push(func(w int) string { return m.renderAssistant(txt, w) })
+		m.pushItem(session.Item{Kind: "assistant", Text: t + suffix})
 	}
 	m.turn.thinking.Reset()
 	m.turn.live.Reset()

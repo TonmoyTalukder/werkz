@@ -108,6 +108,7 @@ type Config struct {
 	FallbackMode    string          `json:"fallback_mode"`               // off (default) | ask | auto
 	OpenRouterPaid  bool            `json:"openrouter_paid,omitempty"`   // also offer paid OpenRouter models (default: free only)
 	NoAutoUpdate    bool            `json:"auto_update_off,omitempty"`   // don\'t install new releases automatically
+	NoHistory       bool            `json:"history_off,omitempty"`       // don't save conversations for /resume
 	UpdateCheckedAt time.Time       `json:"update_checked_at,omitempty"` // last time werkz looked for a new release
 	UpdateLatest    string          `json:"update_latest,omitempty"`     // newest release seen by that check
 	CacheTTL        string          `json:"cache_ttl,omitempty"`         // 5m (default) | 1h

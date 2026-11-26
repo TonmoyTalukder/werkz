@@ -20,7 +20,7 @@ func renderUser(text string, w int) string {
 		if i > 0 {
 			pre = "  "
 		}
-		lines[i] = sUserMsg.Render(padRight(pre+l, max(min(w-2, lipgloss.Width(pre+l)+2), 4)))
+		lines[i] = userLine(pre+l, max(min(w-2, lipgloss.Width(pre+l)+2), 4))
 	}
 	return "\n" + strings.Join(lines, "\n")
 }

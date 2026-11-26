@@ -137,7 +137,8 @@ func (e *Engine) compact(ctx context.Context, focus string, auto bool) error {
 	_, wsName := e.workspaceEnv()
 	env := EnvContext(e.dirs(), wsName)
 	e.setHistory([]llm.Msg{{Role: llm.RoleUser, Text: text}})
-	e.memDirs = "" // the summary drops them: send the project instructions again
+	e.attached = nil // the summary doesn't carry attached files
+	e.memDirs = ""   // the summary drops them: send the project instructions again
 	e.addMemory()
 	e.appendHistory(llm.Msg{Role: llm.RoleSystem, Text: env})
 	e.envSent = env

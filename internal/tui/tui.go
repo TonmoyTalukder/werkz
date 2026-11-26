@@ -15,6 +15,9 @@ type Options struct {
 	Login     bool     // open the API key screen first
 	Workspace string   // open this saved workspace
 	Dirs      []string // or work in these folders (first is the main one)
+	Continue  bool     // continue the latest conversation in this folder
+	Resume    bool     // open the saved-conversation list
+	NoMouse   bool     // start with mouse capture off
 	// Updates: Updater replaces the release source/executable (tests); nil = GitHub releases
 	// and the running executable.
 	Updater *update.Updater
@@ -46,6 +49,20 @@ func New(cfg *config.Config, eng *agent.Engine, opts Options) tea.Model {
 	case len(opts.Dirs) > 0:
 		dirs := opts.Dirs
 		m.onStart = func() tea.Cmd { return m.activateDirs(dirs, "", nil) }
+	}
+	m.mouseOff = opts.NoMouse
+	if opts.Continue || opts.Resume {
+		prev := m.onStart
+		m.onStart = func() tea.Cmd {
+			var first tea.Cmd
+			if prev != nil {
+				first = prev()
+			}
+			if opts.Continue {
+				return tea.Sequence(first, m.continueLatest())
+			}
+			return tea.Sequence(first, m.openResume(""))
+		}
 	}
 	return m
 }

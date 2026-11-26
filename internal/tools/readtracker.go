@@ -51,3 +51,9 @@ func (r *ReadTracker) check(path string) error {
 	}
 	return nil
 }
+
+// Mark records that the model has seen path as it is now (e.g. attached with an @mention).
+func (r *ReadTracker) Mark(path string) { r.mark(path) }
+
+// Check reports why path may not be changed yet (nil = it may).
+func (r *ReadTracker) Check(path string) error { return r.check(path) }

@@ -14,6 +14,9 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+// docsURL is the werkz documentation on the website.
+const docsURL = "https://tonmoytalukder.github.io/werkz/docs/"
+
 var commands = []struct{ Name, Desc string }{
 	{"/model", "Choose model & provider"},
 	{"/effort", "Set thinking effort (low → max)"},
@@ -32,7 +35,11 @@ var commands = []struct{ Name, Desc string }{
 	{"/usage", "Your subscription limits (Claude Code: 5-hour, weekly; ChatGPT plan)"},
 	{"/balance", "Set starting Claude credit, e.g. /balance 100"},
 	{"/mode", "Cycle permission mode (or shift+tab) · /mode default|accept|plan|auto|bypass"},
-	{"/clear", "Clear conversation"},
+	{"/resume", "Find a saved conversation and continue it · /resume <search> · /resume off|on"},
+	{"/copy", "Copy the latest response (or a code block) · /copy 2 · /copy prompt · /copy all"},
+	{"/export", "Save the conversation as markdown · /export <file>"},
+	{"/clear", "Start a new conversation (this one stays in /resume)"},
+	{"/docs", "Open the werkz documentation in your browser"},
 	{"/help", "Show help"},
 	{"/exit", "Quit"},
 }
@@ -53,16 +60,37 @@ func (m *model) command(line string) tea.Cmd {
 		return tea.Quit
 	case "/help":
 		return pp(m.helpText)
+	case "/resume", "/history", "/continue":
+		if len(args) == 1 && (args[0] == "off" || args[0] == "on") {
+			m.cfg.NoHistory = args[0] == "off"
+			m.saveConfig()
+			if m.cfg.NoHistory {
+				return p(renderNotice("info", "Conversations are no longer saved. Saved ones stay in /resume until you delete them (ctrl+x there)."))
+			}
+			return tea.Batch(m.saveSession(), p(renderNotice("info", "Conversations are saved again, so /resume can continue them.")))
+		}
+		return m.openResume(strings.Join(args, " "))
+	case "/copy":
+		return m.copyCommand(args)
+	case "/export":
+		return m.exportCommand(args)
+	case "/docs":
+		if err := openBrowser(docsURL); err != nil {
+			return p(renderNotice("info", "Couldn't open a browser here ("+err.Error()+"). The documentation is at "+docsURL))
+		}
+		return p(renderNotice("info", "Opened the documentation in your browser: "+docsURL))
 	case "/clear":
 		if m.turn.active {
 			return p(renderNotice("warn", "Wait for the current turn to finish (esc to interrupt)."))
 		}
+		save := m.saveSession()
 		m.eng.Reset()
+		m.newSession()
 		m.stats.warmUntil = time.Time{}
 		m.stats.ctxUsed = 0
 		m.entries = nil
 		m.push(m.banner)
-		return p(sDim.Render("  (conversation cleared)"))
+		return tea.Batch(save, p(sDim.Render("  (new conversation · /resume brings back the previous one)")))
 	case "/model":
 		if m.turn.active {
 			return p(renderNotice("warn", "Wait for the current turn to finish."))

@@ -13,5 +13,5 @@
 | *"Couldn't load your settings"* | `~/.config/werkz/config.json` isn't valid JSON. Fix or delete it; werkz won't overwrite it meanwhile |
 | The Desktop icon opens as a text file (Linux) | Right-click it → **Allow Launching** |
 | *"werkz.app is damaged / can't be opened"* (macOS) | It's the unsigned-app quarantine: right-click → **Open**, or run `xattr -dr com.apple.quarantine /Applications/werkz.app` |
-| Text can't be selected | Hold **Shift** while dragging (the mouse is used for scrolling) |
+| Selected text isn't copied | werkz copies with `wl-copy`, `xclip` or `xsel` on Linux: install one. Over SSH it uses OSC 52, which some terminals (GNOME Terminal, older xterm) ignore; press **Ctrl+S** and select with the terminal, or use `/copy` and press **w** to write a file |
 | `werkz: command not found` after installing | Add `~/.local/bin` to your `PATH` (see [Installation](installation.md)) |

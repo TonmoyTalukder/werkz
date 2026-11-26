@@ -76,7 +76,9 @@ func (m *model) helpText() string {
 	b.WriteString("\n" + gradient("Keys", 0) + "\n")
 	for _, k := range [][2]string{{"enter", "send (queued while a turn runs)"}, {"ctrl+j / alt+enter", "newline"},
 		{"esc", "interrupt the model / close dialog"}, {"shift+tab", "cycle: default → accept edits → plan → auto → bypass (asks to confirm)"},
-		{"tab", "complete a slash command"}, {"ctrl+c ×2", "quit"}} {
+		{"tab", "complete a slash command"}, {"@", "mention a file or folder: its contents go with your message"},
+		{"alt+↑ / ctrl+o", "select a message to copy"}, {"ctrl+s", "mouse off/on: select text with your terminal"},
+		{"ctrl+c ×2", "quit"}} {
 		b.WriteString("  " + sSky.Render(padRight(k[0], 20)) + sDim.Render(k[1]) + "\n")
 	}
 	return box(strings.TrimRight(b.String(), "\n"), cViolet, m.w)

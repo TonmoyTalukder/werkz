@@ -41,12 +41,13 @@ type Engine struct {
 	turnPin        *attempt                                         // model switched to this turn after a failure (nil = use the chain)
 	autoCompactOff bool                                             // auto-compaction failed this session; don't retry every turn
 	reads          *tools.ReadTracker
-	sessionID      string // prompt_cache_key for OpenAI (routes requests to the same cache)
-	lastProvider   string // provider of the latest request
-	lastContext    int64  // tokens in the last request (input incl. cache + output)
-	lastWindow     int    // context window of the model used last
-	checkFailed    bool   // the latest test/build/lint command failed (holds auto-compaction)
-	sinceFail      int    // tool calls since that failure
+	attached       map[string]time.Time // files attached with @ (path:range -> mtime), to skip unchanged repeats
+	sessionID      string               // prompt_cache_key for OpenAI (routes requests to the same cache)
+	lastProvider   string               // provider of the latest request
+	lastContext    int64                // tokens in the last request (input incl. cache + output)
+	lastWindow     int                  // context window of the model used last
+	checkFailed    bool                 // the latest test/build/lint command failed (holds auto-compaction)
+	sinceFail      int                  // tool calls since that failure
 
 	// prompt-cache keep-alive for the last Claude request
 	lastKA     func(context.Context) (llm.Usage, error)
@@ -98,6 +99,7 @@ func (e *Engine) Reset() {
 	e.setHistory(nil)
 	e.envSent, e.memDirs, e.lastKA = "", "", nil
 	e.reads = tools.NewReadTracker()
+	e.attached = nil
 }
 
 // finish ends a turn. The keep-alive is set up before the UI hears the turn is done, so the
@@ -118,7 +120,11 @@ func (e *Engine) Run(ctx context.Context, userText string, settings config.Confi
 		return
 	}
 	e.addMemory()
-	e.appendHistory(llm.Msg{Role: llm.RoleUser, Text: userText})
+	sendText, att := e.attachMentions(userText)
+	if len(att) > 0 {
+		e.send(AttachedMsg{Items: att})
+	}
+	e.appendHistory(llm.Msg{Role: llm.RoleUser, Text: sendText})
 	_, wsName := e.workspaceEnv()
 	if env := EnvContext(e.dirs(), wsName); env != e.envSent {
 		e.appendHistory(llm.Msg{Role: llm.RoleSystem, Text: env})

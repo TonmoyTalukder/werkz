@@ -31,11 +31,20 @@ func (m *model) View() string {
 	if live := m.liveView(); live != "" {
 		content += "\n" + live
 	}
-	m.vp.SetContent(clipLines(content, m.w, 0))
+	clipped := clipLines(content, m.w, 0)
+	m.lines = strings.Split(clipped, "\n")
+	m.vp.SetContent(clipped)
 	if m.follow {
 		m.vp.GotoBottom()
 	}
-	top := m.vp.View()
+	if m.state == stateSelect {
+		// keep the selected message in view, its start first
+		start, h := m.selectedLine(m.w)
+		if start < m.vp.YOffset || start+min(h, m.vp.Height) > m.vp.YOffset+m.vp.Height {
+			m.vp.SetYOffset(max(start-1, 0))
+		}
+	}
+	top := m.paintSelection(m.vp.View())
 	if !m.follow && !m.vp.AtBottom() {
 		// hint that there is newer output below
 		lines := strings.Split(top, "\n")
@@ -97,6 +106,13 @@ func (m *model) bottomView() string {
 		b.WriteString(m.fallbackModeView())
 	case stateFallbackChain:
 		b.WriteString(m.fallbackChainView())
+	case stateResume:
+		b.WriteString(m.resumeView())
+	case stateCopy:
+		b.WriteString(m.copyPickerView() + "\n")
+	case stateSelect:
+		b.WriteString(sPink.Render("▌ ") + sText.Render("Select a message") +
+			sDim.Render("  ·  ↑↓ move · enter copy (code blocks: choose one) · esc back") + "\n")
 	default:
 		if !m.turn.active {
 			b.WriteString(m.effortHint() + "\n")
@@ -105,8 +121,10 @@ func (m *model) bottomView() string {
 		if m.cfg.Mode == config.ModeAuto {
 			rule = gradient(strings.Repeat("─", max(m.w, 10)), float64(m.turn.frame)/40)
 		}
-		b.WriteString(rule + "\n" + m.input.View() + "\n" + rule + "\n")
-		if sugs := m.suggestions(); len(sugs) > 0 {
+		b.WriteString(rule + "\n" + highlightInput(m.input.View()) + "\n" + rule + "\n")
+		if rows, _ := m.mentionSugs(); rows != nil {
+			b.WriteString(m.mentionView(rows))
+		} else if sugs := m.suggestions(); len(sugs) > 0 {
 			for i, s := range sugs {
 				if i == m.sugSel%len(sugs) {
 					b.WriteString(sPink.Render("❯ "+padRight(s.Name, 12)) + sText.Render(s.Desc) + "\n")
@@ -240,13 +258,19 @@ func (m *model) statusBar() string {
 	case config.ModeBypass:
 		modeLine = sRed.Bold(true).Render("⚠ bypass permissions on") + sDim.Render(" (nothing asks, even outside your folders · this session only · shift+tab to cycle)")
 	default:
-		modeLine = sDim.Render("? /help · shift+tab mode · ctrl+j newline · pgup/pgdn scroll")
+		modeLine = sDim.Render("? /help · shift+tab mode · @ files · drag to copy · ctrl+j newline · pgup/pgdn scroll")
 	}
 	switch {
 	case m.updated != "":
 		modeLine = sGreen.Render("↑ werkz "+m.updated+" installed · restart to use it") + sDim.Render(" · ") + modeLine
 	case m.available != "":
 		modeLine = sGreen.Render("↑ werkz "+m.available+" available") + sDim.Render(" · /update shows how · ") + modeLine
+	}
+	if m.mouseOff {
+		modeLine = sSky.Render("◇ mouse off: select text with your terminal") + sDim.Render(" · ctrl+s turns scrolling back on")
+	}
+	if m.toast != "" {
+		modeLine = sGreen.Render(m.toast)
 	}
 	if m.flash != "" {
 		modeLine = sYellow.Render(m.flash)

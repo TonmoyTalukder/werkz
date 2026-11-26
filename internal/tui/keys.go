@@ -7,12 +7,24 @@ import (
 	"time"
 
 	"github.com/TonmoyTalukder/werkz/internal/config"
+	"github.com/TonmoyTalukder/werkz/internal/session"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
 func (m *model) handleKey(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	ks := k.String()
+	if m.sel.on {
+		text := m.selectedText()
+		m.sel = textSel{}
+		m.follow = m.vp.AtBottom()
+		if ks == "ctrl+c" || ks == "y" {
+			return m, copyText("the selection", text) // copy, as in most apps: not interrupt/quit
+		}
+		if ks == "esc" {
+			return m, nil
+		}
+	}
 	if ks == "ctrl+c" {
 		if m.turn.active {
 			m.turn.cancel()
@@ -34,9 +46,15 @@ func (m *model) handleKey(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.flash = "Press Ctrl+C again to exit"
 		return m, nil
 	}
-	m.flash = ""
+	m.flash, m.toast = "", ""
 
 	switch m.state {
+	case stateResume:
+		return m, m.resumeKey(k)
+	case stateCopy:
+		return m, m.copyPickerKey(k)
+	case stateSelect:
+		return m, m.selectKey(k)
 	case stateLogin:
 		done, cmd := m.login.key(k)
 		if done {
@@ -83,8 +101,16 @@ func (m *model) handleKey(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	}
 
 	// chat state
+	if rows, cmd := m.mentionSugs(); rows != nil && m.mentionKey(k, rows) {
+		return m, cmd
+	}
 	sugs := m.suggestions()
 	switch ks {
+	case "ctrl+s":
+		return m, m.toggleMouse()
+	case "alt+up", "ctrl+o":
+		m.startSelect()
+		return m, nil
 	case "esc":
 		if m.turn.active {
 			m.turn.cancel()
@@ -139,7 +165,12 @@ func (m *model) handleKey(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	if len(m.suggestions()) == 0 {
 		m.sugSel = 0
 	}
-	return m, cmd
+	if _, start, _, ok := m.mentionAt(); !ok || start != m.ment.closed {
+		m.ment.closed = -1 // a new mention: the picker may open again
+	}
+	m.ment.sel = 0
+	_, icmd := m.mentionSugs() // starts indexing as soon as "@" is typed
+	return m, tea.Batch(cmd, icmd)
 }
 
 // cycleMode moves to the next permission mode; the running engine sees it immediately.
@@ -197,7 +228,7 @@ func (m *model) submit(text string) tea.Cmd {
 	m.turn.live.Reset()
 	m.turn.thinking.Reset()
 	go m.eng.Run(ctx, text, *m.cfg) // the engine gets its own snapshot of the settings
-	m.push(func(w int) string { return renderUser(text, w) })
+	m.pushItem(session.Item{Kind: "user", Text: text})
 	return tick()
 }
 

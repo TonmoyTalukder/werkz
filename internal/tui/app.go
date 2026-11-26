@@ -13,6 +13,7 @@ import (
 	"github.com/TonmoyTalukder/werkz/internal/config"
 	"github.com/TonmoyTalukder/werkz/internal/llm"
 	"github.com/TonmoyTalukder/werkz/internal/llm/openai"
+	"github.com/TonmoyTalukder/werkz/internal/session"
 	"github.com/TonmoyTalukder/werkz/internal/textutil"
 	"github.com/TonmoyTalukder/werkz/internal/update"
 
@@ -39,6 +40,9 @@ const (
 	stateFallbackChain
 	stateNotice // the one-time "You're using your ChatGPT plan" notice
 	stateBypass // confirming Bypass permissions
+	stateResume // /resume: choosing a saved conversation
+	stateCopy   // choosing what of a response to copy
+	stateSelect // moving between messages to copy one (alt+↑)
 )
 
 type tickMsg time.Time
@@ -110,6 +114,25 @@ type model struct {
 	planLimits  map[string]llm.PlanLimits // latest usage limits reported per subscription
 	planWarned  map[string]bool           // limit warnings already shown
 	bypassSel   int                       // highlighted answer in the Bypass confirmation (0 = No)
+
+	ment      mentionState // the @ file picker
+	sess      sessionInfo  // this conversation, as saved for /resume
+	rp        resumePicker
+	cp        copyPicker
+	prevState uiState  // where the copy picker returns to
+	selEntry  int      // selected transcript entry (stateSelect)
+	mouseOff  bool     // mouse capture off: the terminal's own selection works
+	toast     string   // a short confirmation in the status line, until the next key
+	sel       textSel  // text selected with the mouse
+	lines     []string // the transcript as last drawn (for copying a selection)
+}
+
+// sessionInfo identifies the saved conversation.
+type sessionInfo struct {
+	id      string
+	created time.Time
+	seq     int64 // orders background saves
+	warned  bool  // a failed save was reported
 }
 
 // turnState is the request currently running (if any) and what it has streamed so far.
@@ -189,6 +212,8 @@ func newModel(cfg *config.Config) *model {
 	ta.Focus()
 
 	m := &model{cfg: cfg, input: ta, w: 100, h: 30, follow: true, vp: viewport.New(100, 20)}
+	m.ment.closed = -1
+	m.newSession()
 	m.startDir, _ = os.Getwd()
 	m.updater = &update.Updater{}
 	m.vp.KeyMap = viewport.KeyMap{} // scrolling is handled explicitly (keys are needed for typing)
@@ -303,6 +328,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
+		m.sel = textSel{} // the text reflows: the selection no longer fits it
 		m.input.SetWidth(max(m.w-4, 10))
 		return m, tea.ClearScreen
 
@@ -375,12 +401,22 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case agent.ToolResultMsg:
-		call := msg.Name
+		it := session.Item{Kind: "tool", Call: msg.Name, Text: msg.Summary, Detail: msg.Detail, IsError: msg.IsError}
 		if m.turn.pending != nil {
-			call = m.turn.pending.Name + sDim.Render("("+m.turn.pending.Summary+")")
+			it.Call, it.Args = m.turn.pending.Name, m.turn.pending.Summary
 		}
 		m.turn.pending = nil
-		return m, m.push(func(w int) string { return renderToolResult(msg, call, w) })
+		return m, m.pushItem(it)
+
+	case agent.AttachedMsg:
+		return m, m.pushItem(attachItem(msg))
+
+	case indexBuiltMsg:
+		return m, m.handleIndexBuilt(msg)
+	case sessionSavedMsg:
+		return m, m.handleSessionSaved(msg)
+	case copiedMsg:
+		return m, m.handleCopied(msg)
 
 	case agent.PermReqMsg:
 		mm := msg
@@ -420,8 +456,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			how = "Auto-compacted the conversation"
 		}
 		m.stats.warmUntil = time.Time{}
-		return m, m.printS(sSky.Render("✻ ") + sText.Render(how) + sDim.Render(fmt.Sprintf(" · ~%s → ~%s tokens per request",
-			catalog.HumanTokens(int(msg.Before)), catalog.HumanTokens(int(msg.After)))))
+		m.pushItem(session.Item{Kind: "note", Text: how})
+		return m, tea.Batch(m.printS(sDim.Render(fmt.Sprintf("  ~%s → ~%s tokens per request",
+			catalog.HumanTokens(int(msg.Before)), catalog.HumanTokens(int(msg.After))))), m.saveSession())
 
 	case agent.PlanLimitsMsg:
 		return m, m.handlePlanLimits(llm.PlanLimits(msg))
@@ -462,6 +499,8 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.turn.cancel()
 		}
 		m.saveConfig()
+		m.ment.stale = true // the turn may have added or removed files
+		cmds = append(cmds, m.saveSession())
 		if msg.Err != nil {
 			if errors.Is(msg.Err, context.Canceled) {
 				cmds = append(cmds, m.printS(renderNotice("warn", "Interrupted · tell werkz what to do instead")))
@@ -483,14 +522,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Sequence(cmds...)
 
 	case tea.MouseMsg:
-		if msg.Button == tea.MouseButtonWheelUp {
-			m.vp.ScrollUp(3)
-			m.follow = false
-		} else if msg.Button == tea.MouseButtonWheelDown {
-			m.vp.ScrollDown(3)
-			m.follow = m.vp.AtBottom()
-		}
-		return m, nil
+		return m, m.handleMouse(msg)
 
 	case tea.KeyMsg:
 		switch msg.String() {
