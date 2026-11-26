@@ -10,12 +10,19 @@ Press **Shift+Tab** (or type `/mode`) to cycle through the modes:
 | **accept edits** | ✓ | ✓ | asks |
 | **plan** | ✓ | blocked (read-only) | blocked |
 | **auto** | ✓ | ✓ | ✓ |
+| **bypass** | ✓ | ✓ | ✓, and nothing asks, even outside your working folders |
 
-**Auto** and **accept edits** last only for the current session; werkz always starts in **default**.
+**Auto**, **accept edits** and **bypass** last only for the current session; werkz always starts in
+**default** (or **plan**, if you left it in plan mode).
+
+**Bypass** is for sandboxes and projects you fully trust. It works with every model, including Claude Code
+mode. Turning it on (Shift+Tab after auto, or `/mode bypass`) always asks for confirmation first, with **No**
+preselected; the status bar then shows a red *bypass permissions on*. It is never saved: closing werkz ends
+it. Credential locations stay blocked even in bypass.
 
 ## Rules that apply in every mode
 
-- Reading, listing, searching or writing **outside your working folders** asks first. Symlinks are followed,
+- Reading, listing, searching or writing **outside your working folders** asks first (except in bypass). Symlinks are followed,
   so a link inside the project can't point the model elsewhere.
 - **Credential locations** (`~/.ssh`, `~/.aws`, `~/.gnupg`, `~/.config/werkz`, `.netrc`, `.git-credentials`, …)
   are never opened by the file tools.

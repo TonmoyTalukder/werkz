@@ -366,7 +366,7 @@ func (e *Engine) permit(ctx context.Context, tc llm.ToolCall, summary string) (t
 		}
 		// Reads, listings and searches with a path outside the working folders, and any write
 		// outside them, always ask, in every mode. (Glob/Grep without a path stay inside.)
-		if (path != "" || tc.Name == "Write" || tc.Name == "Edit") && !tools.InsideDirs(path, e.dirs()) {
+		if (path != "" || tc.Name == "Write" || tc.Name == "Edit") && !tools.InsideDirs(path, e.dirs()) && e.mode() != config.ModeBypass {
 			outside = true
 			if kind != "plan" || !writeTool(tc.Name) {
 				need, kind = true, "ask"

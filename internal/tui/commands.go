@@ -31,7 +31,7 @@ var commands = []struct{ Name, Desc string }{
 	{"/cost", "Show session usage and cost"},
 	{"/usage", "Your subscription limits (Claude Code: 5-hour, weekly; ChatGPT plan)"},
 	{"/balance", "Set starting Claude credit, e.g. /balance 100"},
-	{"/mode", "Cycle permission mode (or shift+tab)"},
+	{"/mode", "Cycle permission mode (or shift+tab) · /mode default|accept|plan|auto|bypass"},
 	{"/clear", "Clear conversation"},
 	{"/help", "Show help"},
 	{"/exit", "Quit"},
@@ -298,6 +298,15 @@ func (m *model) command(line string) tea.Cmd {
 		}
 		return pp(m.costText)
 	case "/mode":
+		if len(args) > 0 {
+			want := map[string]string{"default": config.ModeDefault, "accept": config.ModeAcceptEdits, "acceptedits": config.ModeAcceptEdits,
+				"plan": config.ModePlan, "auto": config.ModeAuto, "bypass": config.ModeBypass}[strings.ToLower(args[0])]
+			if want == "" {
+				return p(renderNotice("warn", "Modes: default, accept, plan, auto, bypass"))
+			}
+			m.setMode(want)
+			return nil
+		}
 		m.cycleMode()
 		return nil
 	}

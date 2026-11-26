@@ -416,3 +416,22 @@ func (m *model) setContextWindow(args []string) tea.Cmd {
 	}
 	return m.printS(renderNotice("info", msg))
 }
+
+// bypassView is the confirmation shown before Bypass permissions turns on.
+func (m *model) bypassView() string {
+	var b strings.Builder
+	b.WriteString(sRed.Bold(true).Render("Turn on Bypass permissions?") + "\n\n")
+	b.WriteString(wrapTo(sText.Render("werkz will edit files and run any command without asking, including outside your working "+
+		"folders. Credential locations such as ~/.ssh stay blocked. Use it only in a sandbox or a project you fully trust."), max(m.w-8, 20)) + "\n")
+	b.WriteString(sDim.Render("It lasts for this session only; werkz always reopens asking.") + "\n\n")
+	opts := []string{"No, keep asking (esc)", "Yes, turn on Bypass for this session"}
+	for i, o := range opts {
+		if i == m.bypassSel {
+			b.WriteString(sPink.Render("❯ ") + sPink.Bold(true).Render(o) + "\n")
+		} else {
+			b.WriteString(sDim.Render("  "+o) + "\n")
+		}
+	}
+	b.WriteString(sDim.Render("↑/↓ choose · enter confirm"))
+	return box(b.String(), cRed, m.w)
+}

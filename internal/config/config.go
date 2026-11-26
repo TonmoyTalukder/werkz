@@ -152,6 +152,9 @@ const (
 	ModeAcceptEdits = "acceptEdits" // edits allowed, commands ask
 	ModePlan        = "plan"        // read-only
 	ModeAuto        = "auto"        // no prompts (writes outside the working folders still ask)
+	// ModeBypass asks for nothing, not even outside the working folders (credential locations
+	// stay blocked). It is turned on only after a confirmation and is never saved.
+	ModeBypass = "bypass"
 )
 
 // DefaultFallbackOrder tries free and local providers before paid ones.
@@ -297,6 +300,11 @@ func (c *Config) Save() error {
 	if s := c.session; s != nil && c.Provider == s.provider && c.Model == s.model {
 		cp := *c // still on the command-line model: save what the user had chosen before
 		cp.Provider, cp.Model, cp.Effort = s.savedProvider, s.savedModel, s.savedEffort
+		out = &cp
+	}
+	if out.Mode == ModeBypass {
+		cp := *out // bypass is never written to disk: werkz always reopens asking
+		cp.Mode = ModeDefault
 		out = &cp
 	}
 	b, err := json.MarshalIndent(out, "", "  ")

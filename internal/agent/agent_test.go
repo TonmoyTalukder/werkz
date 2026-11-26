@@ -350,3 +350,37 @@ func TestBashApprovalScope(t *testing.T) {
 		t.Fatalf("asked %d times (%v), want 3", len(asked), asked)
 	}
 }
+
+// Bypass asks for nothing, not even outside the working folders, but credential locations stay
+// blocked.
+func TestBypassModeSkipsPromptsButNotCredentials(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	must(t, os.MkdirAll(filepath.Join(home, ".ssh"), 0o700))
+	must(t, os.WriteFile(filepath.Join(home, ".ssh", "id_rsa"), []byte("KEY"), 0o600))
+	proj, other := t.TempDir(), t.TempDir()
+	must(t, os.WriteFile(filepath.Join(other, "notes.txt"), []byte("hi"), 0o644))
+	cfg := config.Load()
+	var asked int
+	e := New(cfg, func(v any) {
+		if pr, ok := v.(PermReqMsg); ok {
+			asked++
+			pr.Reply <- PermNo
+		}
+	})
+	e.SetWorkspace([]string{proj}, nil, "")
+	e.SetMode(config.ModeBypass)
+	r := e.execTool(context.Background(), llm.ToolCall{Name: "Read", Args: fmt.Sprintf(`{"path":%q}`, filepath.Join(other, "notes.txt"))})
+	if asked != 0 || r.IsError {
+		t.Fatalf("bypass should read outside the folders without asking: asked=%d %q", asked, r.Output)
+	}
+	r = e.execTool(context.Background(), llm.ToolCall{Name: "Bash", Args: `{"command":"echo ok"}`})
+	if asked != 0 || r.IsError {
+		t.Fatalf("bypass should run commands without asking: asked=%d %q", asked, r.Output)
+	}
+	r = e.execTool(context.Background(), llm.ToolCall{Name: "Read", Args: `{"path":"~/.ssh/id_rsa"}`})
+	if !r.IsError || strings.Contains(r.Output, "KEY") {
+		t.Fatalf("credential locations stay blocked in bypass: %q", r.Output)
+	}
+}

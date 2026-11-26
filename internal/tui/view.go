@@ -83,6 +83,8 @@ func (m *model) bottomView() string {
 		b.WriteString(m.effortView())
 	case stateNotice:
 		b.WriteString(m.noticeView())
+	case stateBypass:
+		b.WriteString(m.bypassView())
 	case statePerm:
 		b.WriteString(m.permView())
 	case stateWorkspaces:
@@ -235,6 +237,8 @@ func (m *model) statusBar() string {
 		modeLine = sSky.Render("⏸ plan mode on") + sDim.Render(" (read-only · shift+tab to cycle)")
 	case config.ModeAuto:
 		modeLine = sOrange.Render("⏵⏵⏵ auto mode on") + sDim.Render(" (no permission prompts · shift+tab to cycle)")
+	case config.ModeBypass:
+		modeLine = sRed.Bold(true).Render("⚠ bypass permissions on") + sDim.Render(" (nothing asks, even outside your folders · this session only · shift+tab to cycle)")
 	default:
 		modeLine = sDim.Render("? /help · shift+tab mode · ctrl+j newline · pgup/pgdn scroll")
 	}

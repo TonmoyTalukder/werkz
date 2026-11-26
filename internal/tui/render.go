@@ -6,7 +6,6 @@ import (
 	"time"
 
 	"github.com/TonmoyTalukder/werkz/internal/agent"
-	"github.com/TonmoyTalukder/werkz/internal/textutil"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/ansi"
@@ -69,7 +68,10 @@ func renderToolResult(r agent.ToolResultMsg, call string, w int) string {
 func renderDetail(lines []string, w int) string {
 	out := make([]string, len(lines))
 	for i, l := range lines {
-		l = textutil.Truncate(l, max(w, 20))
+		// cut, but keep indentation: it is part of the code being shown
+		if r := []rune(strings.TrimRight(l, " ")); len(r) > max(w, 20) {
+			l = string(r[:max(w, 20)]) + "…"
+		}
 		switch {
 		case strings.HasPrefix(l, "+ "):
 			out[i] = sDiffAdd.Render(l)

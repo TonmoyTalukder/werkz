@@ -235,3 +235,16 @@ func TestReadContinuationHint(t *testing.T) {
 		t.Fatalf("over-long line should be reported: %.200q", out)
 	}
 }
+
+// The edit preview shows only what changes, with a line of context around it.
+func TestDiffLinesShowsOnlyChanges(t *testing.T) {
+	old := "  if (!email) return \"x\";\n"
+	got := DiffLines(old, old+"  if (!password) return \"y\";\n", 10)
+	want := []string{"  " + `  if (!email) return "x";`, "+ " + `  if (!password) return "y";`}
+	if strings.Join(got, "|") != strings.Join(want, "|") {
+		t.Fatalf("got %q", got)
+	}
+	if a, r := DiffStat("a\nb\nc", "a\nB\nc"); a != 1 || r != 1 {
+		t.Fatalf("stat +%d -%d", a, r)
+	}
+}

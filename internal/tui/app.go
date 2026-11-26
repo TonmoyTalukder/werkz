@@ -38,6 +38,7 @@ const (
 	stateFallbackMode
 	stateFallbackChain
 	stateNotice // the one-time "You're using your ChatGPT plan" notice
+	stateBypass // confirming Bypass permissions
 )
 
 type tickMsg time.Time
@@ -54,7 +55,7 @@ var spinnerFrames = []string{"✶", "✸", "✹", "✺", "✹", "✷"}
 var verbs = []string{"Refracting", "werkzatizing", "Splitting light", "Pondering", "Conjuring", "Spectrumizing",
 	"Synthesizing", "Brewing", "Untangling", "Reasoning", "Composing", "Calibrating"}
 
-var modes = []string{config.ModeDefault, config.ModeAcceptEdits, config.ModePlan, config.ModeAuto}
+var modes = []string{config.ModeDefault, config.ModeAcceptEdits, config.ModePlan, config.ModeAuto, config.ModeBypass}
 
 type pendingTool struct{ Name, Summary string }
 
@@ -108,6 +109,7 @@ type model struct {
 	loginCancel context.CancelFunc        // stops an unfinished ChatGPT browser sign-in
 	planLimits  map[string]llm.PlanLimits // latest usage limits reported per subscription
 	planWarned  map[string]bool           // limit warnings already shown
+	bypassSel   int                       // highlighted answer in the Bypass confirmation (0 = No)
 }
 
 // turnState is the request currently running (if any) and what it has streamed so far.

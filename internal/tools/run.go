@@ -87,8 +87,7 @@ func Run(ctx context.Context, tc llm.ToolCall, env Env) Result {
 			return Fail("%v", err)
 		}
 		env.Reads.mark(a.Path)
-		added := strings.Count(a.NewString, "\n") + 1
-		removed := strings.Count(a.OldString, "\n") + 1
+		added, removed := DiffStat(a.OldString, a.NewString)
 		return Result{Output: fmt.Sprintf("Edited %s (%d replacement(s))", a.Path, max(c, 1)),
 			Summary: fmt.Sprintf("+%d −%d lines", added, removed), Detail: DiffLines(a.OldString, a.NewString, 8)}
 	case "Bash":

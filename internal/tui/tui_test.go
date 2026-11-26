@@ -639,3 +639,42 @@ func TestPlanLimitsDisplay(t *testing.T) {
 		t.Fatalf("/usage:\n%s", panel)
 	}
 }
+
+// Bypass needs an explicit "Yes", and is never saved: werkz reopens asking.
+func TestBypassNeedsConfirmationAndIsNotSaved(t *testing.T) {
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+	cfg := config.Load()
+	cfg.Onboarded = true
+	cfg.Keys["anthropic"] = "k"
+	m := New(cfg, agent.New(cfg, func(any) {}), Options{Version: "dev"}).(*model)
+	m.Update(tea.WindowSizeMsg{Width: 140, Height: 40})
+	m.cfg.Mode = config.ModeAuto
+	m.cycleMode() // auto → bypass asks first
+	if m.state != stateBypass || m.cfg.Mode != config.ModeAuto {
+		t.Fatalf("bypass must ask first: state=%v mode=%s", m.state, m.cfg.Mode)
+	}
+	m.dialogAt = time.Time{}
+	m.bypassKey(tea.KeyMsg{Type: tea.KeyEsc})
+	if m.state != stateChat || m.cfg.Mode != config.ModeDefault {
+		t.Fatalf("esc declines and returns to default: mode=%s", m.cfg.Mode)
+	}
+	m.command("/mode bypass")
+	m.bypassKey(tea.KeyMsg{Type: tea.KeyEnter}) // the dialog starts on "No"
+	if m.cfg.Mode != config.ModeDefault {
+		t.Fatalf("enter on the default answer must not turn bypass on: %s", m.cfg.Mode)
+	}
+	m.command("/mode bypass")
+	m.bypassKey(tea.KeyMsg{Type: tea.KeyDown})
+	m.bypassKey(tea.KeyMsg{Type: tea.KeyEnter})
+	if m.cfg.Mode != config.ModeBypass || !strings.Contains(ansi.Strip(m.View()), "bypass permissions on") {
+		t.Fatalf("an explicit yes turns it on: %s", m.cfg.Mode)
+	}
+	m.saveConfig()
+	if got := config.Load().Mode; got != config.ModeDefault {
+		t.Fatalf("bypass must never be saved; reopened in %q", got)
+	}
+	b, _ := os.ReadFile(config.Path())
+	if strings.Contains(string(b), `"bypass"`) {
+		t.Fatal("bypass written to the config file")
+	}
+}

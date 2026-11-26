@@ -55,6 +55,12 @@ func (m *model) handleKey(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case stateNotice:
 		m.noticeKey(k)
 		return m, nil
+	case stateBypass:
+		if m.typeahead() {
+			return m, nil
+		}
+		m.bypassKey(k)
+		return m, nil
 	case statePerm:
 		if m.typeahead() {
 			return m, nil
@@ -145,8 +151,37 @@ func (m *model) cycleMode() {
 			break
 		}
 	}
-	m.cfg.Mode = next
-	m.eng.SetMode(next)
+	m.setMode(next)
+}
+
+// setMode switches the permission mode. Bypass needs a confirmation first.
+func (m *model) setMode(mode string) {
+	if mode == config.ModeBypass && m.cfg.Mode != config.ModeBypass {
+		m.state, m.bypassSel = stateBypass, 0
+		m.dialogAt = time.Now()
+		return
+	}
+	m.cfg.Mode = mode
+	m.eng.SetMode(mode)
+}
+
+// bypassKey answers the Bypass confirmation: only an explicit "Yes" turns it on.
+func (m *model) bypassKey(k tea.KeyMsg) {
+	switch k.String() {
+	case "up", "down", "tab", "shift+tab":
+		m.bypassSel = 1 - m.bypassSel
+	case "esc":
+		m.bypassSel = 0
+		fallthrough
+	case "enter":
+		m.state = stateChat
+		if m.bypassSel == 1 {
+			m.cfg.Mode = config.ModeBypass
+		} else {
+			m.cfg.Mode = config.ModeDefault
+		}
+		m.eng.SetMode(m.cfg.Mode)
+	}
 }
 
 func (m *model) submit(text string) tea.Cmd {

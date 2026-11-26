@@ -63,7 +63,7 @@ func NeedsPermission(tool, mode string) (bool, string) {
 	switch mode {
 	case config.ModePlan:
 		return true, "plan"
-	case config.ModeAuto:
+	case config.ModeAuto, config.ModeBypass:
 		return false, ""
 	case config.ModeAcceptEdits:
 		return tool == "Bash", "ask"
@@ -145,19 +145,89 @@ func Preview(tc llm.ToolCall) []string {
 	return nil
 }
 
+// DiffLines renders an edit as a line diff: only changed lines, as "- " and "+ ", with one
+// unchanged line of context ("  ") on each side, cut to limit lines.
 func DiffLines(oldS, newS string, limit int) []string {
-	var out []string
-	for _, l := range strings.Split(oldS, "\n") {
-		out = append(out, "- "+l)
-	}
-	for _, l := range strings.Split(newS, "\n") {
-		out = append(out, "+ "+l)
-	}
+	out, _, _ := lineDiff(oldS, newS)
 	if len(out) > limit {
 		n := len(out) - limit
 		out = append(out[:limit], fmt.Sprintf("… %d more lines", n))
 	}
 	return out
+}
+
+// DiffStat counts the lines an edit adds and removes.
+func DiffStat(oldS, newS string) (added, removed int) {
+	_, added, removed = lineDiff(oldS, newS)
+	return added, removed
+}
+
+func splitLines(s string) []string {
+	if s == "" {
+		return nil
+	}
+	return strings.Split(strings.TrimSuffix(s, "\n"), "\n")
+}
+
+func lineDiff(oldS, newS string) (out []string, added, removed int) {
+	a, b := splitLines(oldS), splitLines(newS)
+	// common prefix and suffix are unchanged
+	pre := 0
+	for pre < len(a) && pre < len(b) && a[pre] == b[pre] {
+		pre++
+	}
+	suf := 0
+	for suf < len(a)-pre && suf < len(b)-pre && a[len(a)-1-suf] == b[len(b)-1-suf] {
+		suf++
+	}
+	ma, mb := a[pre:len(a)-suf], b[pre:len(b)-suf]
+	if pre > 0 {
+		out = append(out, "  "+a[pre-1])
+	}
+	if len(ma)*len(mb) <= 40_000 {
+		// longest common subsequence over the changed middle
+		l := make([][]int, len(ma)+1)
+		for i := range l {
+			l[i] = make([]int, len(mb)+1)
+		}
+		for i := len(ma) - 1; i >= 0; i-- {
+			for j := len(mb) - 1; j >= 0; j-- {
+				if ma[i] == mb[j] {
+					l[i][j] = l[i+1][j+1] + 1
+				} else {
+					l[i][j] = max(l[i+1][j], l[i][j+1])
+				}
+			}
+		}
+		i, j := 0, 0
+		for i < len(ma) || j < len(mb) {
+			switch {
+			case i < len(ma) && j < len(mb) && ma[i] == mb[j]:
+				out = append(out, "  "+ma[i])
+				i, j = i+1, j+1
+			case j < len(mb) && (i == len(ma) || l[i][j+1] >= l[i+1][j]):
+				out = append(out, "+ "+mb[j])
+				added++
+				j++
+			default:
+				out = append(out, "- "+ma[i])
+				removed++
+				i++
+			}
+		}
+	} else {
+		for _, x := range ma {
+			out = append(out, "- "+x)
+		}
+		for _, x := range mb {
+			out = append(out, "+ "+x)
+		}
+		removed, added = len(ma), len(mb)
+	}
+	if suf > 0 {
+		out = append(out, "  "+a[len(a)-suf])
+	}
+	return out, added, removed
 }
 
 func Fail(format string, args ...any) Result {

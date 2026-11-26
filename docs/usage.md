@@ -21,7 +21,7 @@
 | `/balance 100` | Track your remaining Claude credit |
 | `/update` | Check for a new werkz release and install it; `/update auto on\|off` |
 | `/openrouter paid\|free` | Show OpenRouter's paid models too, or only the free ones (default) |
-| `/mode` | Cycle the permission mode |
+| `/mode` | Cycle the permission mode; `/mode default\|accept\|plan\|auto\|bypass` picks one (bypass asks to confirm) |
 | `/clear` | Start a fresh conversation |
 | `/help` · `/exit` | Help · quit |
 
