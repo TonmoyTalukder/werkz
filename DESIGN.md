@@ -21,16 +21,17 @@ colors:
   success: "#16a34a"
   success-ink: "#15803d"
   caution-ink: "#b45309"
-  dark-bg: "#0c0d14"
-  dark-bg-soft: "#11121b"
-  dark-card: "#161722"
+  dark-bg: "#0a0b10"
+  dark-bg-soft: "#12131b"
+  dark-card: "#191a25"
   dark-ink: "#f4f4f7"
   dark-ink-2: "#b4b6c8"
   dark-ink-3: "#8c8ea3"
-  dark-line: "#24253a"
-  dark-line-strong: "#33354d"
+  dark-line: "#272939"
+  dark-line-strong: "#373a52"
   dark-link: "#8fb0ff"
-  dark-code-bg: "#1e1f2c"
+  dark-code-bg: "#20222f"
+  dark-window: "#06070b"
 typography:
   display:
     fontFamily: "Geist, ui-sans-serif, system-ui, -apple-system, Segoe UI, sans-serif"
@@ -338,6 +339,14 @@ a 100-column terminal that scales with its width). Narrower screens stack them, 
 1280×720 and 1366×768 everything in the hero, buttons included, is in the first screen. On these large screens the hero fills
 exactly one screen under the sticky header (`100vh` minus 65px), its row centred vertically, so the next
 section starts at the fold.
+### Dark Theme Depth
+
+Dark mode keeps the light theme's layering instead of flattening it: page `#0a0b10`, grey sections `#12131b`,
+cards `#191a25`, each a visible step apart, with a hairline of light on the top edge of raised surfaces and a real
+drop shadow. The product windows sit deeper than the page (`#06070b`) with a 13% white edge and an inner top
+highlight, so they read as lit windows rather than holes; the glow behind them uses `screen` blending so it adds
+light instead of a muddy wash.
+
 ### Feature Tour
 
 The features section is a tour, not a card grid: a list of features beside a sticky product window that plays
