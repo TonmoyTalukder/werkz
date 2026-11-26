@@ -9,6 +9,49 @@
     try { localStorage.setItem("werkz-theme", next); } catch {}
   });
 
+  // Hero headline types itself in. Every letter is laid out from the start (just invisible), so
+  // nothing shifts; screen readers get the whole heading; reduced motion shows it at once.
+  const typed = document.querySelector("[data-type]");
+  if (typed && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    const text = typed.textContent.trim();
+    typed.setAttribute("aria-label", text);
+    typed.textContent = "";
+    const chars = [];
+    text.split(" ").forEach((word, n) => {
+      if (n) typed.append(" "); // spaces stay outside the words, so lines can break there
+      const w = document.createElement("span");
+      w.className = "tw-word";
+      w.setAttribute("aria-hidden", "true");
+      for (const ch of word) {
+        const c = document.createElement("span");
+        c.className = "tw-char";
+        c.textContent = ch;
+        w.append(c);
+        chars.push(c);
+      }
+      typed.append(w);
+    });
+    const caret = document.createElement("span");
+    caret.className = "tw-caret";
+    caret.setAttribute("aria-hidden", "true");
+    typed.classList.add("typing");
+    let i = 0;
+    const step = () => {
+      if (i < chars.length) {
+        chars[i].classList.add("on");
+        chars[i].after(caret);
+        // a short pause after each word and a longer one at the comma, like real typing
+        const c = chars[i++];
+        const endOfWord = !c.nextSibling;
+        setTimeout(step, c.textContent === "," ? 260 : endOfWord ? 90 : 34 + Math.random() * 30);
+      } else {
+        typed.classList.add("typed");
+        setTimeout(() => caret.classList.add("gone"), 2600);
+      }
+    };
+    setTimeout(step, 250);
+  }
+
   // Tabs (WAI-ARIA: click, arrow keys, Home/End).
   for (const group of document.querySelectorAll("[data-tabs]")) {
     const tabs = [...group.querySelectorAll('[role="tab"]')];
