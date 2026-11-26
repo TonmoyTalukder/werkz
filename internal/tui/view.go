@@ -81,6 +81,8 @@ func (m *model) bottomView() string {
 		b.WriteString(m.pickerView())
 	case stateEffort:
 		b.WriteString(m.effortView())
+	case stateNotice:
+		b.WriteString(m.noticeView())
 	case statePerm:
 		b.WriteString(m.permView())
 	case stateWorkspaces:
@@ -198,6 +200,14 @@ func (m *model) statusBar() string {
 	}
 	folder := sSky.Render(m.folderLabel())
 	prov := providerBadge(m.cfg.Provider)
+	if plan := planStatus(m.cfg.Provider, false); plan != "" {
+		// subscriptions don't cost per request: say what is used instead of a dollar amount
+		money = plan
+		moneyFull = planStatus(m.cfg.Provider, true)
+		if m.stats.cost > 0 {
+			moneyFull += sDim.Render(fmt.Sprintf(" · $%.2f on other models", m.stats.cost))
+		}
+	}
 
 	// most detailed layout first; fall back to more compact ones as the window narrows
 	layouts := [][]string{

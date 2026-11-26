@@ -71,7 +71,7 @@ func (e *Engine) runTask(ctx context.Context, tc llm.ToolCall) tools.Result {
 		}
 		cost += c
 		e.send(UsageMsg{Provider: provider, Model: model, Usage: turn.Usage, Cost: c, Sub: true, Unpriced: c == 0 && !mi.Priced()})
-		hist = append(hist, llm.Msg{Role: llm.RoleAssistant, Text: turn.Text, ToolCalls: turn.ToolCalls, ClaudeRaw: turn.Raw})
+		hist = append(hist, llm.Msg{Role: llm.RoleAssistant, Text: turn.Text, ToolCalls: turn.ToolCalls, ClaudeRaw: turn.Raw, RespItems: turn.Items})
 		if len(turn.ToolCalls) == 0 {
 			report := strings.TrimSpace(turn.Text)
 			if report == "" {

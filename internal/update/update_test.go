@@ -157,7 +157,7 @@ func TestReadOnlyInstallFolder(t *testing.T) {
 // Package-manager installs are never overwritten: the user is told how to update instead.
 func TestPackageManagedInstallsAreLeftAlone(t *testing.T) {
 	for exe, want := range map[string]string{
-		"/usr/bin/werkz":                                "your package manager (apt, dnf, apk or pacman)",
+		"/usr/bin/werkz": "your package manager (apt, dnf, apk or pacman)",
 		"/opt/homebrew/Caskroom/werkz/0.1.1/werkz":      "brew upgrade --cask werkz",
 		"/home/linuxbrew/.linuxbrew/Cellar/werkz/x/bin": "brew upgrade werkz",
 	} {

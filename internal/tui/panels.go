@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/TonmoyTalukder/werkz/internal/catalog"
+	"github.com/TonmoyTalukder/werkz/internal/config"
 	"github.com/TonmoyTalukder/werkz/internal/textutil"
 
 	"github.com/charmbracelet/lipgloss"
@@ -34,8 +35,11 @@ func (m *model) banner(w int) string {
 		fbs = strings.Join(fb, " → ")
 	}
 	billing := "API key"
-	if m.cfg.Provider == "ollama" {
+	switch {
+	case m.cfg.Provider == "ollama":
 		billing = "local"
+	case config.ProviderByID(m.cfg.Provider).Plan():
+		billing = "subscription"
 	}
 	info := strings.Join([]string{
 		sBold.Render("werkz") + sDim.Render(" v"+m.version),

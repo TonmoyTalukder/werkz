@@ -87,6 +87,7 @@ func (m *model) pickerKey(k tea.KeyMsg) tea.Cmd {
 		m.selectModel(mi.Provider, mi.ID)
 		m.saveConfig()
 		m.state = stateChat
+		m.maybePlanNotice(mi.Provider)
 		return m.printS(renderNotice("info", fmt.Sprintf("Model set to %s via %s · effort %s", mi.Label, mi.Provider, m.cfg.Effort)))
 	}
 	var cmd tea.Cmd

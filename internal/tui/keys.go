@@ -52,6 +52,9 @@ func (m *model) handleKey(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 		return m, m.pickerKey(k)
 	case stateEffort:
 		return m, m.effortKey(k)
+	case stateNotice:
+		m.noticeKey(k)
+		return m, nil
 	case statePerm:
 		if m.typeahead() {
 			return m, nil

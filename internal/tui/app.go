@@ -36,6 +36,7 @@ const (
 	stateFallback
 	stateFallbackMode
 	stateFallbackChain
+	stateNotice // the one-time "You're using your ChatGPT plan" notice
 )
 
 type tickMsg time.Time
@@ -101,6 +102,8 @@ type model struct {
 	version  string
 	updater  *update.Updater
 	updated  string // a newer version was installed in the background (restart to use it)
+
+	loginCancel context.CancelFunc // stops an unfinished ChatGPT browser sign-in
 }
 
 // turnState is the request currently running (if any) and what it has streamed so far.
@@ -257,7 +260,18 @@ func (m *model) fetchCredits() tea.Cmd {
 // fetchModels loads a provider's model list in the background. The settings it needs are
 // copied here, on the UI goroutine, so the background command never reads the live config.
 func fetchModels(cfg *config.Config, id string) tea.Cmd {
-	o := &openai.Client{ID: id, BaseURL: cfg.BaseURL(id), Key: cfg.Key(id), IncludePaid: cfg.OpenRouterPaid}
+	type lister interface {
+		ListModels(context.Context) ([]catalog.ModelInfo, error)
+	}
+	var o lister
+	switch id {
+	case "claudecode":
+		return nil // a fixed list (Claude Code's own models)
+	case "chatgpt":
+		o = agent.NewChatGPT(cfg.BaseURL(id))
+	default:
+		o = &openai.Client{ID: id, BaseURL: cfg.BaseURL(id), Key: cfg.Key(id), IncludePaid: cfg.OpenRouterPaid}
+	}
 	return func() tea.Msg {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
@@ -296,6 +310,13 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case updateMsg:
 		return m, m.handleUpdate(msg)
+
+	case chatgptURLMsg:
+		return m, m.handleChatGPTURL(msg)
+	case chatgptLoginMsg:
+		return m, m.handleChatGPTLogin(msg)
+	case chatgptLogoutMsg:
+		return m, m.handleChatGPTLogout(msg)
 
 	case modelsFetchedMsg:
 		if msg.Provider == "openrouter" {

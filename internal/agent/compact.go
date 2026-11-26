@@ -56,7 +56,8 @@ func (e *Engine) CompactThreshold() (at, hard int64) {
 }
 
 func (e *Engine) shouldAutoCompact() bool {
-	if e.cfg.NoAutoCompact || e.autoCompactOff || len(e.history) < compactMinHistory {
+	// Claude Code keeps (and compacts) its own conversation.
+	if e.cfg.NoAutoCompact || e.autoCompactOff || len(e.history) < compactMinHistory || e.lastProvider == "claudecode" {
 		return false
 	}
 	at, hard := e.CompactThreshold()
@@ -202,7 +203,7 @@ func shrinkForSummary(h []llm.Msg) []llm.Msg {
 	}
 	out := make([]llm.Msg, 0, len(h))
 	for _, m := range h {
-		m.ClaudeRaw = nil
+		m.ClaudeRaw, m.RespItems = nil, nil
 		if m.Role == llm.RoleTool {
 			m.Text = clip(m.Text)
 		}

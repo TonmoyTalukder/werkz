@@ -8,10 +8,14 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/TonmoyTalukder/werkz/internal/chatgpt"
 )
 
 // ProviderInfo describes one backend werkz can talk to.
@@ -25,7 +29,19 @@ type ProviderInfo struct {
 	SignupURL    string
 	NeedsKey     bool
 	Free         bool // has a usable free tier
+	// Auth is how a provider without an API key is set up: AuthChatGPT (browser sign-in) or
+	// AuthCLI (an installed command-line tool that is already signed in).
+	Auth string
 }
+
+// Provider set-up kinds (ProviderInfo.Auth); "" means an API key.
+const (
+	AuthChatGPT = "chatgpt"
+	AuthCLI     = "cli"
+)
+
+// Plan reports whether requests use the user's subscription (no per-token charge).
+func (p *ProviderInfo) Plan() bool { return p != nil && p.Auth != "" }
 
 var Providers = []ProviderInfo{
 	{ID: "anthropic", Name: "Claude (Anthropic)", EnvVar: "ANTHROPIC_API_KEY", DefaultModel: "claude-opus-5-5",
@@ -44,6 +60,21 @@ var Providers = []ProviderInfo{
 		DefaultModel: "llama-3.3-70b-versatile", KeyHint: "gsk_…", SignupURL: "console.groq.com/keys", NeedsKey: true, Free: true},
 	{ID: "ollama", Name: "Ollama (local, offline)", EnvVar: "OLLAMA_HOST", BaseURL: "http://localhost:11434/v1",
 		DefaultModel: "llama3.2", KeyHint: "http://localhost:11434 (optional)", SignupURL: "ollama.com/download", Free: true},
+	{ID: "chatgpt", Name: "ChatGPT plan", BaseURL: "https://api.openai.com/v1", DefaultModel: "gpt-6.2-sol",
+		SignupURL: "/login chatgpt", Auth: AuthChatGPT},
+	{ID: "claudecode", Name: "Claude Code (your subscription)", DefaultModel: "default",
+		SignupURL: "code.claude.com", Auth: AuthCLI},
+}
+
+// KeyProviders are the providers set up with an API key (or, for Ollama, a host).
+func KeyProviders() []ProviderInfo {
+	var out []ProviderInfo
+	for _, p := range Providers {
+		if p.Auth == "" {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 func ProviderByID(id string) *ProviderInfo {
@@ -83,6 +114,7 @@ type Config struct {
 	FallbackChain   []FallbackModel `json:"fallback_models,omitempty"`     // ordered; empty = one model per provider in FallbackOrder
 	CompactAt       int             `json:"auto_compact_tokens,omitempty"` // 0 = default (300k)
 	NoAutoCompact   bool            `json:"auto_compact_off,omitempty"`
+	PlanNoticeSeen  bool            `json:"chatgpt_plan_notice_seen,omitempty"` // "You're using your ChatGPT plan" shown once
 }
 
 // Permission modes (Config.Mode).
@@ -94,10 +126,14 @@ const (
 )
 
 // DefaultFallbackOrder tries free and local providers before paid ones.
-var DefaultFallbackOrder = []string{"gemini", "openrouter", "groq", "ollama", "anthropic", "openai", "xai"}
+// Subscriptions come next: they don't cost extra per request.
+var DefaultFallbackOrder = []string{"gemini", "openrouter", "groq", "ollama", "chatgpt", "claudecode", "anthropic", "openai", "xai"}
 
-// oldDefaultOrder was the default before free providers came first.
-var oldDefaultOrder = []string{"anthropic", "openai", "xai", "gemini", "openrouter", "groq", "ollama"}
+// Earlier defaults, migrated to the current one (a custom order is kept).
+var (
+	oldDefaultOrder  = []string{"anthropic", "openai", "xai", "gemini", "openrouter", "groq", "ollama"}
+	prevDefaultOrder = []string{"gemini", "openrouter", "groq", "ollama", "anthropic", "openai", "xai"}
+)
 
 // Fallback modes (Config.FallbackMode).
 const (
@@ -184,7 +220,7 @@ func Load() *Config {
 	}
 	// Free options first: a failure (most often a free-tier rate limit) shouldn't escalate
 	// straight to the most expensive models. The old default is migrated; a custom order stays.
-	if len(c.FallbackOrder) == 0 || slices.Equal(c.FallbackOrder, oldDefaultOrder) {
+	if len(c.FallbackOrder) == 0 || slices.Equal(c.FallbackOrder, oldDefaultOrder) || slices.Equal(c.FallbackOrder, prevDefaultOrder) {
 		c.FallbackOrder = slices.Clone(DefaultFallbackOrder)
 	}
 	// Prompt-free modes are per session: a new session (maybe in a freshly cloned, untrusted
@@ -274,10 +310,40 @@ func (c *Config) Key(id string) string {
 
 // Configured reports whether a provider can be tried at all.
 func (c *Config) Configured(id string) bool {
-	if id == "ollama" {
+	switch id {
+	case "ollama":
 		return true // reachability is checked at call time
+	case "chatgpt":
+		return chatgpt.SignedIn()
+	case "claudecode":
+		return ClaudeCLI() != ""
 	}
 	return c.Key(id) != ""
+}
+
+var claudeCLI struct {
+	sync.Mutex
+	at   time.Time
+	path string
+}
+
+// ClaudeCLI returns the path of the installed Claude Code command ("" if not installed). The
+// result is cached for a short while, since this is asked often while drawing the screen.
+func ClaudeCLI() string {
+	// WERKZ_CLAUDE_BIN picks another `claude`; "off" hides Claude Code (tests use this).
+	if v := os.Getenv("WERKZ_CLAUDE_BIN"); v != "" {
+		if v == "off" {
+			return ""
+		}
+		return v
+	}
+	claudeCLI.Lock()
+	defer claudeCLI.Unlock()
+	if time.Since(claudeCLI.at) > 30*time.Second {
+		claudeCLI.path, _ = exec.LookPath("claude")
+		claudeCLI.at = time.Now()
+	}
+	return claudeCLI.path
 }
 
 func (c *Config) BaseURL(id string) string {
@@ -309,10 +375,10 @@ func (c *Config) ModelFor(id string) string {
 	return ""
 }
 
-// AnyConfigured reports whether at least one remote provider has a key.
+// AnyConfigured reports whether at least one remote provider has a key or a sign-in.
 func (c *Config) AnyConfigured() bool {
 	for _, p := range Providers {
-		if p.NeedsKey && c.Key(p.ID) != "" {
+		if p.NeedsKey && c.Key(p.ID) != "" || p.Auth == AuthChatGPT && c.Configured(p.ID) {
 			return true
 		}
 	}

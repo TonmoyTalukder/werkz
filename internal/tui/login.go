@@ -18,6 +18,10 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+// keyProviders are the rows of the login screen (the subscriptions are set up with /login
+// chatgpt and by installing Claude Code).
+var keyProviders = config.KeyProviders()
+
 type validateMsg struct {
 	ID  string
 	OK  bool
@@ -38,7 +42,7 @@ type loginModel struct {
 
 func newLogin(cfg *config.Config, first bool) loginModel {
 	l := loginModel{cfg: cfg, first: first, status: map[string]string{}, errs: map[string]string{}}
-	for _, p := range config.Providers {
+	for _, p := range keyProviders {
 		ti := textinput.New()
 		ti.Placeholder = p.KeyHint
 		ti.Prompt = ""
@@ -99,7 +103,7 @@ func (l *loginModel) key(k tea.KeyMsg) (bool, tea.Cmd) {
 
 func (l *loginModel) save() tea.Cmd {
 	var cmds []tea.Cmd
-	for i, p := range config.Providers {
+	for i, p := range keyProviders {
 		v := strings.TrimSpace(l.inputs[i].Value())
 		if v == "" {
 			delete(l.cfg.Keys, p.ID)
@@ -170,7 +174,7 @@ func (l *loginModel) view(w, h int) string {
 	}
 	fieldW := min(46, max(w-nameW-6-24, 14))
 	wide := w >= nameW+6+fieldW+40 // room for hints next to the fields
-	rows := len(config.Providers) * 2
+	rows := len(keyProviders) * 2
 
 	// logo only when there is room for it
 	if h >= rows+18 && w >= lipgloss.Width(logo)+2 {
@@ -185,7 +189,7 @@ func (l *loginModel) view(w, h int) string {
 	}
 	b.WriteString("\n")
 
-	for i, p := range config.Providers {
+	for i, p := range keyProviders {
 		label := p.Name
 		if w < 80 {
 			label = strings.SplitN(p.Name, " (", 2)[0]
@@ -227,8 +231,8 @@ func (l *loginModel) view(w, h int) string {
 		row := lipgloss.JoinHorizontal(lipgloss.Top, cursor+name+tag, field, "  "+st)
 		b.WriteString(row + "\n")
 	}
-	if !wide && l.status[config.Providers[l.focus].ID] == "" {
-		b.WriteString(sDim.Render("get a key → "+config.Providers[l.focus].SignupURL) + "\n")
+	if !wide && l.status[keyProviders[l.focus].ID] == "" {
+		b.WriteString(sDim.Render("get a key → "+keyProviders[l.focus].SignupURL) + "\n")
 	}
 	b.WriteString("\n")
 	switch {
@@ -242,7 +246,11 @@ func (l *loginModel) view(w, h int) string {
 		b.WriteString(sDim.Render("↑/↓ move · enter next · ctrl+s save & verify · esc skip"))
 	}
 	if h >= rows+14 {
-		b.WriteString("\n" + wrapTo(sFaint.Render("Note: ChatGPT/Codex and Gemini app subscriptions can't be used here; use API keys from the links above."), w))
+		cc := "install Claude Code (code.claude.com) to use your Claude subscription"
+		if config.ClaudeCLI() != "" {
+			cc = "Claude Code found: pick a \"(Claude Code)\" model with /model to use your Claude subscription"
+		}
+		b.WriteString("\n" + wrapTo(sFaint.Render("Subscriptions: after this screen, type /login chatgpt to use your ChatGPT plan · "+cc+"."), w))
 	}
 	return b.String()
 }

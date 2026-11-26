@@ -46,6 +46,19 @@ var ClaudeModels = []ModelInfo{
 
 var OpenAIEfforts = []string{"auto", "low", "medium", "high"}
 
+// ClaudeCodeModels run through the user's installed Claude Code, on their Claude subscription.
+// "default" leaves the choice to Claude Code's own settings.
+var ClaudeCodeModels = func() []ModelInfo {
+	out := []ModelInfo{{ID: "default", Label: "Claude Code default", Provider: "claudecode", Context: 1_000_000,
+		Efforts: ClaudeEfforts, DefaultEffort: "high", Note: "your Claude subscription · Claude Code's own choice"}}
+	for _, m := range ClaudeModels {
+		out = append(out, ModelInfo{ID: m.ID, Label: m.Label + " (Claude Code)", Provider: "claudecode",
+			Context: m.Context, Efforts: ClaudeEfforts, DefaultEffort: m.DefaultEffort,
+			Note: "your Claude subscription · " + m.Note})
+	}
+	return out
+}()
+
 // remote model lists fetched from OpenAI-compatible /models endpoints
 var (
 	remoteMu     sync.Mutex
@@ -78,6 +91,15 @@ func Lookup(provider, id string) ModelInfo {
 		}
 		return mi
 	}
+	if provider == "claudecode" {
+		for _, m := range ClaudeCodeModels {
+			if m.ID == id {
+				return m
+			}
+		}
+		return ModelInfo{ID: id, Label: id + " (Claude Code)", Provider: provider, Context: 1_000_000,
+			Efforts: ClaudeEfforts, DefaultEffort: "high"}
+	}
 	remoteMu.Lock()
 	defer remoteMu.Unlock()
 	for _, m := range remoteModels[provider] {
@@ -85,7 +107,11 @@ func Lookup(provider, id string) ModelInfo {
 			return m
 		}
 	}
-	return ModelInfo{ID: id, Label: id, Provider: provider, Context: 128_000, Efforts: OpenAIEfforts,
+	ctx := 128_000
+	if provider == "chatgpt" {
+		ctx = 272_000
+	}
+	return ModelInfo{ID: id, Label: id, Provider: provider, Context: ctx, Efforts: OpenAIEfforts,
 		DefaultEffort: "auto", Free: IsFree(provider, id)}
 }
 
@@ -109,6 +135,10 @@ func All(cfg *config.Config) []ModelInfo {
 	defer remoteMu.Unlock()
 	for _, p := range config.Providers {
 		if p.ID == "anthropic" || !cfg.Configured(p.ID) {
+			continue
+		}
+		if p.ID == "claudecode" {
+			out = append(out, ClaudeCodeModels...)
 			continue
 		}
 		if ms := remoteModels[p.ID]; len(ms) > 0 {
@@ -190,4 +220,6 @@ var olderClaudePrices = map[string][3]float64{
 }
 
 // Priced reports whether werkz can estimate this model's cost (free, or a known price).
-func (m ModelInfo) Priced() bool { return m.Free || m.In > 0 || m.Provider == "ollama" }
+func (m ModelInfo) Priced() bool {
+	return m.Free || m.In > 0 || m.Provider == "ollama" || config.ProviderByID(m.Provider).Plan()
+}

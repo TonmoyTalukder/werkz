@@ -17,7 +17,7 @@ var commands = []struct{ Name, Desc string }{
 	{"/model", "Choose model & provider"},
 	{"/effort", "Set thinking effort (low → max)"},
 	{"/fast", "Toggle fast mode (Opus 5.5 / Fable 5.2)"},
-	{"/login", "Add or change API keys"},
+	{"/login", "Add or change API keys · /login chatgpt uses your ChatGPT plan"},
 	{"/fallback", "Choose fallback mode and models (default off) · /fallback models · /fallback status"},
 	{"/workspace", "Open a workspace (several folders) · /workspace new · /workspace none"},
 	{"/add-dir", "Add a working folder, e.g. /add-dir ~/Desktop/mis-frontend"},
@@ -112,6 +112,9 @@ func (m *model) command(line string) tea.Cmd {
 	case "/login", "/keys", "/logout":
 		if m.turn.active {
 			return p(renderNotice("warn", "Wait for the current turn to finish."))
+		}
+		if len(args) > 0 {
+			return m.planCommand(cmd, strings.ToLower(args[0]))
 		}
 		m.state = stateLogin
 		m.login = newLogin(m.cfg, false)

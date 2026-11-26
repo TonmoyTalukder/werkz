@@ -9,6 +9,8 @@ func (m ModelInfo) FreeKind() string {
 	switch {
 	case m.Provider == "ollama":
 		return "local"
+	case m.Provider == "chatgpt", m.Provider == "claudecode":
+		return "plan"
 	case !m.Free:
 		return ""
 	case m.Provider == "openrouter":
@@ -22,6 +24,10 @@ func PriceLabel(mi ModelInfo) (string, bool) {
 	switch k := mi.FreeKind(); {
 	case k == "free tier":
 		return "free tier (billed if your key's project has billing on)", false
+	case k == "plan" && mi.Provider == "chatgpt":
+		return "your ChatGPT plan (counts toward its usage limits)", false
+	case k == "plan":
+		return "your Claude subscription, through Claude Code (counts toward its limits)", false
 	case k != "":
 		return k, false
 	case mi.In > 0:

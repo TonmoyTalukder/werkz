@@ -14,6 +14,7 @@ import (
 	"github.com/TonmoyTalukder/werkz/internal/catalog"
 	"github.com/TonmoyTalukder/werkz/internal/config"
 	"github.com/TonmoyTalukder/werkz/internal/llm"
+	"github.com/TonmoyTalukder/werkz/internal/textutil"
 	"github.com/TonmoyTalukder/werkz/internal/tools"
 
 	"github.com/anthropics/anthropic-sdk-go/v2"
@@ -41,6 +42,7 @@ type Engine struct {
 	autoCompactOff bool                                             // auto-compaction failed this session; don't retry every turn
 	reads          *tools.ReadTracker
 	sessionID      string // prompt_cache_key for OpenAI (routes requests to the same cache)
+	lastProvider   string // provider of the latest request
 	lastContext    int64  // tokens in the last request (input incl. cache + output)
 	lastWindow     int    // context window of the model used last
 	checkFailed    bool   // the latest test/build/lint command failed (holds auto-compaction)
@@ -139,7 +141,7 @@ func (e *Engine) Run(ctx context.Context, userText string, settings config.Confi
 		// An empty reply (e.g. a refusal with no content) is not stored: an assistant message
 		// without content would make every later request fail.
 		if turn.Text != "" || len(turn.ToolCalls) > 0 {
-			e.appendHistory(llm.Msg{Role: llm.RoleAssistant, Text: turn.Text, ToolCalls: turn.ToolCalls, ClaudeRaw: turn.Raw})
+			e.appendHistory(llm.Msg{Role: llm.RoleAssistant, Text: turn.Text, ToolCalls: turn.ToolCalls, ClaudeRaw: turn.Raw, RespItems: turn.Items})
 		}
 		switch turn.StopReason {
 		case string(anthropic.BetaStopReasonRefusal):
@@ -252,7 +254,8 @@ func (e *Engine) attemptOnce(ctx context.Context, sys string, a attempt) (*llm.T
 	}
 	fast := e.cfg.Fast && a.provider == e.cfg.Provider && a.model == e.cfg.Model
 	req := llm.Request{Model: a.model, System: sys, History: e.history, Tools: tools.Defs, Effort: effort,
-		Fast: fast, TTL1h: e.cfg.TTL1h(), CacheKey: e.sessionID}
+		Fast: fast, TTL1h: e.cfg.TTL1h(), CacheKey: e.sessionID, Dirs: e.dirs(), Mode: e.mode()}
+	e.lastProvider = a.provider
 	reqStart := time.Now()
 	e.send(StreamStartMsg{Provider: a.provider, Model: a.model})
 	turn, err := e.provider(a.provider).Stream(ctx, req, llm.Handlers{
@@ -271,6 +274,14 @@ func (e *Engine) attemptOnce(ctx context.Context, sys string, a attempt) (*llm.T
 				e.send(ToolPrepMsg(n))
 			}
 		},
+		// Claude Code runs its own tools: show them, and answer its permission questions.
+		OnExternalTool: func(tc llm.ToolCall) {
+			e.send(ToolCallMsg{ID: tc.ID, Name: tc.Name, Summary: tools.Summary(tc)})
+		},
+		OnExternalToolResult: func(id, name string, isError bool, output string) {
+			e.send(ToolResultMsg{ID: id, Name: name, Summary: externalSummary(output, isError), IsError: isError})
+		},
+		Approve: e.approveExternal,
 	})
 	if err != nil {
 		return nil, err
@@ -298,7 +309,49 @@ func (e *Engine) attemptOnce(ctx context.Context, sys string, a attempt) (*llm.T
 func (e *Engine) execTool(ctx context.Context, tc llm.ToolCall) tools.Result {
 	summary := tools.Summary(tc)
 	e.send(ToolCallMsg{ID: tc.ID, Name: tc.Name, Summary: summary})
+	if res, ok := e.permit(ctx, tc, summary); !ok {
+		return res
+	}
+	var res tools.Result
+	if tc.Name == "Task" {
+		res = e.runTask(ctx, tc)
+	} else {
+		res = tools.Run(ctx, tc, e.toolEnv())
+	}
+	e.trackCheck(tc, res)
+	e.send(ToolResultMsg{ID: tc.ID, Name: tc.Name, Summary: res.Summary, Detail: res.Detail, IsError: res.IsError})
+	return res
+}
 
+// approveExternal answers a permission question from a backend that runs its own tools
+// (Claude Code), with the same rules and dialog as werkz's own tools.
+func (e *Engine) approveExternal(ctx context.Context, tc llm.ToolCall) (bool, string) {
+	res, ok := e.permit(ctx, tc, tools.Summary(tc))
+	if ok {
+		return true, ""
+	}
+	return false, res.Output
+}
+
+// externalSummary is the one-line result shown for a tool another program ran.
+func externalSummary(output string, isError bool) string {
+	output = strings.TrimSpace(output)
+	if isError {
+		first, _, _ := strings.Cut(output, "\n")
+		return textutil.Truncate(first, 80)
+	}
+	if output == "" {
+		return "done"
+	}
+	if n := strings.Count(output, "\n") + 1; n > 1 {
+		return fmt.Sprintf("%d lines", n)
+	}
+	return textutil.Truncate(output, 80)
+}
+
+// permit applies werkz's permission rules to a tool call, asking the user when needed. When the
+// call may not run, it returns the result to report instead (and has told the UI).
+func (e *Engine) permit(ctx context.Context, tc llm.ToolCall, summary string) (tools.Result, bool) {
 	need, kind := tools.NeedsPermission(tc.Name, e.mode())
 	outside := false
 	if a, err := tools.ParseArgs(tc); err == nil && fileTool(tc.Name) {
@@ -306,7 +359,7 @@ func (e *Engine) execTool(ctx context.Context, tc llm.ToolCall) tools.Result {
 		if tools.Sensitive(path) {
 			r := tools.Fail("%s is a credential location; werkz's file tools never open it", path)
 			e.send(ToolResultMsg{ID: tc.ID, Name: tc.Name, Summary: "refused (credentials)", IsError: true})
-			return r
+			return r, false
 		}
 		// Reads, listings and searches with a path outside the working folders, and any write
 		// outside them, always ask, in every mode. (Glob/Grep without a path stay inside.)
@@ -326,7 +379,7 @@ func (e *Engine) execTool(ctx context.Context, tc llm.ToolCall) tools.Result {
 		if kind == "plan" {
 			r := tools.Result{Output: "Plan mode is on: only read-only tools may run. Describe the plan instead.", IsError: true}
 			e.send(ToolResultMsg{ID: tc.ID, Name: tc.Name, Summary: "blocked (plan mode)", IsError: true})
-			return r
+			return r, false
 		}
 		reply := make(chan PermDecision, 1)
 		e.send(PermReqMsg{Tool: tc.Name, Summary: summary, Detail: tools.Preview(tc), Always: always, Reply: reply})
@@ -337,21 +390,13 @@ func (e *Engine) execTool(ctx context.Context, tc llm.ToolCall) tools.Result {
 			}
 			if d == PermNo {
 				e.send(ToolResultMsg{ID: tc.ID, Name: tc.Name, Summary: "denied by user", IsError: true})
-				return tools.Result{Output: "The user denied this action. Ask what they want instead.", IsError: true}
+				return tools.Result{Output: "The user denied this action. Ask what they want instead.", IsError: true}, false
 			}
 		case <-ctx.Done():
-			return tools.Result{Output: "Interrupted by user.", IsError: true}
+			return tools.Result{Output: "Interrupted by user.", IsError: true}, false
 		}
 	}
-	var res tools.Result
-	if tc.Name == "Task" {
-		res = e.runTask(ctx, tc)
-	} else {
-		res = tools.Run(ctx, tc, e.toolEnv())
-	}
-	e.trackCheck(tc, res)
-	e.send(ToolResultMsg{ID: tc.ID, Name: tc.Name, Summary: res.Summary, Detail: res.Detail, IsError: res.IsError})
-	return res
+	return tools.Result{}, true
 }
 
 func fileTool(name string) bool {
