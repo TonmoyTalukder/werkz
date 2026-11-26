@@ -57,6 +57,8 @@ changes and checks its work, asking before it does anything risky.
 - **Several repos at once** with optional workspaces, and a full-screen terminal UI that adapts to any size.
 - **Reads the web:** looks up docs and error messages with `WebFetch` and `WebSearch` (your model's own
   search, or Brave, Tavily or SearXNG); pages on your local network ask first.
+- **Checks its own web UI:** starts your dev server, opens the page in your installed Chrome (a separate
+  profile), clicks through it, reads console and network errors, and compares screenshots before and after.
 - **Made for daily use:** type `@` to attach files (with `@repo/path` across repos), drag to select and copy
   any text, and pick up any earlier conversation with `/resume` or `werkz -c`.
 

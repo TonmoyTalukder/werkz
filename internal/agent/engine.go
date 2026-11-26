@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -41,7 +42,10 @@ type Engine struct {
 	turnPin        *attempt                                         // model switched to this turn after a failure (nil = use the chain)
 	autoCompactOff bool                                             // auto-compaction failed this session; don't retry every turn
 	reads          *tools.ReadTracker
-	pages          pageCache            // fetched pages, for reading long ones in parts
+	pages          pageCache    // fetched pages, for reading long ones in parts
+	br             browserState // werkz's browser, started on first use
+	defsOnce       sync.Once
+	defs           []llm.ToolDef        // tools offered to the model (fixed per session: keeps the cache)
 	localOK        sync.Map             // WebFetch calls approved to reach the local network (by call ID)
 	attached       map[string]time.Time // files attached with @ (path:range -> mtime), to skip unchanged repeats
 	sessionID      string               // prompt_cache_key for OpenAI (routes requests to the same cache)
@@ -261,7 +265,7 @@ func (e *Engine) attemptOnce(ctx context.Context, sys string, a attempt) (*llm.T
 		effort = e.cfg.Effort
 	}
 	fast := e.cfg.Fast && a.provider == e.cfg.Provider && a.model == e.cfg.Model
-	req := llm.Request{Model: a.model, System: sys, History: e.history, Tools: tools.Defs, Effort: effort,
+	req := llm.Request{Model: a.model, System: sys, History: e.history, Tools: e.toolDefs(), Effort: effort,
 		Fast: fast, TTL1h: e.cfg.TTL1h(), CacheKey: e.sessionID, Dirs: e.dirs(), Mode: e.mode(), Window: e.cfg.ContextWindow}
 	e.lastProvider = a.provider
 	reqStart := time.Now()
@@ -318,7 +322,7 @@ func (e *Engine) attemptOnce(ctx context.Context, sys string, a attempt) (*llm.T
 }
 
 func (e *Engine) execTool(ctx context.Context, tc llm.ToolCall) tools.Result {
-	summary := tools.Summary(tc)
+	summary := toolSummary(tc)
 	e.send(ToolCallMsg{ID: tc.ID, Name: tc.Name, Summary: summary})
 	if res, ok := e.permit(ctx, tc, summary); !ok {
 		return res
@@ -332,6 +336,16 @@ func (e *Engine) execTool(ctx context.Context, tc llm.ToolCall) tools.Result {
 		res = e.webFetch(ctx, tc, local)
 	case "WebSearch":
 		res = e.webSearch(ctx, tc)
+	case "DevServer":
+		res = e.runDevServer(ctx, tc)
+	case "Browse", "ReadPage", "Click", "Type", "Screenshot", "Console", "Network":
+		always := false
+		if a := parseBrowserArgs(tc); tc.Name == "Browse" {
+			if u, err := url.Parse(a.URL); err == nil {
+				always = e.allow["Browse@"+strings.ToLower(u.Hostname())]
+			}
+		}
+		res = e.runBrowserTool(ctx, tc, always)
 	default:
 		res = tools.Run(ctx, tc, e.toolEnv())
 	}
@@ -391,6 +405,32 @@ func (e *Engine) permit(ctx context.Context, tc llm.ToolCall, summary string) (t
 	key, always := allowKey(tc)
 	if outside {
 		key, always = "", ""
+	}
+	// Starting a dev server runs a command: it asks like Bash, approved per command prefix.
+	if start, command := devServerStarts(tc); tc.Name == "DevServer" && start {
+		need, kind = tools.NeedsPermission("Bash", e.mode())
+		key, always = "", ""
+		if p := commandPrefix(command); p != "" {
+			key, always = "DevServer:"+p, "Yes, and don't ask again for dev servers started with "+p+" this session"
+		}
+	}
+	// Browser actions: other sites ask (per domain); form submits, uploads and downloads always
+	// ask, even in Bypass; password fields are never typed into. Clicking and typing change the
+	// page, so plan mode doesn't allow them.
+	if isBrowserTool(tc.Name) {
+		if e.mode() == config.ModePlan && (tc.Name == "Click" || tc.Name == "Type") {
+			need, kind = true, "plan"
+		} else {
+			ask, why, bkey, blabel, refuse := e.browserCheck(ctx, tc)
+			if refuse != nil {
+				e.send(ToolResultMsg{ID: tc.ID, Name: tc.Name, Summary: "refused", IsError: true})
+				return tools.Fail("%v", refuse), false
+			}
+			if ask && (bkey == "" || e.mode() != config.ModeBypass) {
+				need, kind, key, always = true, "ask", bkey, blabel
+				summary += "  ⚠ " + why
+			}
+		}
 	}
 	// A page on the local network asks in every mode but Bypass; "don't ask again" covers the host.
 	if local, host := localFetch(ctx, tc); local {

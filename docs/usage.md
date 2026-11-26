@@ -25,6 +25,8 @@
 | `/resume [search]` | Find a saved conversation and continue it (see [Conversations](#saved-conversations)); `/resume off\|on` stops or restarts saving |
 | `/copy` | Copy the latest response as markdown, or one of its code blocks exactly; `/copy 2` the one before, `/copy prompt` your last request, `/copy all` the whole conversation |
 | `/export [file]` | Save the conversation as a markdown file |
+| `/search` | Web search for the model: `/search brave\|tavily <key>`, `/search searxng <url>`, `/search off` (see [Web access](#web-access)) |
+| `/browser` | werkz's browser: `/browser show` to watch it, `/browser hide`, `/browser close` |
 | `/docs` | Open this documentation in your browser |
 | `/clear` | Start a new conversation (the previous one stays in `/resume`) |
 | `/help` · `/exit` | Help · quit |
@@ -122,6 +124,36 @@ Everything read from the web reaches the model marked as untrusted: it is told t
 never to follow instructions in it. In Claude Code mode, Claude Code's own web tools are used, with the same
 rule for local pages.
 
+## The browser
+
+werkz checks web UI it changes the way you would: it starts the dev server (`DevServer`), opens the page,
+clicks and types through it, reads the console and the network requests, and compares screenshots from before
+and after a change. For example: "the signup button does nothing, fix it and check it in the browser".
+
+- It uses **your installed Chrome, Chromium or Edge**, with its own separate profile (your bookmarks, logins
+  and cookies are never used). werkz never downloads a browser; if none is installed, the browser tools aren't
+  offered. Set `WERKZ_BROWSER` to use a particular one.
+- It runs in the background. `/browser show` opens its window so you can watch (on a desktop), `/browser hide`
+  goes back, `/browser close` closes it. `/browser` shows its state and the running dev servers.
+- The model reads pages through their accessibility tree (the structure screen readers use), with ids it
+  clicks and types by. Screenshots are saved under `~/.cache/werkz/screenshots/`; comparing two says how much
+  of the page changed and where.
+- Dev servers keep running in the background until stopped, and werkz stops them when you quit. At most four
+  run at once.
+
+What asks first:
+
+| Action | Asks? |
+|---|---|
+| Opening a page on this machine (`localhost`, `127.0.0.1`) | No |
+| Opening any other site | Yes, with "don't ask again" for that domain. The page can't move itself to a site you haven't approved |
+| Clicking and typing | No, except as below. Blocked in plan mode |
+| Submitting a form (submit button, or Enter in a form) | Always, in every mode |
+| Uploading a file (only files in your working folders) | Always |
+| Downloading a file | Always |
+| Typing into a password or payment field | Never done |
+| Starting a dev server | Like any command (`Bash` rules) |
+
 ## Saved conversations
 
 Every conversation is saved as you go, so you can come back to it. `/resume` lists the ones from this
@@ -149,6 +181,9 @@ werkz gives the model a small set of tools and runs them on your machine:
 | `Task` | Hands a research question to a read-only sub-agent and gets a short report back |
 | `WebFetch` | Reads a web page as Markdown: docs, issues, changelogs, or your local dev server (see [Web access](#web-access)) |
 | `WebSearch` | Searches the web for current information |
+| `DevServer` | Starts your project's dev server in the background, waits for its port, reads its output, stops it |
+| `Browse` · `ReadPage` · `Click` · `Type` | Opens and uses pages in werkz's browser (see [The browser](#the-browser)) |
+| `Screenshot` · `Console` · `Network` | Captures and compares screenshots; reads console errors and failed requests |
 
 Because `Bash` runs your real shell, werkz works with whatever your project uses: `git`, `go`, `npm`,
 `pytest`, `cargo`, `make`, `docker` and so on. If a folder has an **`AGENTS.md`** or **`CLAUDE.md`**, werkz

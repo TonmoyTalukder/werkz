@@ -104,7 +104,8 @@ func run(provider, model string, opts tui.Options) error {
 		popts = append(popts, tea.WithMouseCellMotion())
 	}
 	p = tea.NewProgram(m, popts...)
-	defer tools.KillAll() // don't leave commands started by the agent running after exit
+	defer tools.KillAll()    // don't leave commands (and dev servers) started by the agent running after exit
+	defer eng.CloseBrowser() // nor werkz's browser
 	if _, err := p.Run(); err != nil {
 		return err
 	}

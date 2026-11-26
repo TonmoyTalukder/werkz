@@ -63,7 +63,10 @@ var Defs = []llm.ToolDef{
 // kind "plan" means it is blocked outright.
 func NeedsPermission(tool, mode string) (bool, string) {
 	readOnly := tool == "Read" || tool == "LS" || tool == "Glob" || tool == "Grep" || tool == "Task" ||
-		tool == "WebFetch" || tool == "WebSearch" // local-network pages ask separately (see the engine)
+		tool == "WebFetch" || tool == "WebSearch" || // local-network pages ask separately (see the engine)
+		// the browser tools and DevServer have their own rules in the engine (sites, forms, commands)
+		tool == "Browse" || tool == "ReadPage" || tool == "Click" || tool == "Type" || tool == "Screenshot" ||
+		tool == "Console" || tool == "Network" || tool == "DevServer"
 	if readOnly {
 		return false, ""
 	}

@@ -417,6 +417,8 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handleSessionSaved(msg)
 	case copiedMsg:
 		return m, m.handleCopied(msg)
+	case browserDoneMsg:
+		return m, m.handleBrowserDone(msg)
 
 	case agent.PermReqMsg:
 		mm := msg

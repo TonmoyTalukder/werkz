@@ -38,6 +38,9 @@ it. Credential locations stay blocked even in bypass.
 - **Web pages on your local network** (`localhost`, private and cloud-metadata addresses) are fetched only
   after you approve, checked again when connecting, so redirects and DNS tricks can't reach them. Public pages
   and searches don't ask; their content is marked as untrusted for the model.
+- **werkz's browser** uses its own profile, never yours. Sites other than this machine ask first; form
+  submits, uploads and downloads ask in every mode, including bypass; password and payment fields are never
+  typed into. See [The browser](usage.md#the-browser).
 - Text from models, tools and files is cleaned of terminal escape sequences before it's displayed.
 - Project instruction files (`AGENTS.md`, `CLAUDE.md`) are passed to the model as repository content, not as
   werkz's own instructions, so they can't override these rules.
