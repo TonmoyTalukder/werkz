@@ -1,0 +1,55 @@
+# Publishes the website (site/ + docs/*.md + release notes from git tags) to the gh-pages branch,
+# which GitHub Pages serves at https://tonmoytalukder.github.io/werkz/. The apt/ and rpm/
+# package repositories and the signing key on that branch are left untouched.
+name: pages
+
+on:
+  push:
+    branches: [main]
+    paths: ["site/**", "docs/**", "tools/sitegen/**", ".github/workflows/pages.yml"]
+    tags: ["v*"] # new release notes
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gh-pages
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # release notes are read from the tags
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build the site
+        run: go run ./tools/sitegen -out "$RUNNER_TEMP/site"
+
+      - uses: actions/checkout@v4
+        with:
+          ref: gh-pages
+          path: ghp
+
+      - name: Publish to gh-pages
+        run: |
+          cd ghp
+          # replace the site, keep the package repositories and the signing key
+          find . -mindepth 1 -maxdepth 1 \
+            ! -name .git ! -name apt ! -name rpm ! -name werkz.gpg ! -name werkz.asc ! -name .nojekyll \
+            -exec rm -rf {} +
+          cp -R "$RUNNER_TEMP/site/." .
+          touch .nojekyll
+          git add -A
+          if git diff --cached --quiet; then echo "site unchanged"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -qm "site: ${GITHUB_REF_NAME} ($(git -C .. rev-parse --short HEAD))"
+          for i in 1 2 3; do git push -q origin gh-pages && exit 0; git pull -q --rebase origin gh-pages; done
+          exit 1

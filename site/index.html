@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>werkz · an agentic coding tool for your terminal</title>
+<meta name="description" content="werkz reads your codebase, edits files and runs commands from your terminal, on a paid API key, your ChatGPT or Claude subscription, a free tier, or a local model.">
+<meta name="theme-color" content="#2b2f7f">
+<meta property="og:title" content="werkz · bring your own model">
+<meta property="og:description" content="An agentic coding tool for your terminal. API keys, ChatGPT and Claude subscriptions, free tiers or local models.">
+<meta property="og:image" content="https://tonmoytalukder.github.io/werkz/assets/werkz.png">
+<link rel="icon" href="assets/favicon.png">
+<link rel="preload" href="fonts/Jost-200-600.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <filter id="sheer" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85 0.06" numOctaves="2" seed="7" result="weave"/>
+      <feColorMatrix in="weave" type="matrix" values="0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.16 0" result="threads"/>
+      <feComposite in="threads" in2="SourceGraphic" operator="in" result="lit"/>
+      <feBlend in="lit" in2="SourceGraphic" mode="screen"/>
+    </filter>
+    <symbol id="arrow" viewBox="0 0 26 12"><path d="M0 6h24M19 1l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.2"/></symbol>
+    <symbol id="sw-closed" viewBox="0 0 26 14"><circle cx="3" cy="10" r="2.2" fill="currentColor"/><circle cx="23" cy="10" r="2.2" fill="currentColor"/><path d="M3 10H23" stroke="currentColor" stroke-width="1.6"/></symbol>
+    <symbol id="sw-open" viewBox="0 0 26 14"><circle cx="3" cy="10" r="2.2" fill="currentColor"/><circle cx="23" cy="10" r="2.2" fill="currentColor"/><path d="M3 10L20 2" stroke="currentColor" stroke-width="1.6"/></symbol>
+    <symbol id="sw-cut" viewBox="0 0 26 14"><circle cx="3" cy="10" r="2.2" fill="currentColor"/><circle cx="23" cy="10" r="2.2" fill="currentColor"/><path d="M9 4l8 8M17 4l-8 8" stroke="currentColor" stroke-width="1.6"/></symbol>
+    <symbol id="guard" viewBox="0 0 20 20"><path d="M10 1.5l7 3v5.2c0 4.2-2.9 7.6-7 8.8-4.1-1.2-7-4.6-7-8.8V4.5z" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M6.6 10l2.4 2.4 4.6-4.8" fill="none" stroke="currentColor" stroke-width="1.3"/></symbol>
+    <symbol id="sun" viewBox="0 0 26 26"><circle cx="13" cy="13" r="5" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M13 1v4M13 21v4M1 13h4M21 13h4M4.5 4.5l2.8 2.8M18.7 18.7l2.8 2.8M4.5 21.5l2.8-2.8M18.7 7.3l2.8-2.8" stroke="currentColor" stroke-width="1.3"/></symbol>
+  </defs>
+</svg>
+
+<header class="top" id="top">
+  <div class="top-inner">
+    <a class="wordmark" href="./" aria-label="werkz home"><img src="assets/werkz.png" alt="" width="28" height="28">werkz</a>
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="topnav" aria-label="Menu">
+      <svg width="20" height="14" viewBox="0 0 20 14" aria-hidden="true"><path d="M0 1h20M0 7h20M0 13h20" stroke="currentColor" stroke-width="1.4"/></svg>
+    </button>
+    <nav id="topnav" aria-label="Main">
+      <a href="#install">Install</a>
+      <a href="#models">Models</a>
+      <a href="#subscriptions">Subscriptions</a>
+      <a href="#releases">Releases</a>
+      <a href="docs/">Docs</a>
+      <a href="https://github.com/TonmoyTalukder/werkz">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main id="main">
+
+<section class="hero" aria-labelledby="hero-title">
+  <ol class="rail" aria-label="On this page">
+    <li><a href="#top" class="active">Overview</a></li>
+    <li><a href="#models">Models</a></li>
+    <li><a href="#subscriptions">Subscriptions</a></li>
+    <li><a href="#safety">Safety</a></li>
+    <li><a href="#tokens">Tokens</a></li>
+    <li><a href="#install">Install</a></li>
+    <li><a href="#releases">Releases</a></li>
+    <li><a href="docs/">Docs</a></li>
+  </ol>
+
+  <div class="hero-copy">
+    <h1 id="hero-title"><span>Bring</span> <span>your own</span> <span>model</span></h1>
+    <p class="lede">werkz is an agentic coding tool for your terminal. It reads your code, edits files and runs commands, asking first, on an API key, your ChatGPT or Claude subscription, a free tier, or a model on your own machine.</p>
+
+    <div class="hero-actions">
+      <div class="install" data-tabs>
+        <div class="tabs" role="tablist" aria-label="Install werkz">
+          <button role="tab" id="t-sh" aria-controls="p-sh" aria-selected="true">Linux &amp; macOS</button>
+          <button role="tab" id="t-brew" aria-controls="p-brew" aria-selected="false" tabindex="-1">Homebrew</button>
+          <button role="tab" id="t-apt" aria-controls="p-apt" aria-selected="false" tabindex="-1">apt</button>
+          <button role="tab" id="t-dnf" aria-controls="p-dnf" aria-selected="false" tabindex="-1">dnf</button>
+        </div>
+        <div class="panel" role="tabpanel" id="p-sh" aria-labelledby="t-sh">
+          <div class="cmd"><pre><code>curl -fsSL https://raw.githubusercontent.com/TonmoyTalukder/werkz/main/install.sh | sh</code></pre><button class="copy" type="button">Copy</button></div>
+          <p>Installs the latest release with an app icon, then keeps itself up to date.</p>
+        </div>
+        <div class="panel" role="tabpanel" id="p-brew" aria-labelledby="t-brew" hidden>
+          <div class="cmd"><pre><code>brew install --cask ZenixBit/tap/werkz</code></pre><button class="copy" type="button">Copy</button></div>
+          <p>macOS or Linux. Update with <code>brew upgrade --cask werkz</code>.</p>
+        </div>
+        <div class="panel" role="tabpanel" id="p-apt" aria-labelledby="t-apt" hidden>
+          <div class="cmd"><pre><code>curl -fsSL https://tonmoytalukder.github.io/werkz/werkz.gpg | sudo tee /etc/apt/keyrings/werkz.gpg &gt;/dev/null
+echo "deb [signed-by=/etc/apt/keyrings/werkz.gpg] https://tonmoytalukder.github.io/werkz/apt stable main" | sudo tee /etc/apt/sources.list.d/werkz.list
+sudo apt update &amp;&amp; sudo apt install werkz</code></pre><button class="copy" type="button">Copy</button></div>
+          <p>Debian and Ubuntu. Then <code>sudo apt upgrade</code> keeps it current.</p>
+        </div>
+        <div class="panel" role="tabpanel" id="p-dnf" aria-labelledby="t-dnf" hidden>
+          <div class="cmd"><pre><code>sudo curl -fsSL https://tonmoytalukder.github.io/werkz/rpm/werkz.repo -o /etc/yum.repos.d/werkz.repo
+sudo dnf install werkz</code></pre><button class="copy" type="button">Copy</button></div>
+          <p>Fedora and RHEL. Then <code>sudo dnf upgrade</code> keeps it current.</p>
+        </div>
+      </div>
+      <div class="btn-row">
+        <a class="btn btn-solid" href="docs/getting-started.html">Get started <svg aria-hidden="true"><use href="#arrow"/></svg></a>
+        <a class="btn btn-line" href="#install">Every install method</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="canopy" aria-hidden="true">
+    <svg viewBox="0 0 1000 560" preserveAspectRatio="xMaxYMin meet">
+      <defs>
+        <path id="lab-keys" d="M-50.0,179.0 L-3.8,190.1 L43.1,200.0 L90.1,208.7 L137.2,215.9 L184.5,221.8 L231.8,226.3 L279.2,229.3 L326.7,230.8 L374.2,230.9 L421.7,229.5 L469.3,226.6 L516.8,222.1 L564.3,216.2 L611.7,208.8 L659.0,199.8 L706.3,189.4 L753.4,177.6 L800.5,164.3 L847.4,149.6 L894.2,133.5 L940.8,116.0 L987.3,97.2 L1033.7,77.2 L1079.5,56.1"/>
+        <path id="lab-plans" d="M-36.1,512.8 L10.3,510.0 L57.0,506.3 L103.9,501.7 L150.7,496.1 L197.6,489.7 L244.5,482.2 L291.4,473.8 L338.3,464.3 L385.1,453.9 L431.9,442.5 L478.7,430.0 L525.4,416.5 L572.1,402.0 L618.7,386.4 L665.2,369.9 L711.6,352.3 L757.9,333.8 L804.2,314.3 L850.3,293.9 L896.4,272.5 L942.3,250.2 L988.2,227.1 L1034.0,203.0 L1079.5,178.3"/>
+        <path id="lab-free" d="M-37.2,310.9 L8.1,309.2 L52.9,308.6 L97.5,309.3 L142.1,311.1 L186.6,314.0 L231.1,318.1 L275.5,323.2 L319.9,329.4 L364.3,336.7 L408.8,345.0 L453.3,354.4 L497.8,364.8 L542.4,376.2 L587.0,388.8 L631.8,402.3 L676.7,417.0 L721.6,432.8 L766.7,449.7 L811.9,467.7 L857.3,486.8 L902.7,507.2 L948.2,528.8 L993.9,551.5 L1040.0,575.8"/>
+      </defs>
+      <g class="band free" data-band="free">
+        <g class="band-shape">
+          <path filter="url(#sheer)" fill="#f2b31a" fill-opacity="0.86" d="M-34.4,351.8 L10.4,351.4 L54.0,352.3 L97.5,354.2 L140.8,357.2 L184.0,361.2 L227.1,366.2 L270.2,372.1 L313.2,378.8 L356.2,386.5 L399.2,395.0 L442.4,404.3 L485.6,414.5 L528.9,425.6 L572.4,437.5 L616.1,450.3 L660.0,464.0 L704.1,478.7 L748.5,494.3 L793.0,511.0 L837.9,528.7 L882.9,547.5 L928.2,567.5 L973.6,588.7 L1020.0,611.6 L1100.0,468.4 L1054.7,440.0 L1008.5,412.5 L962.1,386.2 L915.5,361.3 L868.6,337.8 L821.5,315.7 L774.2,295.1 L726.7,276.0 L678.9,258.4 L630.9,242.5 L582.8,228.2 L534.4,215.5 L486.0,204.4 L437.4,195.0 L388.8,187.3 L340.1,181.2 L291.5,176.7 L242.9,173.8 L194.3,172.5 L145.8,172.8 L97.5,174.5 L49.3,177.7 L1.2,182.3 L-45.6,188.2Z"/>
+          <text fill="#5a2a12"><textPath href="#lab-free" startOffset="63%">Free &amp; local</textPath></text>
+        </g>
+      </g>
+      <g class="band plans" data-band="plans">
+        <g class="band-shape">
+          <path filter="url(#sheer)" fill="#b23a65" fill-opacity="0.84" d="M-32.2,555.6 L14.7,554.2 L62.4,551.8 L110.2,548.4 L158.1,543.9 L206.0,538.5 L254.0,531.9 L301.9,524.2 L349.9,515.4 L397.7,505.3 L445.6,494.1 L493.3,481.6 L540.9,468.0 L588.4,453.1 L635.7,437.0 L682.9,419.8 L729.9,401.4 L776.7,381.8 L823.3,361.2 L869.8,339.5 L916.0,316.7 L962.1,293.0 L1008.1,268.3 L1053.9,242.8 L1099.0,216.6 L1021.0,63.4 L974.5,83.9 L928.6,103.3 L882.9,122.0 L837.3,140.0 L791.9,157.2 L746.7,173.8 L701.6,189.8 L656.8,205.3 L612.1,220.2 L567.6,234.6 L523.3,248.6 L479.1,262.0 L435.1,275.0 L391.1,287.6 L347.3,299.7 L303.5,311.3 L259.7,322.5 L216.0,333.1 L172.3,343.2 L128.6,352.7 L84.8,361.6 L40.9,369.9 L-3.0,377.5 L-47.8,384.4Z"/>
+          <text fill="#ffffff"><textPath href="#lab-plans" startOffset="20%">Subscriptions</textPath></text>
+        </g>
+      </g>
+      <g class="band keys" data-band="keys">
+        <g class="band-shape">
+          <path filter="url(#sheer)" fill="#2b2f7f" fill-opacity="0.86" d="M-60.0,228.0 L-13.5,240.8 L34.5,252.6 L82.7,262.9 L131.1,271.8 L179.8,279.2 L228.6,285.0 L277.6,289.2 L326.7,291.7 L375.9,292.4 L425.1,291.5 L474.3,288.7 L523.6,284.3 L572.7,278.0 L621.7,270.0 L670.6,260.3 L719.3,248.9 L767.7,235.8 L816.0,221.0 L863.9,204.7 L911.7,186.9 L959.1,167.6 L1006.3,147.0 L1053.3,124.9 L1098.9,102.1 L1021.1,-82.1 L975.1,-66.2 L930.4,-52.0 L885.9,-38.9 L841.7,-26.9 L797.7,-16.0 L754.0,-6.0 L710.6,3.0 L667.4,11.1 L624.4,18.5 L581.6,25.0 L539.0,30.7 L496.4,35.7 L454.0,40.0 L411.6,43.5 L369.1,46.3 L326.7,48.3 L284.1,49.6 L241.4,50.0 L198.6,49.5 L155.5,48.2 L112.3,45.8 L68.9,42.4 L25.2,37.9 L-20.0,32.0Z"/>
+          <text fill="#ffffff"><textPath href="#lab-keys" startOffset="36%">API keys <tspan class="providers">· Claude · OpenAI · Grok</tspan></textPath></text>
+        </g>
+      </g>
+    </svg>
+  </div>
+
+  <ul class="canopy-key" aria-label="The three bands">
+    <li><i style="background:#2b2f7f"></i>API keys</li>
+    <li><i style="background:#b23a65"></i>Subscriptions</li>
+    <li><i style="background:#f2b31a"></i>Free &amp; local</li>
+  </ul>
+
+  <p class="status"><svg aria-hidden="true"><use href="#sun"/></svg><span>v<!-- VERSION --> · Linux &amp; macOS · Apache 2.0</span></p>
+  <p class="chord-note"><strong class="caps">Where the bands cross</strong>werkz moves to another model only if you turn fallback on, and only to the models you picked.</p>
+</section>
+
+<section class="section" id="models" aria-labelledby="models-title">
+  <div class="section-inner">
+    <h2 id="models-title">Three kinds of model access</h2>
+    <p class="intro">Connect any mix. Pick a model with <code>/model</code>, switch any time, and keep the conversation. Paid models are labelled, and nothing is charged that you didn't choose.</p>
+
+    <div class="silks">
+      <article class="silk keys" data-band="keys">
+        <div class="body">
+          <h3 class="caps">Indigo · API keys</h3>
+          <p class="what">Pay per token, billed by the provider</p>
+          <ul>
+            <li><b>Claude</b><span>Fable 5.2, Opus 5.5, Sonnet 5.5, Haiku 5.5, with prompt caching and fast mode</span></li>
+            <li><b>OpenAI</b><span>GPT models with your OpenAI key</span></li>
+            <li><b>xAI Grok</b><span>Grok models with your xAI key</span></li>
+          </ul>
+          <p class="how">Add keys with <code>/login</code>, or set <code>ANTHROPIC_API_KEY</code>, <code>OPENAI_API_KEY</code>, <code>XAI_API_KEY</code>.</p>
+        </div>
+        <div class="swatch" aria-hidden="true"><svg viewBox="0 0 60 200" preserveAspectRatio="none"><rect width="60" height="200" fill="#2b2f7f" filter="url(#sheer)"/><path d="M-10 70L70 20V75L-10 125Z" fill="#b23a65" fill-opacity=".55" style="mix-blend-mode:multiply" filter="url(#sheer)"/><path d="M-10 150L70 120V160L-10 190Z" fill="#f2b31a" fill-opacity=".45" style="mix-blend-mode:multiply" filter="url(#sheer)"/></svg></div>
+      </article>
+
+      <article class="silk plans" data-band="plans">
+        <div class="body">
+          <h3 class="caps">Madder · Subscriptions</h3>
+          <p class="what">Use the plan you already pay for</p>
+          <ul>
+            <li><b>ChatGPT plan</b><span>Plus or Pro, through OpenAI's official Sign in with ChatGPT</span></li>
+            <li><b>Claude subscription</b><span>Pro or Max, through your own installed Claude Code</span></li>
+          </ul>
+          <p class="how">Step by step below, in <a href="#subscriptions">Subscriptions</a>.</p>
+        </div>
+        <div class="swatch" aria-hidden="true"><svg viewBox="0 0 60 200" preserveAspectRatio="none"><rect width="60" height="200" fill="#b23a65" filter="url(#sheer)"/><path d="M-10 70L70 20V75L-10 125Z" fill="#f2b31a" fill-opacity=".55" style="mix-blend-mode:multiply" filter="url(#sheer)"/><path d="M-10 150L70 120V160L-10 190Z" fill="#2b2f7f" fill-opacity=".45" style="mix-blend-mode:multiply" filter="url(#sheer)"/></svg></div>
+      </article>
+
+      <article class="silk free" data-band="free">
+        <div class="body">
+          <h3 class="caps">Saffron · Free &amp; local</h3>
+          <p class="what">No charge, or nothing leaves your machine</p>
+          <ul>
+            <li><b>Gemini and Groq</b><span>Free tiers (free while the key's project has billing off)</span></li>
+            <li><b>OpenRouter</b><span>Models ending in <code>:free</code>; paid ones only if you ask with <code>/openrouter paid</code></span></li>
+            <li><b>Ollama</b><span>Fully offline, on your own computer</span></li>
+          </ul>
+          <p class="how">No key at all? Press <code>Esc</code> on the first screen to start with Ollama.</p>
+        </div>
+        <div class="swatch" aria-hidden="true"><svg viewBox="0 0 60 200" preserveAspectRatio="none"><rect width="60" height="200" fill="#f2b31a" filter="url(#sheer)"/><path d="M-10 70L70 20V75L-10 125Z" fill="#b23a65" fill-opacity=".55" style="mix-blend-mode:multiply" filter="url(#sheer)"/><path d="M-10 150L70 120V160L-10 190Z" fill="#2b2f7f" fill-opacity=".45" style="mix-blend-mode:multiply" filter="url(#sheer)"/></svg></div>
+      </article>
+    </div>
+
+    <div class="chords">
+      <div class="chord">
+        <div class="chip" aria-hidden="true"><i style="background:#2b2f7f"></i><i style="background:#b23a65;clip-path:polygon(40% 0,100% 0,100% 100%,0 100%)"></i></div>
+        <div><h4 class="caps">Fallback is off</h4><p>When a model fails, werkz stops and tells you why. It never switches to another model, or a paid one, on its own.</p></div>
+      </div>
+      <div class="chord">
+        <div class="chip" aria-hidden="true"><i style="background:#b23a65"></i><i style="background:#f2b31a;clip-path:polygon(40% 0,100% 0,100% 100%,0 100%)"></i></div>
+        <div><h4 class="caps">Or it asks</h4><p><code>/fallback ask</code>: when a model fails, werkz asks which of your chosen models to use instead.</p></div>
+      </div>
+      <div class="chord">
+        <div class="chip" aria-hidden="true"><i style="background:#2b2f7f"></i><i style="background:#b23a65;clip-path:polygon(30% 0,100% 0,100% 100%,0 100%)"></i><i style="background:#f2b31a;clip-path:polygon(65% 0,100% 0,100% 100%,0 100%)"></i></div>
+        <div><h4 class="caps">Or follows your list</h4><p><code>/fallback auto</code>: werkz moves down the models you listed with <code>/fallback models</code>, free ones first by default.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="subscriptions" aria-labelledby="subs-title">
+  <div class="section-inner">
+    <h2 id="subs-title">Using your subscription</h2>
+    <p class="intro">ChatGPT and Claude subscriptions work differently in werkz, because OpenAI and Anthropic set different rules for other apps. Here is exactly how each one works, and what to expect.</p>
+
+    <div class="split">
+      <div>
+        <h3 class="caps" style="color:var(--madder)">ChatGPT plan (Codex users)</h3>
+        <p>werkz signs in to your ChatGPT account directly, with OpenAI's official <a href="https://developers.openai.com/siwc/token-sharing-open-source">Sign in with ChatGPT</a> for open-source apps. It does not use the Codex app or its login; you sign in to werkz once on its own.</p>
+        <ol class="steps">
+          <li>In werkz, type <code>/login chatgpt</code>. Your browser opens; choose <b>Continue with ChatGPT</b> and allow werkz to use your plan.</li>
+          <li>Type <code>/model</code> and pick a model marked <b>plan</b>.</li>
+          <li>The status bar shows <b>Using ChatGPT plan</b>. Requests count toward your ChatGPT plan's limits, the same limits Codex uses, not an API bill.</li>
+        </ol>
+        <p class="note">Over SSH, werkz shows the link and the port to forward instead of opening a browser. <code>/logout chatgpt</code> signs out. OpenAI doesn't share plan usage with apps, so <code>/usage</code> shows your limits only when ChatGPT reports them; see or cap werkz's share at <a href="https://chatgpt.com/settings/usage">chatgpt.com/settings/usage</a>.</p>
+      </div>
+      <div>
+        <h3 class="caps" style="color:var(--indigo)">Claude subscription (Claude Code users)</h3>
+        <p>Anthropic doesn't let other apps sign in with a Claude account, so werkz doesn't ask for it. Instead, werkz runs <b>your own Claude Code</b> behind the scenes; Claude Code uses its own login and your Pro or Max plan.</p>
+        <ol class="steps">
+          <li>Install <a href="https://code.claude.com">Claude Code</a>, run <code>claude</code> once in a terminal and use <code>/login</code> there. werkz never sees this login.</li>
+          <li>In werkz, type <code>/model</code> and pick a model marked <b>(Claude Code)</b>. <code>/login claudecode</code> checks the setup.</li>
+          <li>The status bar shows <b>Claude subscription via Claude Code</b>. Claude Code does the work with its own tools; werkz shows every step and asks you before anything risky, with its usual rules.</li>
+        </ol>
+        <p class="note">If werkz says Claude Code isn't signed in, run <code>claude</code> and <code>/login</code> again; its login can expire. Usage counts toward your Claude plan's limits. The status bar and <code>/usage</code> show your 5-hour and weekly windows, and a model's own weekly window such as Fable, with when each resets.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="work" aria-labelledby="work-title">
+  <div class="section-inner split">
+    <div>
+      <h2 id="work-title">It does the work. You keep the switch.</h2>
+      <p class="intro">Describe a task in plain words. werkz plans it, reads and searches your code, makes the change and checks it with your own test runner, linters and git, showing each command and edit before it runs.</p>
+      <div class="btn-row"><a class="btn btn-line" href="docs/usage.html">Commands and shortcuts <svg aria-hidden="true"><use href="#arrow"/></svg></a></div>
+    </div>
+    <ol class="walk" aria-label="What a task looks like">
+      <li><span class="who caps">You</span><p>“The login form accepts empty passwords; fix it and add a test.”</p></li>
+      <li><span class="who caps">werkz</span><p>Searches the code for <code>password</code> and finds the form in <code>src/auth/login.ts</code>.</p></li>
+      <li class="asked"><span class="who caps">Asks you</span><p>Shows the four-line edit before making it. You answer <b>Yes</b>.</p></li>
+      <li><span class="who caps">werkz</span><p>Runs your own <code>npm test -- login</code>, which passes.</p></li>
+      <li><span class="who caps">Done</span><p>Empty and whitespace-only passwords are now rejected, with a test covering both.</p></li>
+    </ol>
+  </div>
+</section>
+
+<section class="section" id="safety" aria-labelledby="safety-title">
+  <div class="section-inner split">
+    <div>
+      <h2 id="safety-title">Nothing risky without asking</h2>
+      <p class="intro">Press <kbd>Shift</kbd>+<kbd>Tab</kbd> to change how much werkz may do on its own. The faster modes last only for the current session.</p>
+      <ul class="rules">
+        <li><svg aria-hidden="true"><use href="#guard"/></svg><span>Anything outside your working folders asks first, in every mode.</span></li>
+        <li><svg aria-hidden="true"><use href="#guard"/></svg><span>Credential locations such as <code>~/.ssh</code> and <code>~/.aws</code> are never opened.</span></li>
+        <li><svg aria-hidden="true"><use href="#guard"/></svg><span>Your code goes only to the provider you chose. No werkz server, no telemetry.</span></li>
+      </ul>
+    </div>
+    <div class="modes" role="table" aria-label="Permission modes">
+      <div class="mode head caps" role="row"><span role="columnheader">Mode</span><span role="columnheader">Reading</span><span role="columnheader">Edits</span><span role="columnheader">Commands</span></div>
+      <div class="mode" role="row"><span class="name caps" role="rowheader">Default</span><span class="state" role="cell" data-what="Reading"><svg aria-hidden="true"><use href="#sw-closed"/></svg>allowed</span><span class="state ask" role="cell" data-what="Edits"><svg aria-hidden="true"><use href="#sw-open"/></svg>asks</span><span class="state ask" role="cell" data-what="Commands"><svg aria-hidden="true"><use href="#sw-open"/></svg>asks</span></div>
+      <div class="mode" role="row"><span class="name caps" role="rowheader">Accept edits</span><span class="state" role="cell" data-what="Reading"><svg aria-hidden="true"><use href="#sw-closed"/></svg>allowed</span><span class="state" role="cell" data-what="Edits"><svg aria-hidden="true"><use href="#sw-closed"/></svg>allowed</span><span class="state ask" role="cell" data-what="Commands"><svg aria-hidden="true"><use href="#sw-open"/></svg>asks</span></div>
+      <div class="mode" role="row"><span class="name caps" role="rowheader">Plan</span><span class="state" role="cell" data-what="Reading"><svg aria-hidden="true"><use href="#sw-closed"/></svg>allowed</span><span class="state no" role="cell" data-what="Edits"><svg aria-hidden="true"><use href="#sw-cut"/></svg>blocked</span><span class="state no" role="cell" data-what="Commands"><svg aria-hidden="true"><use href="#sw-cut"/></svg>blocked</span></div>
+      <div class="mode" role="row"><span class="name caps" role="rowheader">Auto</span><span class="state" role="cell" data-what="Reading"><svg aria-hidden="true"><use href="#sw-closed"/></svg>allowed</span><span class="state" role="cell" data-what="Edits"><svg aria-hidden="true"><use href="#sw-closed"/></svg>allowed</span><span class="state" role="cell" data-what="Commands"><svg aria-hidden="true"><use href="#sw-closed"/></svg>allowed</span></div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="tokens" aria-labelledby="tokens-title">
+  <div class="section-inner">
+    <h2 id="tokens-title">Fewer tokens, by design</h2>
+    <p class="intro">Long coding sessions re-send the whole conversation with every request. werkz is built to make that cheap without you managing it.</p>
+    <dl class="facts">
+      <div><dt>Prompt caching</dt><dd>Follow-up requests read 97–99% of their input from Claude's prompt cache, which werkz keeps warm while you think.</dd></div>
+      <div><dt>Compaction</dt><dd>At 300k tokens by default, werkz replaces a long conversation with a structured summary; <code>/compact</code> does it on demand.</dd></div>
+      <div><dt>Your own window</dt><dd><code>/context window 350k</code> caps the window for every model, and werkz keeps the conversation inside it.</dd></div>
+      <div><dt>Trimmed output</dt><dd>Long test and build output is trimmed to what matters, with the full text saved to a file the model can read if it needs to.</dd></div>
+    </dl>
+</div>
+  </div>
+</section>
+
+<section class="section" id="install" aria-labelledby="install-title">
+  <div class="section-inner">
+    <h2 id="install-title">Install</h2>
+    <p class="intro">Linux (x86-64, ARM64) and macOS (Apple Silicon, Intel). Every release is signed and checksummed.</p>
+
+    <div class="methods" data-tabs>
+      <div role="tablist" aria-label="Install methods" aria-orientation="vertical">
+        <button role="tab" id="m-sh" aria-controls="mp-sh" aria-selected="true"><b>Installer</b><span>One line, any Linux or Mac</span></button>
+        <button role="tab" id="m-brew" aria-controls="mp-brew" aria-selected="false" tabindex="-1"><b>Homebrew</b><span>macOS and Linux</span></button>
+        <button role="tab" id="m-apt" aria-controls="mp-apt" aria-selected="false" tabindex="-1"><b>apt</b><span>Debian, Ubuntu</span></button>
+        <button role="tab" id="m-dnf" aria-controls="mp-dnf" aria-selected="false" tabindex="-1"><b>dnf</b><span>Fedora, RHEL</span></button>
+        <button role="tab" id="m-pkg" aria-controls="mp-pkg" aria-selected="false" tabindex="-1"><b>Package files</b><span>.deb .rpm .apk Arch</span></button>
+        <button role="tab" id="m-go" aria-controls="mp-go" aria-selected="false" tabindex="-1"><b>Go</b><span>go install, or from source</span></button>
+      </div>
+
+      <div class="panel" role="tabpanel" id="mp-sh" aria-labelledby="m-sh">
+        <h3>One-line installer</h3>
+        <p>Downloads the latest release for your system, checks it against the release's <code>SHA256SUMS</code>, and installs it with an app icon (app grid and Desktop on Linux, <code>werkz.app</code> on macOS).</p>
+        <div class="cmd"><pre><code>curl -fsSL https://raw.githubusercontent.com/TonmoyTalukder/werkz/main/install.sh | sh</code></pre><button class="copy" type="button">Copy</button></div>
+        <p class="note">This copy updates itself once a day; <code>/update auto off</code> stops that, and werkz then just tells you when a new version is out.</p>
+      </div>
+      <div class="panel" role="tabpanel" id="mp-brew" aria-labelledby="m-brew" hidden>
+        <h3>Homebrew</h3>
+        <p>Installs the <code>werkz</code> command from the werkz tap.</p>
+        <div class="cmd"><pre><code>brew install --cask ZenixBit/tap/werkz</code></pre><button class="copy" type="button">Copy</button></div>
+        <p class="note">Update with <code>brew upgrade --cask werkz</code>; werkz reminds you when one is out.</p>
+      </div>
+      <div class="panel" role="tabpanel" id="mp-apt" aria-labelledby="m-apt" hidden>
+        <h3>apt</h3>
+        <p>Adds the signed werkz repository once, then installs.</p>
+        <div class="cmd"><pre><code>sudo install -d -m 755 /etc/apt/keyrings
+curl -fsSL https://tonmoytalukder.github.io/werkz/werkz.gpg | sudo tee /etc/apt/keyrings/werkz.gpg &gt;/dev/null
+echo "deb [signed-by=/etc/apt/keyrings/werkz.gpg] https://tonmoytalukder.github.io/werkz/apt stable main" | sudo tee /etc/apt/sources.list.d/werkz.list
+sudo apt update &amp;&amp; sudo apt install werkz</code></pre><button class="copy" type="button">Copy</button></div>
+        <p class="note">For updates without lifting a finger, let Ubuntu's background updater include werkz:</p>
+        <div class="cmd"><pre><code>echo 'Unattended-Upgrade::Origins-Pattern { "origin=werkz"; };' | sudo tee /etc/apt/apt.conf.d/52werkz-unattended</code></pre><button class="copy" type="button">Copy</button></div>
+      </div>
+      <div class="panel" role="tabpanel" id="mp-dnf" aria-labelledby="m-dnf" hidden>
+        <h3>dnf</h3>
+        <p>Adds the signed werkz repository, then installs.</p>
+        <div class="cmd"><pre><code>sudo curl -fsSL https://tonmoytalukder.github.io/werkz/rpm/werkz.repo -o /etc/yum.repos.d/werkz.repo
+sudo dnf install werkz</code></pre><button class="copy" type="button">Copy</button></div>
+        <p class="note">Update with <code>sudo dnf upgrade</code>.</p>
+      </div>
+      <div class="panel" role="tabpanel" id="mp-pkg" aria-labelledby="m-pkg" hidden>
+        <h3>Package files</h3>
+        <p>Every <a href="https://github.com/TonmoyTalukder/werkz/releases/latest">release</a> has <code>.deb</code>, <code>.rpm</code>, <code>.apk</code> and Arch (<code>.pkg.tar.zst</code>) packages for x86-64 and ARM64, plus bare binaries and a macOS app. Download yours, then for example:</p>
+        <div class="cmd"><pre><code>sudo apt install ./werkz_*_amd64.deb</code></pre><button class="copy" type="button">Copy</button></div>
+        <p class="note">When a new version is out, werkz shows the exact command and download link for your package type.</p>
+      </div>
+      <div class="panel" role="tabpanel" id="mp-go" aria-labelledby="m-go" hidden>
+        <h3>Go</h3>
+        <p>Needs Go 1.26 or later; installs the command only, in <code>~/go/bin</code>.</p>
+        <div class="cmd"><pre><code>go install github.com/TonmoyTalukder/werkz/cmd/werkz@latest</code></pre><button class="copy" type="button">Copy</button></div>
+        <p class="note">From source: <code>git clone https://github.com/TonmoyTalukder/werkz.git &amp;&amp; cd werkz &amp;&amp; go build ./cmd/werkz</code>.</p>
+      </div>
+    </div>
+
+    <table class="updates">
+      <caption class="caps">Staying up to date</caption>
+      <thead><tr><th scope="col">Installed with</th><th scope="col">When a new version is out</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Installer or a downloaded file</th><td>werkz installs it in the background; restart to use it.</td></tr>
+        <tr><th scope="row">apt or dnf repository</th><td><code>sudo apt update &amp;&amp; sudo apt install --only-upgrade werkz</code> or <code>sudo dnf upgrade werkz</code>, or automatically with Ubuntu's updater.</td></tr>
+        <tr><th scope="row">Homebrew</th><td><code>brew upgrade --cask werkz</code></td></tr>
+        <tr><th scope="row">Package files</th><td>werkz shows the command with the download link for the new package.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<section class="section" id="releases" aria-labelledby="releases-title">
+  <div class="section-inner split">
+    <div>
+      <h2 id="releases-title">What's new</h2>
+      <p class="intro">The latest releases, newest first. Installed copies pick them up on their own; package installs are told the command.</p>
+      <div class="btn-row"><a class="btn btn-line" href="docs/releases.html">All release notes <svg aria-hidden="true"><use href="#arrow"/></svg></a></div>
+    </div>
+    <!-- RELEASES -->
+  </div>
+</section>
+
+<section class="section" id="docs" aria-labelledby="docs-title">
+  <div class="section-inner">
+    <h2 id="docs-title">Documentation</h2>
+    <p class="intro">Everything in one place, kept in step with each release.</p>
+    <ul class="doclist">
+      <!-- DOCS-LIST -->
+    </ul>
+  </div>
+</section>
+
+<section class="section close" aria-labelledby="close-title">
+  <div class="close-silk" aria-hidden="true">
+    <svg viewBox="0 0 1200 400" preserveAspectRatio="none">
+      <path d="M640 0L1200 0L1200 90C1000 170 820 300 700 400L470 400C600 250 640 120 640 0Z" fill="#b23a65" fill-opacity=".78" filter="url(#sheer)"/>
+      <path d="M930 0L1200 0L1200 400L1080 400C1050 260 990 120 930 0Z" fill="#f2b31a" fill-opacity=".72" filter="url(#sheer)"/>
+    </svg>
+  </div>
+  <div class="section-inner">
+    <h2 id="close-title">Start in a minute</h2>
+    <p>Install, open a project folder and type <code>werkz</code>. Paste any key you have, sign in with ChatGPT, or press Esc to use a local model.</p>
+    <div class="cmd"><pre><code>curl -fsSL https://raw.githubusercontent.com/TonmoyTalukder/werkz/main/install.sh | sh</code></pre><button class="copy" type="button">Copy</button></div>
+    <div class="btn-row" style="margin-top:20px"><a class="btn btn-line" href="docs/getting-started.html">Getting started <svg aria-hidden="true"><use href="#arrow"/></svg></a><a class="btn btn-line" href="https://github.com/TonmoyTalukder/werkz">Source on GitHub</a></div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <span>werkz · Apache License 2.0 · Tonmoy Talukder and contributors</span>
+  <nav aria-label="Footer">
+    <a href="https://github.com/TonmoyTalukder/werkz/releases">Releases</a>
+    <a href="docs/">Docs</a>
+    <a href="werkz.asc">Signing key</a>
+    <a href="https://github.com/TonmoyTalukder/werkz/issues">Report a problem</a>
+  </nav>
+</footer>
+
+<script src="site.js" defer></script>
+</body>
+</html>

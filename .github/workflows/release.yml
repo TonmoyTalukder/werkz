@@ -71,7 +71,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git commit -qm "packages for $GITHUB_REF_NAME"
-          git push -q origin gh-pages
+          # the pages workflow may publish the site at the same moment: retry on top of it
+          for i in 1 2 3; do git push -q origin gh-pages && exit 0; git pull -q --rebase origin gh-pages; done
+          exit 1
 
       - name: Remove the signing key
         if: always()

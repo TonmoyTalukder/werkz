@@ -24,3 +24,8 @@ coverage.*
 # Python (icon generator)
 __pycache__/
 *.pyc
+/_site/
+/.impeccable/review/
+/.impeccable/ref/
+/.impeccable/mocks/
+/.claude/launch.json

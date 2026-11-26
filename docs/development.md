@@ -62,6 +62,22 @@ the module version instead.
 by Homebrew or a Linux package are never replaced (see `Updater.Managed`); they get a "update with your
 package manager" notice instead.
 
+## Website
+
+The site at <https://tonmoytalukder.github.io/werkz/> is plain static HTML and CSS in `site/` (landing page,
+styles, a small script, self-hosted fonts). `tools/sitegen` turns it into the published site: it renders
+`docs/*.md` into the documentation pages and fills in the documentation list and the release notes, which come
+from the version tags and their `feat:`, `fix:` and `build:` commits.
+
+```bash
+go run ./tools/sitegen -out _site                     # build into _site/
+python3 -m http.server 8642 --directory _site          # preview at http://localhost:8642
+```
+
+`.github/workflows/pages.yml` publishes it to the `gh-pages` branch whenever `site/`, `docs/` or the generator
+change on `main`, and after every release (for the new release notes). It never touches the `apt/` and `rpm/`
+repositories or the signing key on that branch.
+
 ## Project layout
 
 ```text
@@ -81,7 +97,9 @@ werkz/
 │   ├── textutil/       small shared text helpers
 │   └── testutil/       fake model servers for tests
 ├── packaging/          icon generator, Linux launcher/installer, macOS app, build script
-├── docs/               documentation
+├── docs/               documentation (also rendered on the website)
+├── site/               the website (static HTML/CSS)
+├── tools/sitegen/      builds the website: docs pages and release notes
 ├── .goreleaser.yaml    release build (binaries, packages, Homebrew cask)
 ├── .github/workflows/  release workflow (runs GoReleaser on v* tags)
 ├── install.sh          one-line installer (downloads a GitHub release)
