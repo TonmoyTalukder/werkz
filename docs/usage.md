@@ -235,7 +235,7 @@ choppy. Measured on Linux with Chrome 158:
 | How your terminal shows it | Frames a second | Picture | Notes |
 |---|---|---|---|
 | kitty, Ghostty (kitty graphics) | up to 15 | Full colour, sharp | The fastest: the terminal draws the picture itself |
-| iTerm2, WezTerm (iTerm2 images) | up to 8 | Full colour, sharp | Untested here (see below) |
+| iTerm2, WezTerm (iTerm2 images) | up to 8 | Full colour, sharp | Tested in WezTerm; iTerm2 (macOS only) wasn't |
 | Sixel | up to 4 | 256 colours, a little soft | Sixel takes 0.1 to 0.2 s to make each frame, so werkz makes them in the background |
 | Text (half-block characters) | up to 5 | Two pixels per character cell: layout and colour, not small text | Works everywhere; the title, address and last action are shown above the picture |
 | tmux | as the terminal outside | | With passthrough on, a picture as above (each frame crosses tmux, a little slower); otherwise text |
@@ -255,9 +255,10 @@ Three ways to watch:
 | Works over SSH | Yes | No (needs a desktop) | Only if Chrome runs where werkz runs |
 | Back | Esc | `/browser hide` (the page stays open) | `/browser disconnect` closes werkz's tab, Chrome keeps running |
 
-Checked on real terminals: kitty and Ghostty (pictures, live at the page's own rate), xterm started with
-`-ti vt340` (Sixel), tmux (with and without passthrough), GNOME Terminal and Ptyxis (VTE 0.84, built without
-Sixel, so they show text). WezTerm, foot and iTerm2 were not tested; what they show follows the protocols above.
+Checked on real terminals: kitty and Ghostty (pictures, live at the page's own rate), WezTerm (iTerm2
+images, live), foot and xterm started with `-ti vt340` (Sixel), tmux (with and without passthrough), GNOME
+Terminal and Ptyxis (VTE 0.84, built without Sixel, so they show text). iTerm2 runs only on macOS and was not
+tested; it uses the same protocol as WezTerm.
 
 | Terminal | What you see |
 |---|---|

@@ -43,6 +43,7 @@ type overlay struct {
 	drawn   string
 	ticking bool
 	kitty   []uint32 // images placed directly (kitty without placeholders), deleted before a redraw
+	live    []ovRect // where live view frames were last drawn (see leftBehind)
 	sixel   map[string]string
 	pending map[string]bool   // Sixel pictures being encoded (off the UI's goroutine)
 	latest  map[string]string // the newest Sixel picture made for each group and size
@@ -52,6 +53,35 @@ type overlay struct {
 }
 
 func (o *overlay) add(it ovItem) { o.plan = append(o.plan, it) }
+
+type ovRect struct{ row, col, cols, rows int }
+
+func (r ovRect) covers(row, col int) bool {
+	return row >= r.row && row < r.row+r.rows && col >= r.col && col < r.col+r.cols
+}
+
+// leftBehind reports whether a live view frame was drawn where the plan now has no picture, as when
+// the strip closes or gets shorter. Sixel and iTerm2 pixels stay on the screen until the cells
+// under them are written, and blank cells that stay blank never are.
+func (o *overlay) leftBehind() bool {
+	for _, old := range o.live {
+		for r := old.row; r < old.row+old.rows; r++ {
+			for c := old.col; c < old.col+old.cols; c++ {
+				covered := false
+				for _, it := range o.plan {
+					if (ovRect{it.row, it.col, it.cols, it.rows}).covers(r, c) {
+						covered = true
+						break
+					}
+				}
+				if !covered {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
 
 // picMarker is an invisible mark (an empty hyperlink with an id) put where a picture's room
 // starts in the conversation, so View can find where it is on the screen.
@@ -130,6 +160,10 @@ func (m *model) finishPlan(screen []string) {
 func (m *model) handleOvTick() tea.Cmd {
 	o := &m.img.ov
 	o.ticking = false
+	if o.sig != o.drawn && len(o.live) > 0 && (m.img.caps.Proto == termimg.Sixel || m.img.caps.Proto == termimg.ITerm2) && o.leftBehind() {
+		o.live, o.drawn = nil, ""
+		return tea.Batch(tea.ClearScreen, m.ovSchedule(ovSettle)) // then the pictures still planned are drawn again
+	}
 	if o.sig == o.drawn || (len(o.plan) == 0 && len(o.kitty) == 0) {
 		o.drawn = o.sig
 		return nil
@@ -223,6 +257,7 @@ func (m *model) drawPlan() []tea.Cmd {
 		}
 		o.kitty = o.kitty[:0]
 	}
+	o.live = o.live[:0]
 	for _, it := range o.plan {
 		seq, cmd := m.ovSequence(it)
 		if cmd != nil {
@@ -230,6 +265,9 @@ func (m *model) drawPlan() []tea.Cmd {
 		}
 		if seq == "" {
 			continue
+		}
+		if strings.HasPrefix(it.group, "live/") {
+			o.live = append(o.live, ovRect{it.row, it.col, it.cols, it.rows})
 		}
 		// save the cursor, go to the picture's place, draw, restore
 		fmt.Fprintf(&b, "\x1b7\x1b[%d;%dH%s\x1b8", it.row, it.col, seq)

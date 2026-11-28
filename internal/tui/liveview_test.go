@@ -2,6 +2,7 @@ package tui
 
 import (
 	"bytes"
+	"fmt"
 	"image"
 	"image/color"
 	"strings"
@@ -176,6 +177,54 @@ func TestSixelKeepsUpWithFrames(t *testing.T) {
 	if !strings.Contains(out.String(), "\x1bPq") {
 		t.Fatal("the newest finished frame wasn't drawn")
 	}
+}
+
+// Sixel pixels stay in cells that are never written again: when the strip closes, the screen is
+// cleared so no band of the last frame is left above the input.
+func TestStripCloseClearsSixel(t *testing.T) {
+	m := chatModel(t)
+	var out bytes.Buffer
+	m.img = gfx{caps: termimg.Caps{Proto: termimg.Sixel, CellW: 8, CellH: 16}, out: &out}
+	browseStarted(m)
+	defer m.unwatch()
+	_, data := writePNG(t, 800, 500)
+	fakeWatch(t, m, data, "http://x/")
+	m.View()
+	m.img.ov.at = time.Now().Add(-time.Second)
+	runAll(m, m.handleOvTick())
+	m.img.ov.at = time.Now().Add(-time.Second)
+	m.handleOvTick()
+	if len(m.img.ov.live) == 0 {
+		t.Fatal("the frame wasn't drawn")
+	}
+	m.live.strip = false
+	m.View()
+	m.img.ov.at = time.Now().Add(-time.Second)
+	if !hasClear(m.handleOvTick()) {
+		t.Fatal("closing the strip left its pixels on the screen")
+	}
+	m.View() // nothing drawn now: nothing more to clear
+	m.img.ov.at = time.Now().Add(-time.Second)
+	if hasClear(m.handleOvTick()) {
+		t.Fatal("cleared the screen again")
+	}
+}
+
+func hasClear(cmd tea.Cmd) bool {
+	if cmd == nil {
+		return false
+	}
+	switch msg := cmd().(type) {
+	case tea.BatchMsg:
+		for _, c := range msg {
+			if hasClear(c) {
+				return true
+			}
+		}
+	default:
+		return fmt.Sprintf("%T", msg) == "tea.clearScreenMsg"
+	}
+	return false
 }
 
 func TestDrawMark(t *testing.T) {
