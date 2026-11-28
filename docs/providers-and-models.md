@@ -24,7 +24,8 @@ Add or change keys at any time with `/login` (or `werkz --login`). Keys are chec
 
 ## Using a subscription instead of an API key
 
-You can use the API and your subscription side by side: pick either from `/model`.
+You can use the API and your subscription side by side, in one conversation: pick either from `/model` and
+switch whenever you like. werkz's browser, dev servers and your MCP tools work with both.
 
 ### ChatGPT plan (Sign in with ChatGPT)
 
@@ -72,7 +73,10 @@ How it differs from the other providers:
   werkz runs these itself, so you watch the browser with `/browser view` and each call goes through werkz's
   own permission rules, as with any other model.
 - Claude Code keeps the conversation and compacts it itself; werkz's `/compact` and caching settings don't
-  apply. Switching to Claude Code mid-conversation passes the conversation so far along.
+  apply. Switching to Claude Code mid-conversation passes the conversation so far along. Switching from
+  Claude Code to an API model passes along Claude Code's answers and the tools it used, with the start of
+  each result (the latest three turns whole, older ones shortened), so the next model knows what was read,
+  run and found. Like any tool result, that can include parts of files Claude Code read.
 - werkz removes `ANTHROPIC_API_KEY` from Claude Code's environment, so it uses your subscription rather than
   billing that key.
 - **Limits:** Claude Code reports your plan's usage windows with every request: the 5-hour window, the weekly

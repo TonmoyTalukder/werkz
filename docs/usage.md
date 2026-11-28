@@ -157,14 +157,29 @@ and after a change. For example: "the signup button does nothing, fix it and che
 By default werkz uses its own browser profile, signed in to nothing. To let it work on sites where you are
 signed in (a staging admin, a dashboard), connect it to your own Chrome for the session:
 
-1. Start Chrome with a debugging port. `/browser connect` shows the exact command for your system, for example:
+1. Start Chrome with a debugging port. `/browser connect` shows the exact command for your system (and copies
+   it to your clipboard). With Google Chrome installed in the usual place it is:
+
+   Linux:
 
    ```bash
    google-chrome --remote-debugging-port=9222 --user-data-dir="$HOME/.config/werkz/chrome-connect"
    ```
 
+   macOS:
+
+   ```bash
+   open -na "Google Chrome" --args --remote-debugging-port=9222 "--user-data-dir=$HOME/Library/Application Support/werkz/chrome-connect"
+   ```
+
+   Windows (PowerShell):
+
+   ```powershell
+   & "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 "--user-data-dir=$env:APPDATA\werkz\chrome-connect"
+   ```
+
    Chrome only allows this with a profile of its own (not your default one), so this is a separate profile: sign
-   in there once to the sites werkz should use, and it remembers them.
+   in there once to the sites werkz should use, and it remembers them. Chromium, Edge and Brave work the same.
 2. In werkz, run `/browser connect` (or `/browser connect 9333` for another port) and confirm.
 
 While connected, a red **connected to your Chrome** line shows at the bottom. werkz opens one tab of its own and
@@ -185,9 +200,48 @@ being typed into with a blue frame, for a moment. The strip closes a few seconds
 **Ctrl+G** (or `/browser view`) shows the page full screen, and **Esc** goes back. The strip never takes your
 typing, and on a short window it gives way so approval prompts always fit.
 
-Frames come only when the page changes (at most 8 a second, 5 in text mode), sized to your window, and none
-are made while nothing shows them. `/browser view off` stops the strip from opening by itself (Ctrl+G still
-works); `/browser view auto` turns it back on. `/browser` says how your terminal shows the page.
+Frames come only when the page changes, sized to your window, and none are made while nothing shows them; on a
+still page werkz only looks again now and then (every 1 to 8 seconds), which costs next to nothing.
+`/browser view off` stops the strip from opening by itself (Ctrl+G still works); `/browser view auto` turns it
+back on. In the full view, **r** restarts the frames and **Esc** goes back.
+`/browser` says how your terminal shows the page.
+
+#### How live is it?
+
+Near real time, not video. The page is sent as a new picture each time it changes, a few times a second at
+most, so you see every page load, click and form being filled, but an animation or a video on the page looks
+choppy. Measured on Linux with Chrome 158:
+
+- **From an action to the frame showing it:** about 40 ms (25 to 48 ms across our test runs of 6 clicks each), before the terminal
+  draws it.
+- **Frames a second, at most:** these caps keep werkz light; the terminal's own drawing adds to the time.
+
+| How your terminal shows it | Frames a second | Picture | Notes |
+|---|---|---|---|
+| kitty, Ghostty (kitty graphics) | up to 15 | Full colour, sharp | The fastest: the terminal draws the picture itself |
+| iTerm2, WezTerm (iTerm2 images) | up to 8 | Full colour, sharp | Untested here (see below) |
+| Sixel | up to 4 | 256 colours, a little soft | Sixel takes 0.1 to 0.2 s to make each frame, so werkz makes them in the background |
+| Text (half-block characters) | up to 5 | Two pixels per character cell: layout and colour, not small text | Works everywhere; the title, address and last action are shown above the picture |
+| tmux | as the terminal outside | | With passthrough on, a picture as above (each frame crosses tmux, a little slower); otherwise text |
+
+A full-screen text view at 8 frames a second used about 17% of one CPU core while the page kept changing (now
+capped at 5); a still page uses next to nothing. For a page with motion, or to see it exactly as it is, open
+the real window with `/browser show` (werkz's own Chrome) or work in your own Chrome with `/browser connect`:
+both show the page at the browser's full frame rate, and the terminal view keeps working alongside.
+
+Three ways to watch:
+
+| | In the terminal (`/browser view`) | werkz's window (`/browser show`) | Your Chrome (`/browser connect`) |
+|---|---|---|---|
+| Where | A strip above the input, or full screen | A Chrome window on your desktop | A tab of its own in your Chrome |
+| Speed | Near real time (see above) | The browser's full frame rate | The browser's full frame rate |
+| Signed in to | Nothing (werkz's own profile) | Nothing (werkz's own profile) | What you signed in to in that profile |
+| Works over SSH | Yes | No (needs a desktop) | Only if Chrome runs where werkz runs |
+| Back | Esc | `/browser hide` (the page stays open) | `/browser disconnect` closes werkz's tab, Chrome keeps running |
+
+Checked on real terminals: tmux (with and without passthrough), GNOME Terminal and Ptyxis (VTE 0.84, built
+without Sixel, so they show text). kitty, Ghostty, WezTerm, iTerm2, foot and xterm were not available to test;
+what they show follows the protocols above.
 
 | Terminal | What you see |
 |---|---|

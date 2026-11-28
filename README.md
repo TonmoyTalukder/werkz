@@ -41,6 +41,10 @@ changes and checks its work, asking before it does anything risky.
 
 ## Highlights
 
+- **Everything in one terminal:** your Claude Code and Claude API coding experience from one platform, one
+  terminal. Use your subscription and your API keys side by side and switch mid-conversation (the next model
+  knows what the last one read and ran), watch the browser while it works, and change several repos in one
+  request with a [workspace](docs/workspaces.md).
 - **Bring your own model:** Claude (Fable 5.2, Opus 5.5, Sonnet 5.5, Haiku 5.5), OpenAI, Grok, Gemini,
   OpenRouter (free and paid models), Groq, OpenCode Zen, or fully offline with Ollama.
 - **Or use your subscription:** sign in with ChatGPT to use your ChatGPT plan, or run your installed Claude
@@ -61,12 +65,16 @@ changes and checks its work, asking before it does anything risky.
   profile), clicks through it, reads console and network errors, and compares screenshots before and after.
   You watch it live: the page opens by itself above the input while it browses, with each click and the field
   being typed into marked, in every terminal (pictures in kitty, Ghostty, iTerm2, WezTerm and Sixel terminals,
-  coloured text elsewhere); Ctrl+G shows it full screen. Opt in with
-  `/browser connect` to let it work in your own Chrome, in a tab of its own.
+  coloured text elsewhere); Ctrl+G shows it full screen. It's near real time (a new frame about 40 ms after
+  each action, up to 4 to 15 frames a second by terminal); `/browser show` opens the real window for full
+  speed, and `/browser connect` lets it work in your own Chrome, in a tab of its own.
 - **MCP servers:** use tools from any MCP server (stdio or HTTP with OAuth sign-in), configured the same way as in
   Claude Code; a project's servers start only once you approve them.
 - **Made for daily use:** type `@` to attach files (with `@repo/path` across repos), drag to select and copy
   any text, and pick up any earlier conversation with `/resume` or `werkz -c`.
+
+werkz is an independent open-source project, not affiliated with or endorsed by Anthropic or OpenAI. Claude
+and Claude Code are trademarks of Anthropic; ChatGPT is a trademark of OpenAI.
 
 ## Install
 

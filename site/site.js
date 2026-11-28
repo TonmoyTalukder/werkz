@@ -313,7 +313,7 @@
   if (!demo) return;
   const buttons = demo.querySelectorAll(".live-switch [data-look]");
   buttons.forEach((b) => b.addEventListener("click", () => {
-    buttons.forEach((x) => x.setAttribute("aria-checked", String(x === b)));
+    buttons.forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
     demo.classList.toggle("lv-text", b.dataset.look === "text");
   }));
   // the click ring lands on the Subscribe button wherever the layout puts it
