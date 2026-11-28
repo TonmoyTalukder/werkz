@@ -15,11 +15,11 @@ jobs:
   goreleaser:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # the changelog needs the full history and tags
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
 
@@ -39,7 +39,7 @@ jobs:
           gpg --batch --quiet --import "$RUNNER_TEMP/signing-key.asc"
           echo "id=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr/{print $10; exit}')" >> "$GITHUB_OUTPUT"
 
-      - uses: goreleaser/goreleaser-action@v6
+      - uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
           version: "~> v2"
@@ -53,7 +53,7 @@ jobs:
       # Pre-releases (tags with a "-", like v0.3.0-rc.1) are left out.
       - name: Check out the Pages branch
         if: ${{ !contains(github.ref_name, '-') }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: gh-pages
           path: site

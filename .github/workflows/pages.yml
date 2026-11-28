@@ -21,18 +21,18 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0 # release notes are read from the tags
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
 
       - name: Build the site
         run: go run ./tools/sitegen -out "$RUNNER_TEMP/site"
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: gh-pages
           path: ghp
