@@ -86,12 +86,12 @@ func (m *model) liveView() string {
 		b.WriteString(tail(renderThinkingLive(t, m.w), 6) + "\n")
 	}
 	if t := m.turn.live.String(); t != "" {
-		b.WriteString(indent(wrapTo(t, max(m.w-2, 10)), sViolet.Render("⏺ "), "  ") + "\n")
+		b.WriteString(indent(wrapTo(t, max(m.w-2, 10)), sViolet.Render(bullet+" "), "  ") + "\n")
 	}
 	if m.turn.pending != nil {
-		dot := sYellow.Render("⏺")
+		dot := sYellow.Render(bullet)
 		if m.turn.frame%6 < 3 {
-			dot = sFaint.Render("⏺")
+			dot = sFaint.Render(bullet)
 		}
 		b.WriteString(dot + " " + sBold.Render(m.turn.pending.Name) + sDim.Render("("+m.turn.pending.Summary+")") + "\n")
 	}

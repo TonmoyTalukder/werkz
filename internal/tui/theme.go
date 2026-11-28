@@ -1,11 +1,25 @@
 package tui
 
 import (
+	"os"
+	"runtime"
 	"strings"
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/lucasb-eyer/go-colorful"
 )
+
+// bullet starts each reply and tool line. ⏺ (U+23FA) is also an emoji: on Linux and Windows the
+// font often lacks it and the terminal falls back to the colour emoji, and Ghostty draws it as one
+// everywhere. ● (U+25CF) is in every font and never an emoji.
+var bullet = pickBullet(runtime.GOOS, os.Getenv("TERM_PROGRAM"), os.Getenv("GHOSTTY_RESOURCES_DIR"))
+
+func pickBullet(goos, termProgram, ghosttyDir string) string {
+	if goos == "darwin" && !strings.EqualFold(termProgram, "ghostty") && ghosttyDir == "" {
+		return "⏺"
+	}
+	return "●"
+}
 
 // Brand palette: saffron → red → blue.
 const (

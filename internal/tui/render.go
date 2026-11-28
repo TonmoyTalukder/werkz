@@ -35,7 +35,7 @@ func (m *model) renderAssistant(md string, w int) string {
 	lines := strings.Split(out, "\n")
 	for i := range lines {
 		if i == 0 {
-			lines[i] = sViolet.Render("⏺") + strings.TrimPrefix(lines[i], " ")
+			lines[i] = sViolet.Render(bullet) + strings.TrimPrefix(lines[i], " ")
 		}
 	}
 	return strings.Join(lines, "\n")
@@ -53,10 +53,10 @@ func renderThinkingLive(t string, w int) string {
 }
 
 func renderToolResult(r agent.ToolResultMsg, call string, w int) string {
-	dot := sGreen.Render("⏺")
+	dot := sGreen.Render(bullet)
 	sum := sDim.Render(r.Summary)
 	if r.IsError {
-		dot, sum = sRed.Render("⏺"), sRed.Render(r.Summary)
+		dot, sum = sRed.Render(bullet), sRed.Render(r.Summary)
 	}
 	s := dot + " " + ansi.Truncate(sBold.Render(call), max(w-2, 10), "…") + "\n" + sDim.Render("  ⎿  ") + sum
 	if len(r.Detail) > 0 {
