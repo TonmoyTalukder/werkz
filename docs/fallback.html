@@ -90,7 +90,8 @@ model. Fallback is <strong>off by default</strong>. Choose your default with <co
 <p>Choosing <strong>Ask</strong> or <strong>Auto</strong> in <code>/fallback</code> opens a chooser: press <strong>Space</strong> to add or remove a model; the
 numbers show the order they're tried. <code>/fallback models</code> edits the list later, and <code>/fallback status</code> shows it.</p>
 <p>Without a list, werkz uses one model per connected provider, free ones first: Gemini, OpenRouter, Groq,
-Ollama, then Claude, OpenAI and Grok (<code>/fallback gemini,ollama</code> changes that order).</p>
+Ollama, then your ChatGPT plan and Claude Code, then Claude, OpenAI, Grok and OpenCode Zen
+(<code>/fallback gemini,ollama</code> changes that order).</p>
 <h2 id="behaviour">Behaviour<a class="anchor" href="#behaviour" aria-label="Link to this section">#</a></h2>
 <ul>
 <li>After switching, werkz stays on the new model for the rest of that message instead of retrying the failing

@@ -109,6 +109,12 @@
 <td><code>GROQ_API_KEY</code></td>
 </tr>
 <tr>
+<td><strong>OpenCode Zen</strong></td>
+<td>paid</td>
+<td><a href="https://opencode.ai/console">opencode.ai/console</a></td>
+<td><code>OPENCODE_API_KEY</code></td>
+</tr>
+<tr>
 <td><strong>Ollama</strong></td>
 <td>free, local, offline</td>
 <td><a href="https://ollama.com/download">ollama.com</a> (no key)</td>
@@ -130,6 +136,9 @@
 </table>
 <p>* Gemini and Groq are free only while the key's project has no billing, so werkz labels their models
 &quot;free tier&quot;. OpenRouter's <code>:free</code> models are labelled &quot;free&quot;, and Ollama &quot;local&quot;.</p>
+<p><strong>OpenCode Zen</strong> is <a href="https://opencode.ai">OpenCode</a>'s hosted models (Claude, GPT, Gemini, Kimi, DeepSeek, GLM,
+Qwen and more) under one key. <code>/model</code> lists its models with their prices, which werkz reads from OpenCode.
+OpenCode's free models aren't listed: OpenCode lets them answer only inside its own app.</p>
 <p>Add or change keys at any time with <code>/login</code> (or <code>werkz --login</code>). Keys are checked when you save them.</p>
 <h2 id="using-a-subscription-instead-of-an-api-key">Using a subscription instead of an API key<a class="anchor" href="#using-a-subscription-instead-of-an-api-key" aria-label="Link to this section">#</a></h2>
 <p>You can use the API and your subscription side by side: pick either from <code>/model</code>.</p>
