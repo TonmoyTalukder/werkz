@@ -116,3 +116,19 @@ func TestBrowserApprovalsDontCarryAcrossBrowsers(t *testing.T) {
 		t.Fatal("the page may still navigate to the old browser's approved site")
 	}
 }
+
+func TestBrowserLateReachesUserAndModel(t *testing.T) {
+	var shown []any
+	e := New(config.Load(), func(m any) { shown = append(shown, m) })
+	e.browserLate("the page started a download on its own: r.csv (blocked: downloads are off)")
+	if len(shown) != 1 || !strings.Contains(fmt.Sprint(shown[0]), "r.csv") {
+		t.Fatalf("the user wasn't told at once: %v", shown)
+	}
+	note := e.takeBrowserLate()
+	if !strings.Contains(note, "on its own") || !strings.Contains(note, "- the page started a download") {
+		t.Fatalf("model note = %q", note)
+	}
+	if again := e.takeBrowserLate(); again != "" {
+		t.Fatalf("delivered twice: %q", again)
+	}
+}

@@ -130,7 +130,9 @@ func (b *Browser) onEvent(ev any) {
 	case *page.EventFrameRequestedNavigation:
 		b.mu.Lock()
 		if e.FrameID == b.mainID && e.Reason == page.ClientNavigationReasonFormSubmissionGet {
-			b.notes = capTail(append(b.notes, "sent a form to "+truncate(e.URL, 200)+" (GET)"), maxBlocked)
+			if note := "sent a form to " + truncate(e.URL, 200) + " (GET)"; !b.lateLocked("the page " + note) {
+				b.notes = capTail(append(b.notes, note), maxBlocked)
+			}
 		}
 		b.mu.Unlock()
 	case *page.EventFrameStartedLoading:
@@ -366,6 +368,9 @@ func (b *Browser) mainAllowed(raw, method string) bool {
 func (b *Browser) addBlocked(note string) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	if b.lateLocked("werkz blocked what the page tried on its own: " + note) {
+		return
+	}
 	if n := len(b.blocked); n > 0 && b.blocked[n-1] == note {
 		return
 	}
@@ -556,6 +561,18 @@ func truncate(s string, n int) string {
 func (b *Browser) noteDownload(rawURL, note string, named bool) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
+	if b.idle && b.opts.OnLate != nil {
+		// Reported as it happens. Both reports of one file arrive together: send only the first.
+		if t, ok := b.lateDL[rawURL]; ok && time.Since(t) < 10*time.Second {
+			return
+		}
+		if b.lateDL == nil || len(b.lateDL) > 100 {
+			b.lateDL = map[string]time.Time{}
+		}
+		b.lateDL[rawURL] = time.Now()
+		b.lateLocked("the page started a download on its own: " + note)
+		return
+	}
 	if old, ok := b.dlNoted[rawURL]; ok {
 		for i, n := range b.downloads {
 			if n == old {
@@ -573,11 +590,44 @@ func (b *Browser) noteDownload(rawURL, note string, named bool) {
 	b.dlNoted[rawURL] = b.addDownloadLocked(note)
 }
 
+// lateLocked hands note to Options.OnLate when no action is running, and reports whether it did:
+// the note is then not kept for the next action's result. Callers hold b.mu.
+func (b *Browser) lateLocked(note string) bool {
+	if !b.idle || b.opts.OnLate == nil {
+		return false
+	}
+	b.late = capTail(append(b.late, note), maxBlocked)
+	if !b.lateBusy {
+		b.lateBusy = true
+		go b.deliverLate()
+	}
+	return true
+}
+
+// deliverLate passes queued late notes to Options.OnLate, outside b.mu and in order.
+func (b *Browser) deliverLate() {
+	for {
+		b.mu.Lock()
+		if len(b.late) == 0 {
+			b.lateBusy = false
+			b.mu.Unlock()
+			return
+		}
+		note := b.late[0]
+		b.late = b.late[1:]
+		b.mu.Unlock()
+		b.opts.OnLate(note)
+	}
+}
+
 // addDownloadLocked records a download note and returns it as recorded. A page can start a download
 // on its own after werkz's action has finished (a script's timer); such a note is reported with the
 // next action's result, so it says when it happened instead of looking like that action's doing.
 // Callers hold b.mu.
 func (b *Browser) addDownloadLocked(note string) string {
+	if b.lateLocked("the page started a download on its own: " + note) {
+		return note
+	}
 	if b.idle {
 		note += ", started by the page after werkz's previous action had finished"
 	}

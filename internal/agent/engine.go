@@ -149,6 +149,9 @@ func (e *Engine) Run(ctx context.Context, userText string, settings config.Confi
 		if i > 0 && e.shouldAutoCompact() && !e.autoCompact(ctx, userText) {
 			return
 		}
+		if late := e.takeBrowserLate(); late != "" {
+			e.appendHistory(llm.Msg{Role: llm.RoleSystem, Text: late})
+		}
 		turn, err := e.callWithFallback(ctx, sys)
 		if err != nil {
 			e.finish(err)

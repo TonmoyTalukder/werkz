@@ -363,3 +363,46 @@ func TestTransientNetError(t *testing.T) {
 		}
 	}
 }
+
+// Issue #1: what a page does on its own between actions reaches OnLate as it happens, once, and
+// is not held for the next action's result. While an action runs, notes stay with its result.
+func TestLateNotesDeliveredAtOnce(t *testing.T) {
+	got := make(chan string, 10)
+	b := &Browser{opts: Options{OnLate: func(n string) { got <- n }}, idle: true}
+	b.mu.Lock()
+	b.addDownloadLocked("report.csv (blocked: downloads are off)")
+	b.mu.Unlock()
+	b.noteDownload("http://x/a.bin", "a.bin (blocked: downloads are off)", false)
+	b.noteDownload("http://x/a.bin", "a.bin (blocked: downloads are off)", true) // the second report of one file
+	b.addBlocked("popup to http://evil.test/")
+	want := []string{
+		"the page started a download on its own: report.csv (blocked: downloads are off)",
+		"the page started a download on its own: a.bin (blocked: downloads are off)",
+		"werkz blocked what the page tried on its own: popup to http://evil.test/",
+	}
+	for _, w := range want {
+		select {
+		case n := <-got:
+			if n != w {
+				t.Fatalf("got %q, want %q", n, w)
+			}
+		case <-time.After(2 * time.Second):
+			t.Fatalf("no late note %q", w)
+		}
+	}
+	select {
+	case n := <-got:
+		t.Fatalf("unexpected extra note %q", n)
+	case <-time.After(100 * time.Millisecond):
+	}
+	if len(b.downloads)+len(b.blocked) != 0 {
+		t.Fatalf("late notes were also kept for the next action: %v %v", b.downloads, b.blocked)
+	}
+	b.mu.Lock()
+	b.idle = false // an action runs
+	b.addDownloadLocked("b.bin (blocked: downloads are off)")
+	b.mu.Unlock()
+	if len(b.downloads) != 1 || b.downloads[0] != "b.bin (blocked: downloads are off)" {
+		t.Fatalf("a note made during an action belongs to its result, got %v", b.downloads)
+	}
+}

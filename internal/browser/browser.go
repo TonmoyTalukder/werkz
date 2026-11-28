@@ -87,6 +87,11 @@ type Options struct {
 	// scheme's default port (80, 443) and a trailing dot dropped. nil = allow
 	// all. Navigate() is pre-approved by the caller for the host:port it opens.
 	AllowHost func(host string) bool
+	// OnLate hears what a page does on its own between werkz's actions (a download a script
+	// started, a blocked navigation or popup, a form it sent), as it happens, instead of with
+	// the next action's result. It is called from its own goroutine, in order. nil = such
+	// notes wait for the next action, marked as having happened before it.
+	OnLate func(note string)
 }
 
 // Browser is one werkz-owned browser with a single reused tab.
@@ -122,8 +127,11 @@ type Browser struct {
 	mainDocID  network.RequestID
 	blocked    []string
 	notes      []string
-	denyGen    int  // counts operations: a pending restore of the download switch yields to a newer one
-	denying    bool // connected mode: downloads are denied by Chrome right now
+	late       []string             // notes for Options.OnLate not yet delivered
+	lateBusy   bool                 // a goroutine is delivering late
+	lateDL     map[string]time.Time // download URL -> when it was reported late
+	denyGen    int                  // counts operations: a pending restore of the download switch yields to a newer one
+	denying    bool                 // connected mode: downloads are denied by Chrome right now
 	downloads  []string
 	dlSeen     map[string]bool
 	dlOrder    []string

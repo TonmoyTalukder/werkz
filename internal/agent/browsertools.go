@@ -113,6 +113,9 @@ type browserState struct {
 	// gen changes when werkz connects to or disconnects from the user's Chrome: approvals given
 	// for one browser (a site, JavaScript on a site) are keyed by it and never carry to the other.
 	gen atomic.Int64
+
+	lateMu sync.Mutex
+	late   []string // page events since the last action that the model hasn't heard about yet
 }
 
 // approvalKey is the "don't ask again" key for a browser approval, tied to the current browser.
@@ -244,7 +247,7 @@ func (e *Engine) session(ctx context.Context) (*browser.Browser, error) {
 	if b != nil {
 		_ = b.Close() // dead: clear it up before starting another
 	}
-	nb, err := browser.Start(ctx, browser.Options{Headless: !visible, AllowHost: e.allowHost})
+	nb, err := browser.Start(ctx, browser.Options{Headless: !visible, AllowHost: e.allowHost, OnLate: e.browserLate})
 	e.br.mu.Lock()
 	e.br.b = nil
 	if err == nil {
@@ -252,6 +255,31 @@ func (e *Engine) session(ctx context.Context) (*browser.Browser, error) {
 	}
 	e.br.mu.Unlock()
 	return nb, err
+}
+
+// browserLate hears what a browser page did on its own between werkz's actions: the user sees it
+// at once, and the model hears it with its next request (see takeBrowserLate).
+func (e *Engine) browserLate(note string) {
+	e.send(NoticeMsg{"info", "Browser: " + note})
+	e.br.lateMu.Lock()
+	e.br.late = append(e.br.late, note)
+	if len(e.br.late) > 50 {
+		e.br.late = e.br.late[len(e.br.late)-50:]
+	}
+	e.br.lateMu.Unlock()
+}
+
+// takeBrowserLate returns the page events the model hasn't heard about yet, as one note.
+func (e *Engine) takeBrowserLate() string {
+	e.br.lateMu.Lock()
+	late := e.br.late
+	e.br.late = nil
+	e.br.lateMu.Unlock()
+	if len(late) == 0 {
+		return ""
+	}
+	return "Since werkz's last browser action, the page did this on its own (not caused by any later action):\n- " +
+		strings.Join(late, "\n- ")
 }
 
 // BrowserStatus describes the browser for /browser.
@@ -320,7 +348,7 @@ func (e *Engine) BrowserAddr() string {
 func (e *Engine) ConnectBrowser(ctx context.Context, addr string) error {
 	e.br.startMu.Lock()
 	defer e.br.startMu.Unlock()
-	b, err := browser.Connect(ctx, addr, browser.Options{AllowHost: e.allowHost})
+	b, err := browser.Connect(ctx, addr, browser.Options{AllowHost: e.allowHost, OnLate: e.browserLate})
 	if err != nil {
 		return err
 	}

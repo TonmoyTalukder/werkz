@@ -143,6 +143,11 @@ and after a change. For example: "the signup button does nothing, fix it and che
   of the page changed and where.
 - Dev servers keep running in the background until stopped, and werkz stops them when you quit or close the
   terminal. At most four run at once.
+- A page can act on its own after werkz's action has finished, for example a script that starts a download a
+  moment later. werkz shows that in the conversation as it happens ("Browser: the page started a download on its
+  own: report.csv (blocked: downloads are off)"), and tells the model with its next request, so it isn't mistaken
+  for the effect of whatever the model does next. The same goes for popups, navigations and frames werkz blocked
+  and GET forms the page sent.
 - Links that open a new tab or window open in werkz's tab instead (if the site is allowed). Two werkz windows
   can each use a browser at the same time. If Chrome crashes or you close its window, werkz starts it again
   when needed.
