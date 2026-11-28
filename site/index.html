@@ -54,6 +54,7 @@
     <nav id="topnav" aria-label="Main">
       <a href="#features">Features</a>
       <a href="docs/">Docs</a>
+      <a href="#live">Browser</a>
       <a href="#install">Install</a>
       <a href="#subscriptions">Subscriptions</a>
       <a href="docs/releases.html">Releases</a>
@@ -220,6 +221,74 @@ sudo dnf install werkz</code></pre><button class="copy" type="button"><svg class
       </div>
     </div>
   </div>
+</section>
+
+<section class="section stage" id="live" aria-labelledby="live-title">
+  <div class="wrap">
+    <div class="section-head center">
+      <h2 id="live-title">Watch it browse, right in your terminal</h2>
+      <p>When werkz opens a page, it opens above your input too, live. Every page load, scroll and keystroke shows as it happens, and each click is marked. <kbd>Ctrl</kbd>+<kbd>G</kbd> shows it full screen.</p>
+    </div>
+    <div class="live-demo" data-live>
+      <div class="live-switch" role="radiogroup" aria-label="How your terminal shows the page">
+        <button type="button" role="radio" aria-checked="true" data-look="pic">Picture <small>kitty · Ghostty · iTerm2 · WezTerm · Sixel</small></button>
+        <button type="button" role="radio" aria-checked="false" data-look="text">Text drawing <small>any other terminal</small></button>
+      </div>
+      <div class="window live-win">
+        <div class="window-bar"><i class="d1"></i><i class="d2"></i><i class="d3"></i><span>werkz — ~/code/shop</span></div>
+        <div class="lv-term" aria-hidden="true">
+          <div class="lv-log">
+            <div class="lv-l l0"><b class="p">❯</b> the newsletter form does nothing, fix it and check it</div>
+            <div class="lv-l l1"><b class="g">⏺</b> <b>Browse</b><i>(localhost:3000)</i></div>
+            <div class="lv-l l2"><b class="g">⏺</b> <b>Act</b><i>(scroll down)</i></div>
+            <div class="lv-l l3"><b class="g">⏺</b> <b>Type</b><i>(ref_7 ← "ada@example.com")</i></div>
+            <div class="lv-l l4"><b class="g">⏺</b> <b>Click</b><i>(ref_8 Subscribe)</i></div>
+          </div>
+          <div class="lv-head"><b class="s">◉</b> <span class="grad">browser</span><i> · Shop · localhost:3000 · last: </i><span class="lv-last"><em class="a1">Browse(localhost:3000)</em><em class="a2">Act(scroll down)</em><em class="a3">Type(ref_7)</em><em class="a4">Click(ref_8)</em></span><i class="lv-key"> · ctrl+g full view</i></div>
+          <div class="lv-page-wrap">
+            <div class="lv-page">
+              <div class="lv-scroll">
+                <div class="lv-nav"><span class="lv-logo">shop</span><span>New</span><span>Sale</span><span>Help</span></div>
+                <div class="lv-hero"><span class="lv-h1">Autumn collection</span><span class="lv-sub">Warm layers, made to last.</span></div>
+                <div class="lv-cards"><span></span><span></span><span></span></div>
+                <div class="lv-news">
+                  <span class="lv-h2">Get the newsletter</span>
+                  <div class="lv-form"><span class="lv-input"><span class="lv-typed">ada@example.com</span><span class="lv-caret"></span></span><span class="lv-btn">Subscribe</span></div>
+                  <span class="lv-thanks">✓ Thanks, you're subscribed</span>
+                </div>
+              </div>
+              <span class="lv-ring"></span>
+            </div>
+          </div>
+          <div class="lv-input-line"><b class="p">❯</b> <i>Try "explain this repo" · / for commands</i></div>
+        </div>
+      </div>
+      <p class="live-note">An illustration of werkz's live view. Frames come only when the page changes (up to 8 a second), sized to your window, and stop when nothing shows them.</p>
+    </div>
+    <div class="termtable">
+      <table>
+        <caption class="sr">What each terminal shows</caption>
+        <thead><tr><th scope="col">Terminal</th><th scope="col">The page</th><th scope="col">Screenshots in the conversation</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">kitty, Ghostty</th><td data-label="The page"><span class="pill yes">Picture</span> <small>kitty graphics</small></td><td data-label="Screenshots"><span class="pill yes">Picture</span></td></tr>
+          <tr><th scope="row">iTerm2, WezTerm</th><td data-label="The page"><span class="pill yes">Picture</span> <small>iTerm2 images</small></td><td data-label="Screenshots"><span class="pill yes">Picture</span></td></tr>
+          <tr><th scope="row">foot, Konsole, xterm<small>and VTE terminals built with Sixel</small></th><td data-label="The page"><span class="pill yes">Picture</span> <small>Sixel</small></td><td data-label="Screenshots"><span class="pill yes">Picture</span></td></tr>
+          <tr><th scope="row">GNOME Terminal, Ptyxis<small>and any other terminal</small></th><td data-label="The page"><span class="pill ask">Text drawing</span> <small>colour half blocks, with title, address and a link to the picture</small></td><td data-label="Screenshots"><span class="pill ask">Link</span></td></tr>
+          <tr><th scope="row">tmux</th><td data-label="The page"><span class="pill yes">Picture</span> <small>in kitty or Ghostty with <code>allow-passthrough on</code>; otherwise text, and werkz says how to turn it on</small></td><td data-label="Screenshots"><span class="pill ask">Same</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="live-more"><a href="docs/usage.html#seeing-the-page-in-your-terminal">How the live view works</a> · <code>/browser view off</code> keeps it closed until you press <kbd>Ctrl</kbd>+<kbd>G</kbd></p>
+  </div>
+  <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+    <filter id="lv-blocks" x="0" y="0" width="100%" height="100%">
+      <feFlood x="2" y="2" height="1" width="1"/>
+      <feComposite width="5" height="5"/>
+      <feTile result="a"/>
+      <feComposite in="SourceGraphic" in2="a" operator="in"/>
+      <feMorphology operator="dilate" radius="2.5"/>
+    </filter>
+  </svg>
 </section>
 
 <section class="section soft" id="subscriptions" aria-labelledby="subs-title">
