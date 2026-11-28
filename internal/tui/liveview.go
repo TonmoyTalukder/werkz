@@ -308,7 +308,7 @@ func (m *model) pageLines(name string, cols, rows, row, col int) []string {
 		}
 		return termimg.KittyPlaceholder(r.id, r.placed, cols, rows)
 	case m.pixelImages():
-		m.img.ov.add(ovItem{key: fmt.Sprintf("live/%s/%d", name, m.live.ver), row: row, col: col, cols: cols, rows: rows,
+		m.img.ov.add(ovItem{key: fmt.Sprintf("live/%s/%d", name, m.live.ver), group: "live/" + name, row: row, col: col, cols: cols, rows: rows,
 			img: f.img, enc: f.enc})
 		out := make([]string, rows)
 		for i := range out {

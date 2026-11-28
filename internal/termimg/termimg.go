@@ -99,6 +99,9 @@ func (c Caps) Fit(w, h, maxCols, maxRows int) (cols, rows int) {
 		return 0, 0
 	}
 	cw, ch := c.cell()
+	if c.Proto == Sixel { // xterm draws at most SixelMaxPx a side, and Sixel costs more as it grows
+		maxCols, maxRows = max(1, min(maxCols, SixelMaxPx/cw)), max(1, min(maxRows, SixelMaxPx/ch))
+	}
 	// Natural size in cells, then the scale that fits both limits (never >1).
 	nc, nr := float64(w)/float64(cw), float64(h)/float64(ch)
 	s := 1.0
@@ -112,6 +115,10 @@ func (c Caps) Fit(w, h, maxCols, maxRows int) (cols, rows int) {
 	rows = max(1, min(maxRows, int(nr*s+0.5)))
 	return cols, rows
 }
+
+// SixelMaxPx is the largest Sixel picture side werkz makes: xterm's default limit
+// (maxGraphicSize 1000x1000); larger pictures are cut off there.
+const SixelMaxPx = 1000
 
 // ITerm2Image returns an OSC 1337 inline image sequence.
 func ITerm2Image(png []byte, cols, rows int) string {

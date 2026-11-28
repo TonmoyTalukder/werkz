@@ -27,7 +27,8 @@ import (
 
 type ovItem struct {
 	key        string
-	row, col   int // 1-based screen position of the top-left cell
+	group      string // frames of one live view: a newer frame replaces an older one
+	row, col   int    // 1-based screen position of the top-left cell
 	cols, rows int
 	img        image.Image // decoded, if at hand
 	enc        []byte      // the encoded picture
@@ -43,7 +44,8 @@ type overlay struct {
 	ticking bool
 	kitty   []uint32 // images placed directly (kitty without placeholders), deleted before a redraw
 	sixel   map[string]string
-	pending map[string]bool // Sixel pictures being encoded (off the UI's goroutine)
+	pending map[string]bool   // Sixel pictures being encoded (off the UI's goroutine)
+	latest  map[string]string // the newest Sixel picture made for each group and size
 	nextPic int
 	pics    map[string]int // file path -> marker number
 	picPath map[int]string
@@ -140,34 +142,51 @@ func (m *model) handleOvTick() tea.Cmd {
 	return tea.Batch(cmds...)
 }
 
-type sixelReadyMsg struct{ key, seq string }
+type sixelReadyMsg struct{ key, group, seq string }
 
 // encodeSixel makes a Sixel picture in the background: it costs too much for the UI's goroutine.
+// A live view encodes one frame at a time; frames that come meanwhile are skipped.
 func (m *model) encodeSixel(k string, it ovItem) tea.Cmd {
 	o := &m.img.ov
 	if o.pending == nil {
 		o.pending = map[string]bool{}
 	}
-	if o.pending[k] {
+	busy := k
+	if it.group != "" {
+		busy = it.group
+	}
+	if o.pending[busy] {
 		return nil
 	}
-	o.pending[k] = true
+	o.pending[busy] = true
 	caps := m.img.caps
+	group := sizeKey(it.group, it)
 	return func() tea.Msg {
 		img := it.img
 		if img == nil && it.decode != nil {
 			img, _ = it.decode()
 		}
 		if img == nil {
-			return sixelReadyMsg{key: k}
+			return sixelReadyMsg{key: k, group: group}
 		}
-		return sixelReadyMsg{key: k, seq: caps.SixelFrom(img, it.cols, it.rows)}
+		return sixelReadyMsg{key: k, group: group, seq: caps.SixelFrom(img, it.cols, it.rows)}
 	}
+}
+
+// sizeKey names a picture of group at the item's size ("" when it has no group).
+func sizeKey(group string, it ovItem) string {
+	if group == "" {
+		return ""
+	}
+	return fmt.Sprintf("%s/%dx%d", group, it.cols, it.rows)
 }
 
 func (m *model) handleSixelReady(msg sixelReadyMsg) tea.Cmd {
 	o := &m.img.ov
 	delete(o.pending, msg.key)
+	if msg.group != "" {
+		delete(o.pending, msg.group[:strings.LastIndex(msg.group, "/")])
+	}
 	if msg.seq == "" {
 		return nil
 	}
@@ -175,6 +194,12 @@ func (m *model) handleSixelReady(msg sixelReadyMsg) tea.Cmd {
 		o.sixel = map[string]string{}
 	}
 	o.sixel[msg.key] = msg.seq
+	if msg.group != "" {
+		if o.latest == nil || len(o.latest) > 8 {
+			o.latest = map[string]string{}
+		}
+		o.latest[msg.group] = msg.seq
+	}
 	o.drawn = "" // draw it now
 	return m.ovSchedule(0)
 }
@@ -224,7 +249,9 @@ func (m *model) ovSequence(it ovItem) (string, tea.Cmd) {
 		if s, ok := m.img.ov.sixel[k]; ok {
 			return s, nil
 		}
-		return "", m.encodeSixel(k, it) // drawn when ready
+		// Drawn when ready; a live view shows its newest finished frame meanwhile, so a page that
+		// keeps changing still moves even when frames come faster than Sixel is made.
+		return m.img.ov.latest[sizeKey(it.group, it)], m.encodeSixel(k, it)
 	case termimg.Kitty:
 		id := m.newImageID()
 		m.img.ov.kitty = append(m.img.ov.kitty, id)

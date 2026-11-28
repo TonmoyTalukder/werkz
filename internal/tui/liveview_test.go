@@ -145,6 +145,39 @@ func TestStripPictureDrawnInPlace(t *testing.T) {
 	}
 }
 
+// Frames that come faster than Sixel is made: the newest finished one is drawn rather than
+// waiting for one that is never ready in time (found in xterm on a page that kept changing).
+func TestSixelKeepsUpWithFrames(t *testing.T) {
+	m := chatModel(t)
+	var out bytes.Buffer
+	m.img = gfx{caps: termimg.Caps{Proto: termimg.Sixel, CellW: 8, CellH: 16}, out: &out}
+	browseStarted(m)
+	defer m.unwatch()
+	_, data := writePNG(t, 800, 500)
+	fakeWatch(t, m, data, "http://x/")
+	m.View()
+	m.img.ov.at = time.Now().Add(-time.Second)
+	first := m.handleOvTick() // starts encoding frame 1
+	if first == nil {
+		t.Fatal("no encode started")
+	}
+	m.live.ver++ // frame 2 comes while frame 1 is being made
+	m.View()
+	m.img.ov.at = time.Now().Add(-time.Second)
+	if c := m.handleOvTick(); c != nil {
+		if _, ok := c().(sixelReadyMsg); ok {
+			t.Fatal("a second Sixel encode started while one was running")
+		}
+	}
+	runAll(m, first) // frame 1 is ready; frame 2's picture isn't
+	out.Reset()
+	m.img.ov.at = time.Now().Add(-time.Second)
+	m.handleOvTick()
+	if !strings.Contains(out.String(), "\x1bPq") {
+		t.Fatal("the newest finished frame wasn't drawn")
+	}
+}
+
 func TestDrawMark(t *testing.T) {
 	img := image.NewNRGBA(image.Rect(0, 0, 400, 200))
 	f := browser.Frame{ViewW: 800, ViewH: 400, Mark: &browser.Mark{Kind: "click", X: 400, Y: 200}}

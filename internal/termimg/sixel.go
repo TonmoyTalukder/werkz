@@ -62,7 +62,7 @@ func (c Caps) SixelFrom(src image.Image, cols, rows int) string {
 	cw, ch := c.cell()
 	// Sixel draws 6 pixel rows at a time: a height that isn't a multiple of 6 would paint into the
 	// row below the picture's room.
-	w, h := max(1, cols*cw), max(6, rows*ch/6*6)
+	w, h := max(1, min(cols*cw, SixelMaxPx)), max(6, min(rows*ch, SixelMaxPx)/6*6)
 	dst := image.NewNRGBA(image.Rect(0, 0, w, h))
 	draw.ApproxBiLinear.Scale(dst, dst.Bounds(), src, src.Bounds(), draw.Over, nil)
 
