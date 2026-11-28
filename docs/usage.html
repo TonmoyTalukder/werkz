@@ -412,7 +412,7 @@ draws it.</li>
 <td>iTerm2, WezTerm (iTerm2 images)</td>
 <td>up to 8</td>
 <td>Full colour, sharp</td>
-<td>Untested here (see below)</td>
+<td>Tested in WezTerm; iTerm2 (macOS only) wasn't</td>
 </tr>
 <tr>
 <td>Sixel</td>
@@ -481,9 +481,10 @@ both show the page at the browser's full frame rate, and the terminal view keeps
 </tr>
 </tbody>
 </table>
-<p>Checked on real terminals: kitty and Ghostty (pictures, live at the page's own rate), xterm started with
-<code>-ti vt340</code> (Sixel), tmux (with and without passthrough), GNOME Terminal and Ptyxis (VTE 0.84, built without
-Sixel, so they show text). WezTerm, foot and iTerm2 were not tested; what they show follows the protocols above.</p>
+<p>Checked on real terminals: kitty and Ghostty (pictures, live at the page's own rate), WezTerm (iTerm2
+images, live), foot and xterm started with <code>-ti vt340</code> (Sixel), tmux (with and without passthrough), GNOME
+Terminal and Ptyxis (VTE 0.84, built without Sixel, so they show text). iTerm2 runs only on macOS and was not
+tested; it uses the same protocol as WezTerm.</p>
 <table>
 <thead>
 <tr>
