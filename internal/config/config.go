@@ -126,6 +126,7 @@ type Config struct {
 	NoAutoCompact   bool              `json:"auto_compact_off,omitempty"`
 	PlanNoticeSeen  bool              `json:"chatgpt_plan_notice_seen,omitempty"` // "You're using your ChatGPT plan" shown once
 	ContextWindow   int               `json:"context_window,omitempty"`           // user's limit in tokens; 0 = each model's full window
+	BrowserView     string            `json:"browser_view,omitempty"`             // "" (auto: the page shows while the model browses) | off
 }
 
 // Window is the context window werkz works with for a model whose full window is modelMax: the

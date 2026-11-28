@@ -11,6 +11,7 @@ import (
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/fetch"
 	"github.com/chromedp/cdproto/network"
+	"github.com/chromedp/cdproto/page"
 	"github.com/chromedp/cdproto/target"
 	"github.com/chromedp/chromedp"
 )
@@ -114,6 +115,10 @@ func (b *Browser) listenTab(t *tab) error {
 func (b *Browser) tabEvent(t *tab, ev any) {
 	if e, ok := ev.(*fetch.EventRequestPaused); ok {
 		go b.onPaused(t, e)
+		return
+	}
+	if e, ok := ev.(*page.EventScreencastFrame); ok {
+		go b.onCastFrame(t, e)
 		return
 	}
 	b.mu.Lock()

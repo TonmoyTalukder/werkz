@@ -179,17 +179,26 @@ with werkz's own browser.
 
 ### Seeing the page in your terminal
 
-werkz shows its browser inside the terminal when the terminal can draw pictures:
+When the model starts using the browser, the page opens by itself in a strip above the input and stays live:
+you see each page load, scroll and change as it happens. A click is marked with an orange ring and the field
+being typed into with a blue frame, for a moment. The strip closes a few seconds after the model's turn;
+**Ctrl+G** (or `/browser view`) shows the page full screen, and **Esc** goes back. The strip never takes your
+typing, and on a short window it gives way so approval prompts always fit.
+
+Frames come only when the page changes (at most 8 a second, 5 in text mode), sized to your window, and none
+are made while nothing shows them. `/browser view off` stops the strip from opening by itself (Ctrl+G still
+works); `/browser view auto` turns it back on. `/browser` says how your terminal shows the page.
 
 | Terminal | What you see |
 |---|---|
-| kitty, Ghostty | Screenshots right in the conversation, sized to the window; they scroll and resize with the text. `/browser view` shows the live page full screen |
-| iTerm2, WezTerm, terminals with Sixel (foot, Konsole, xterm with Sixel, recent GNOME Terminal builds) | `/browser view` shows the live page full screen; screenshots in the conversation are links |
-| Others, and inside tmux | Screenshots are links to the files (Ctrl+click or ⌘+click in most terminals) |
+| kitty, Ghostty | The page as a picture, in the strip and full screen; screenshots right in the conversation. Pictures scroll and resize with the text |
+| iTerm2, WezTerm | The same, drawn with iTerm2's image protocol |
+| Sixel terminals (foot, Konsole, xterm with Sixel, GNOME Terminal and Ptyxis when VTE was built with Sixel) | The same, drawn as Sixel |
+| Any other terminal (including GNOME Terminal and Ptyxis without Sixel) | The page drawn with coloured half-block characters (24-bit colour where the terminal has it), with the page's title, address, the last action, and a link to the full picture |
+| tmux | Inside kitty or Ghostty with `set -g allow-passthrough on`: pictures. Otherwise the text drawing; werkz tells you when turning on passthrough would give pictures |
 
-`/browser view` refreshes every 1.5 seconds while werkz works; **r** refreshes now and **Esc** goes back. werkz
-asks the terminal what it supports when it starts; set `WERKZ_IMAGES=kitty`, `iterm2`, `sixel` or `off` to choose
-yourself (inside tmux, that also needs `set -g allow-passthrough on`).
+werkz asks the terminal what it supports when it starts; set `WERKZ_IMAGES=kitty`, `iterm2`, `sixel` or `text`
+to choose yourself (`off` is the same as `text`).
 
 What asks first:
 

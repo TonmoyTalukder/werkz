@@ -123,6 +123,8 @@ func (m *model) handleKey(k tea.KeyMsg) (tea.Model, tea.Cmd) {
 	case "alt+up", "ctrl+o":
 		m.startSelect()
 		return m, nil
+	case "ctrl+g":
+		return m, m.openLiveView() // the browser's page, full screen
 	case "esc":
 		if m.turn.active {
 			m.turn.cancel()

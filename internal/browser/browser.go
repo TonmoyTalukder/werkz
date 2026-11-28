@@ -127,6 +127,9 @@ type Browser struct {
 	mainDocID  network.RequestID
 	blocked    []string
 	notes      []string
+	mark       *Mark // where the last click or typing happened (the live view shows it)
+	castMu     sync.Mutex
+	cast       *caster              // the live view's frames, while it watches
 	late       []string             // notes for Options.OnLate not yet delivered
 	lateBusy   bool                 // a goroutine is delivering late
 	lateDL     map[string]time.Time // download URL -> when it was reported late

@@ -21,7 +21,7 @@ can be changed from inside werkz, so you rarely need to edit it by hand.
 | `WERKZ_NO_UPDATE=1` | Don't check for or install updates this session (see [Updating](installation.md#updating)) |
 | `BRAVE_API_KEY`, `TAVILY_API_KEY`, `SEARXNG_URL` | A web search service for models without their own search (see [Web access](usage.md#web-access)) |
 | `MCP_TIMEOUT` | How long an MCP server may take to start, in milliseconds (default 30000) |
-| `WERKZ_IMAGES` | How to show screenshots: `kitty`, `iterm2`, `sixel` or `off` (default: asks the terminal) |
+| `WERKZ_IMAGES` | How to show the browser and screenshots: `kitty`, `iterm2`, `sixel` or `text` (half blocks; `off` is the same). Default: asks the terminal |
 | `WERKZ_BROWSER` | The Chrome, Chromium or Edge executable for werkz's browser (default: the first one found) |
 | `WERKZ_NO_MOUSE=1` | Start with werkz's mouse handling off (the terminal's own selection; **Ctrl+S** turns it on) |
 | `WERKZ_CLAUDE_BIN` | Path of the `claude` command for Claude Code mode (`off` hides Claude Code) |

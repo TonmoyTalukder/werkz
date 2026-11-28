@@ -38,7 +38,9 @@ func TestFromEnv(t *testing.T) {
 		{"off", map[string]string{"WERKZ_IMAGES": "off", "KITTY_WINDOW_ID": "1"}, Caps{}},
 	}
 	for _, c := range cases {
-		if got := FromEnv(env(c.env)); got != c.want {
+		got := FromEnv(env(c.env))
+		got.TrueColor = false // checked in TestTrueColor
+		if got != c.want {
 			t.Errorf("%s: got %+v want %+v", c.name, got, c.want)
 		}
 	}
@@ -333,12 +335,13 @@ func TestSixelImage(t *testing.T) {
 	if maxX > w || maxX < w-2 {
 		t.Errorf("maxX %d for width %d", maxX, w)
 	}
-	// Unknown cell size → 8x16; odd height gives ceil bands.
+	// Unknown cell size → 8x16; the height is rounded down to whole 6-pixel bands, so the picture
+	// never paints into the row below its room (16 → 12).
 	s, err = (Caps{}).SixelImage(testPNG(t, 30, 30, false), 2, 1)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, h, bands, _, _ := decodeSixel(t, s); h != 16 || bands != 3 {
+	if _, h, bands, _, _ := decodeSixel(t, s); h != 12 || bands != 2 {
 		t.Errorf("h=%d bands=%d", h, bands)
 	}
 	if _, err := c.SixelImage([]byte("nope"), 1, 1); err == nil {
@@ -361,4 +364,98 @@ func absInt(v int) int {
 		return -v
 	}
 	return v
+}
+
+func TestTrueColor(t *testing.T) {
+	for _, c := range []struct {
+		env  map[string]string
+		want bool
+	}{
+		{map[string]string{"COLORTERM": "truecolor"}, true},
+		{map[string]string{"COLORTERM": "24bit"}, true},
+		{map[string]string{"VTE_VERSION": "8400"}, true}, // GNOME Terminal, Ptyxis
+		{map[string]string{"TERM": "xterm-256color"}, false},
+		{nil, false},
+	} {
+		if got := FromEnv(env(c.env)).TrueColor; got != c.want {
+			t.Errorf("%v: truecolor %v", c.env, got)
+		}
+	}
+}
+
+// Inside tmux, kitty's pictures need passthrough; without it, werkz says how to turn it on.
+func TestInTmuxCaps(t *testing.T) {
+	kitty := env(map[string]string{"TMUX": "/s", "KITTY_WINDOW_ID": "1"})
+	base := FromEnv(kitty)
+	if c := InTmuxCaps(base, kitty, "on"); c.Proto != Kitty || !c.Placeholders || !c.InTmux {
+		t.Errorf("passthrough on: %+v", c)
+	}
+	if c := InTmuxCaps(base, kitty, "all"); c.Proto != Kitty {
+		t.Errorf("passthrough all: %+v", c)
+	}
+	if c := InTmuxCaps(base, kitty, "off"); c.Proto != None || !strings.Contains(c.Hint, "allow-passthrough on") {
+		t.Errorf("passthrough off: %+v", c)
+	}
+	vte := env(map[string]string{"TMUX": "/s", "VTE_VERSION": "8400"})
+	if c := InTmuxCaps(FromEnv(vte), vte, "on"); c.Proto != None || c.Hint != "" {
+		t.Errorf("a terminal without kitty graphics in tmux gets the text preview, no hint: %+v", c)
+	}
+	forced := env(map[string]string{"TMUX": "/s", "KITTY_WINDOW_ID": "1", "WERKZ_IMAGES": "off"})
+	if c := InTmuxCaps(FromEnv(forced), forced, "on"); c.Proto != None {
+		t.Errorf("WERKZ_IMAGES wins: %+v", c)
+	}
+}
+
+func TestBlocks(t *testing.T) {
+	img := image.NewNRGBA(image.Rect(0, 0, 4, 4))
+	for x := range 4 {
+		for y := range 2 {
+			img.Set(x, y, color.NRGBA{255, 0, 0, 255}) // red on top
+			img.Set(x, y+2, color.NRGBA{0, 0, 255, 255})
+		}
+	}
+	lines := Blocks(img, 4, 2, true)
+	if len(lines) != 2 {
+		t.Fatalf("%d lines", len(lines))
+	}
+	for i, l := range lines {
+		if w := ansi.StringWidth(l); w != 4 {
+			t.Errorf("line %d is %d cells wide", i, w)
+		}
+		if !strings.HasSuffix(l, "\x1b[0m") || strings.Count(l, "▀") != 4 {
+			t.Errorf("line %d: %q", i, l)
+		}
+	}
+	if !strings.Contains(lines[0], "38;2;255;0;0") || !strings.Contains(lines[1], "48;2;0;0;255") {
+		t.Errorf("colours: %q / %q", lines[0], lines[1])
+	}
+	// 256 colours: pure red is cube entry 196, pure blue 21
+	l256 := Blocks(img, 4, 2, false)
+	if !strings.Contains(l256[0], "38;5;196") || !strings.Contains(l256[1], "48;5;21") {
+		t.Errorf("256 colours: %q / %q", l256[0], l256[1])
+	}
+	if Blocks(nil, 4, 2, true) != nil || Blocks(img, 0, 2, true) != nil {
+		t.Error("empty input should give no lines")
+	}
+}
+
+func TestXterm256(t *testing.T) {
+	for _, c := range []struct{ r, g, b, want int }{
+		{0, 0, 0, 16}, {255, 255, 255, 231}, {255, 0, 0, 196}, {0, 255, 0, 46}, {128, 128, 128, 244}, {95, 135, 175, 67},
+	} {
+		if got := xterm256(c.r, c.g, c.b); got != c.want {
+			t.Errorf("xterm256(%d,%d,%d) = %d, want %d", c.r, c.g, c.b, got, c.want)
+		}
+	}
+}
+
+func TestKittyShow(t *testing.T) {
+	data := bytes.Repeat([]byte{1}, 5000) // more than one chunk once base64-encoded
+	s := KittyShow(7, data, 10, 5)
+	if !strings.HasPrefix(s, "\x1b_Ga=T,f=100,q=2,C=1,i=7,c=10,r=5,m=1;") || !strings.HasSuffix(s, "m=0;"+s[strings.LastIndex(s, "m=0;")+4:]) {
+		t.Fatalf("sequence start: %q", s[:60])
+	}
+	if strings.Count(s, "\x1b_G") != 2 {
+		t.Errorf("chunks: %d", strings.Count(s, "\x1b_G"))
+	}
 }

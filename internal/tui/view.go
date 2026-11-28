@@ -20,16 +20,22 @@ func (m *model) View() string {
 	if m.state == stateLogin {
 		return clipLines(m.login.view(m.w, m.h), m.w, m.h)
 	}
+	m.img.ov.plan = m.img.ov.plan[:0]
 	if m.state == stateLive {
-		return m.browserView()
+		v := m.browserView()
+		m.finishPlan(strings.Split(v, "\n"))
+		return v
 	}
 	bottom := clipLines(m.bottomView(), m.w, 0)
 	if lines := strings.Split(bottom, "\n"); len(lines) >= m.h {
 		// tiny window: the dialog/input takes the whole screen, top part first
+		m.finishPlan(nil)
 		return strings.Join(lines[:m.h], "\n")
 	}
+	bottomH := lipgloss.Height(bottom)
+	stripH := m.stripRows(bottomH)
 	m.vp.Width = m.w
-	m.vp.Height = max(m.h-lipgloss.Height(bottom), 1)
+	m.vp.Height = max(m.h-bottomH-stripH-min(stripH, 1), 1)
 	content := m.history(m.w)
 	if live := m.liveView(); live != "" {
 		content += "\n" + live
@@ -48,13 +54,26 @@ func (m *model) View() string {
 		}
 	}
 	top := m.paintSelection(m.vp.View())
-	if !m.follow && !m.vp.AtBottom() {
+	hint := !m.follow && !m.vp.AtBottom()
+	if m.pixelImages() {
+		lines := strings.Split(top, "\n")
+		if hint {
+			lines = lines[:len(lines)-1] // the hint's line isn't room for a picture
+		}
+		m.planPictures(lines)
+	}
+	if hint {
 		// hint that there is newer output below
 		lines := strings.Split(top, "\n")
 		lines[len(lines)-1] = lipgloss.PlaceHorizontal(m.w, lipgloss.Right, sPink.Render(" ↓ new output · pgdn / end "))
 		top = strings.Join(lines, "\n")
 	}
-	return top + "\n" + bottom
+	if stripH > 0 {
+		top += "\n" + m.stripView(stripH, m.vp.Height+1)
+	}
+	v := top + "\n" + bottom
+	m.finishPlan(strings.Split(v, "\n"))
+	return v
 }
 
 // liveView is the in-progress part of the turn, shown at the end of the transcript.

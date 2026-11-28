@@ -508,6 +508,7 @@ func (b *Browser) ClickAt(call context.Context, x, y int, button string, count i
 		return nil, err
 	}
 	defer end()
+	b.setMark("click", px, py, 0, 0)
 	if _, err := chromedp.Call(ctx, input.DispatchMouseEvent, input.DispatchMouseEventParams{Type: input.DispatchMouseEventTypeMouseMoved, X: px, Y: py, Modifiers: mods}); err != nil {
 		return nil, err
 	}

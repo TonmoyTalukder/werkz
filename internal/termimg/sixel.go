@@ -54,10 +54,17 @@ func (c Caps) SixelImage(data []byte, cols, rows int) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	return c.SixelFrom(src, cols, rows), nil
+}
+
+// SixelFrom is SixelImage for an image already decoded.
+func (c Caps) SixelFrom(src image.Image, cols, rows int) string {
 	cw, ch := c.cell()
-	w, h := max(1, cols*cw), max(1, rows*ch)
+	// Sixel draws 6 pixel rows at a time: a height that isn't a multiple of 6 would paint into the
+	// row below the picture's room.
+	w, h := max(1, cols*cw), max(6, rows*ch/6*6)
 	dst := image.NewNRGBA(image.Rect(0, 0, w, h))
-	draw.CatmullRom.Scale(dst, dst.Bounds(), src, src.Bounds(), draw.Over, nil)
+	draw.ApproxBiLinear.Scale(dst, dst.Bounds(), src, src.Bounds(), draw.Over, nil)
 
 	// Quantise with Floyd–Steinberg (alpha composited over white).
 	idx := make([]uint8, w*h)
@@ -140,7 +147,7 @@ func (c Caps) SixelImage(data []byte, cols, rows int) (string, error) {
 		sb.WriteByte('-')
 	}
 	sb.WriteString(st)
-	return sb.String(), nil
+	return sb.String()
 }
 
 func writeRLE(sb *strings.Builder, m []byte) {

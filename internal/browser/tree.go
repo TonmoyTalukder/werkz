@@ -503,6 +503,7 @@ func (b *Browser) Click(call context.Context, ref string, allow Allow) (*Snapsho
 	if err != nil {
 		return nil, err
 	}
+	b.setMark("click", x, y, 0, 0)
 	for _, ev := range []input.DispatchMouseEventParams{
 		{Type: input.DispatchMouseEventTypeMouseMoved, X: x, Y: y},
 		{Type: input.DispatchMouseEventTypeMousePressed, X: x, Y: y, Button: input.MouseButtonLeft, Buttons: 1, ClickCount: 1},
@@ -611,6 +612,7 @@ func (b *Browser) Type(call context.Context, ref, text string, clear, pressEnter
 	if err := b.checkFocus(ctx, ref, info.backend); err != nil {
 		return nil, err
 	}
+	b.markBox(ctx, "type", info.backend)
 	if clear {
 		if err := key(ctx, "Backspace", 8, ""); err != nil {
 			return nil, err

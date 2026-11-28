@@ -58,8 +58,10 @@ changes and checks its work, asking before it does anything risky.
 - **Reads the web:** looks up docs and error messages with `WebFetch` and `WebSearch` (your model's own
   search, or Brave, Tavily or SearXNG); pages on your local network ask first.
 - **Checks its own web UI:** starts your dev server, opens the page in your installed Chrome (a separate
-  profile), clicks through it, reads console and network errors, and compares screenshots before and after,
-  showing the page right in your terminal where it can (kitty, Ghostty, iTerm2, WezTerm, Sixel). Opt in with
+  profile), clicks through it, reads console and network errors, and compares screenshots before and after.
+  You watch it live: the page opens by itself above the input while it browses, with each click and the field
+  being typed into marked, in every terminal (pictures in kitty, Ghostty, iTerm2, WezTerm and Sixel terminals,
+  coloured text elsewhere); Ctrl+G shows it full screen. Opt in with
   `/browser connect` to let it work in your own Chrome, in a tab of its own.
 - **MCP servers:** use tools from any MCP server (stdio or HTTP with OAuth sign-in), configured the same way as in
   Claude Code; a project's servers start only once you approve them.

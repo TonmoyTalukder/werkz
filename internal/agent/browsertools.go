@@ -179,6 +179,9 @@ func (e *Engine) hostToolDefs() []llm.ToolDef {
 	return out
 }
 
+// IsBrowserTool reports whether a tool acts in werkz's browser (the live view opens for these).
+func IsBrowserTool(name string) bool { return isBrowserDef(name) }
+
 func isBrowserDef(name string) bool {
 	for _, d := range browserDefs {
 		if d.Name == name {
@@ -327,6 +330,43 @@ func (e *Engine) BrowserCapture(ctx context.Context) (png []byte, url string, ok
 	}
 	png, err = b.Capture(ctx)
 	return png, b.URL(), true, err
+}
+
+// WatchBrowser sends live frames of werkz's browser to fn (see browser.Watch) until the returned
+// func is called. It follows the browser across restarts, /browser connect and disconnect, and
+// waits quietly while no browser is open.
+func (e *Engine) WatchBrowser(o browser.WatchOptions, fn func(browser.Frame)) (stop func()) {
+	done := make(chan struct{})
+	go func() {
+		var watched *browser.Browser
+		var unwatch func()
+		defer func() {
+			if unwatch != nil {
+				unwatch()
+			}
+		}()
+		tick := time.NewTicker(300 * time.Millisecond)
+		defer tick.Stop()
+		for {
+			if b, _ := e.current(); b != watched {
+				if unwatch != nil {
+					unwatch()
+					unwatch = nil
+				}
+				watched = b
+				if b != nil {
+					unwatch = b.Watch(o, fn)
+				}
+			}
+			select {
+			case <-done:
+				return
+			case <-tick.C:
+			}
+		}
+	}()
+	var once sync.Once
+	return func() { once.Do(func() { close(done) }) }
 }
 
 // BrowserConnected reports whether werkz drives the user's own Chrome, and where.

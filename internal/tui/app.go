@@ -130,6 +130,7 @@ type model struct {
 	sel        textSel            // text selected with the mouse
 	lines      []string           // the transcript as last drawn (for copying a selection)
 	img        gfx                // pictures in the terminal (screenshots, /browser view)
+	live       liveState          // the browser's page, live (strip and /browser view)
 	mcp        *mcp.Manager       // the session's MCP servers (nil = MCP off)
 	mcpCfgs    []mcp.ServerConfig // configured servers, as last read
 	connAddr   string             // the Chrome address being confirmed (stateConnect)
@@ -335,20 +336,27 @@ func tick() tea.Cmd {
 // ---------------------------------------------------------------- update
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	mm, cmd := m.update(msg)
+	if _, tick := msg.(ovTickMsg); !tick && m.pixelImages() {
+		// pictures drawn at a place follow what this message changed on the screen
+		cmd = tea.Batch(cmd, m.ovSchedule(ovEvery))
+	}
+	return mm, cmd
+}
+
+func (m *model) update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	msg = sanitizeEvent(msg)
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.w, m.h = msg.Width, msg.Height
-		m.sel = textSel{} // the text reflows: the selection no longer fits it
-		if m.state == stateLive {
-			if m.inlineImages() {
-				m.transmitLive(false)
-				return m, tea.ClearScreen
-			}
-			return m, tea.Batch(tea.ClearScreen, m.drawLiveSoon())
+		m.sel = textSel{}   // the text reflows: the selection no longer fits it
+		m.img.ov.drawn = "" // the screen is cleared: draw pictures again
+		var watch tea.Cmd
+		if w, h := m.watchSize(); m.live.stop != nil && (w > m.live.key[0] || h > m.live.key[1]) {
+			watch = m.watch() // the screen grew: bigger frames (a smaller screen uses the ones coming)
 		}
 		m.input.SetWidth(max(m.w-4, 10))
-		return m, tea.ClearScreen
+		return m, tea.Batch(tea.ClearScreen, watch)
 
 	case tickMsg:
 		if !m.turn.active {
@@ -416,9 +424,15 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.flushLive("")
 		m.turn.pending = &pendingTool{Name: agent.DisplayName(msg.Name), Summary: msg.Summary}
 		m.turn.prepTool = ""
+		if isBrowserTool(msg.Name) {
+			return m, m.browserToolStarted(msg.Name, msg.Summary)
+		}
 		return m, nil
 
 	case agent.ToolResultMsg:
+		if isBrowserTool(msg.Name) {
+			m.live.status = msg.Summary
+		}
 		it := session.Item{Kind: "tool", Call: agent.DisplayName(msg.Name), Text: msg.Summary, Detail: msg.Detail, Image: msg.Image, IsError: msg.IsError}
 		if m.turn.pending != nil {
 			it.Call, it.Args = m.turn.pending.Name, m.turn.pending.Summary
@@ -445,23 +459,22 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.handleMCPLogin(msg)
 	case liveFrameMsg:
 		return m, m.handleLiveFrame(msg)
-	case liveTickMsg:
-		if m.state == stateLive {
-			return m, m.captureLive()
-		}
-		return m, nil
-	case liveDrawMsg:
-		m.drawLive()
-		return m, nil
+	case stripHideMsg:
+		return m, m.handleStripHide(msg)
+	case ovTickMsg:
+		return m, m.handleOvTick()
+	case sixelReadyMsg:
+		return m, m.handleSixelReady(msg)
 
 	case agent.PermReqMsg:
+		clear := m.leaveLive() // a prompt always shows: the full view gives way
 		mm := msg
 		mm.Tool = agent.DisplayName(mm.Tool)
 		m.perm, m.state = &mm, statePerm
 		opts, _ := m.permOptions()
 		m.permSel = len(opts) - 1 // highlight starts on "No"
 		m.dialogAt = time.Now()
-		return m, nil
+		return m, clear
 
 	case agent.UsageMsg:
 		m.stats.cost += msg.Cost
@@ -517,10 +530,11 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, m.printS(sDim.Render("↪ switching to ") + sText.Render(msg.To))
 
 	case agent.FallbackAskMsg:
+		clear := m.leaveLive()
 		mm := msg
 		m.fb, m.fbSel, m.fbBrowse, m.state = &mm, len(mm.Candidates)+1, false, stateFallback // highlight starts on "Stop"
 		m.dialogAt = time.Now()
-		return m, nil
+		return m, clear
 
 	case agent.NoticeMsg:
 		return m, m.printS(renderNotice(msg.Level, msg.Text))
@@ -556,7 +570,8 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.turn.queue = m.turn.queue[1:]
 			cmds = append(cmds, m.submit(next))
 		}
-		return m, tea.Sequence(cmds...)
+		// the strip's close timer runs beside the rest, which mustn't wait for it
+		return m, tea.Batch(m.browserTurnEnded(), tea.Sequence(cmds...))
 
 	case tea.MouseMsg:
 		return m, m.handleMouse(msg)

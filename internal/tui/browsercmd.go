@@ -39,6 +39,22 @@ func (m *model) browserCommand(args []string) tea.Cmd {
 	case "hide", "headless":
 		return m.browserAsync(false, "werkz's browser runs in the background.")
 	case "view", "see", "look":
+		if len(args) > 1 {
+			switch strings.ToLower(args[1]) {
+			case "auto", "on":
+				m.cfg.BrowserView = ""
+				m.saveConfig()
+				return m.printS(renderNotice("info", "The page shows above the input while werkz uses the browser (ctrl+g: full screen)."))
+			case "off":
+				m.cfg.BrowserView = "off"
+				m.saveConfig()
+				m.live.strip = false
+				if m.state != stateLive {
+					m.unwatch()
+				}
+				return m.printS(renderNotice("info", "The page no longer opens by itself; /browser view (or ctrl+g) shows it."))
+			}
+		}
 		return m.openLiveView()
 	case "connect":
 		addr := "9222"
@@ -60,7 +76,7 @@ func (m *model) browserCommand(args []string) tea.Cmd {
 		m.eng.CloseBrowser()
 		return m.printS(renderNotice("info", "Closed werkz's browser. It opens again when werkz needs it."))
 	}
-	return m.printS(renderNotice("warn", "Usage: /browser · /browser view · /browser connect [port] · /browser disconnect · /browser show · /browser hide · /browser close"))
+	return m.printS(renderNotice("warn", "Usage: /browser · /browser view [auto|off] · /browser connect [port] · /browser disconnect · /browser show · /browser hide · /browser close"))
 }
 
 // browserAsync switches the window in the background: relaunching Chrome takes a moment.
@@ -111,7 +127,15 @@ func (m *model) browserText() string {
 	if m.eng.BrowserConnected() {
 		add(sRed.Render("● connected to your Chrome at "+m.eng.BrowserAddr()) + sDim.Render(" · werkz uses only its own tab · /browser disconnect"))
 	}
-	add(sDim.Render("/browser view (see the page here) · /browser connect (use your own Chrome) · /browser show (its window) · /browser hide · /browser close"))
+	view := "shows by itself while werkz browses"
+	if !m.liveOn() {
+		view = "off: ctrl+g or /browser view shows it"
+	}
+	add(sDim.Render("live view: ") + sText.Render(view) + sDim.Render(" · drawn with "+m.viewMethod()))
+	if h := m.img.caps.Hint; h != "" {
+		add(sYellow.Render(h))
+	}
+	add(sDim.Render("/browser view (full screen; auto|off) · /browser connect (use your own Chrome) · /browser show (its window) · /browser hide · /browser close"))
 	add(sDim.Render("Pages on this machine open freely; other sites ask. Sending forms (posts), uploads and downloads always ask, and password fields are never typed into."))
 	return box(gradient("Browser", 0)+"\n"+strings.Join(lines, "\n"), cSky, m.w)
 }

@@ -86,3 +86,28 @@ func KittyPlaceholder(id, placement uint32, cols, rows int) []string {
 	}
 	return lines
 }
+
+// KittyShow uploads a PNG as image id and shows it at the cursor in cols×rows cells, without
+// moving the cursor (for terminals with the kitty protocol but no Unicode placeholders).
+func KittyShow(id uint32, png []byte, cols, rows int) string {
+	data := base64.StdEncoding.EncodeToString(png)
+	var b strings.Builder
+	first := true
+	for len(data) > 0 || first {
+		n := min(kittyChunk, len(data))
+		chunk := data[:n]
+		data = data[n:]
+		more := "0"
+		if len(data) > 0 {
+			more = "1"
+		}
+		b.WriteString("\x1b_G")
+		if first {
+			b.WriteString("a=T,f=100,q=2,C=1,i=" + strconv.FormatUint(uint64(id), 10) +
+				",c=" + strconv.Itoa(cols) + ",r=" + strconv.Itoa(rows) + ",")
+			first = false
+		}
+		b.WriteString("m=" + more + ";" + chunk + st)
+	}
+	return b.String()
+}

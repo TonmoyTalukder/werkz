@@ -42,6 +42,10 @@ type Caps struct {
 	Placeholders bool // Kitty Unicode placeholders (U=1) work
 	CellW, CellH int  // cell size in pixels (0 if unknown)
 	InTmux       bool
+	TrueColor    bool // 24-bit colour works (the text-mode preview uses it)
+	// Hint says how to get pictures when the terminal could show them but something is in the
+	// way (tmux without passthrough); "" otherwise.
+	Hint string
 }
 
 const (
@@ -53,7 +57,7 @@ const (
 
 // FromEnv guesses the terminal's capabilities from the environment only.
 func FromEnv(getenv func(string) string) Caps {
-	c := Caps{InTmux: getenv("TMUX") != ""}
+	c := Caps{InTmux: getenv("TMUX") != "", TrueColor: trueColor(getenv)}
 	switch strings.ToLower(strings.TrimSpace(getenv("WERKZ_IMAGES"))) {
 	case "kitty":
 		c.Proto, c.Placeholders = Kitty, true
@@ -64,7 +68,7 @@ func FromEnv(getenv func(string) string) Caps {
 	case "sixel":
 		c.Proto = Sixel
 		return c
-	case "off", "none":
+	case "off", "none", "blocks", "text":
 		return c
 	}
 	switch {
@@ -130,4 +134,41 @@ func FileLink(path, text string) string {
 // TmuxWrap wraps seq for tmux passthrough (ESC doubled).
 func TmuxWrap(seq string) string {
 	return "\x1bPtmux;" + strings.ReplaceAll(seq, esc, esc+esc) + st
+}
+
+// trueColor reports whether the terminal takes 24-bit colours.
+func trueColor(getenv func(string) string) bool {
+	switch strings.ToLower(getenv("COLORTERM")) {
+	case "truecolor", "24bit":
+		return true
+	}
+	return getenv("KITTY_WINDOW_ID") != "" || getenv("GHOSTTY_RESOURCES_DIR") != "" || getenv("VTE_VERSION") != "" ||
+		getenv("WEZTERM_PANE") != "" || getenv("LC_TERMINAL") == "iTerm2" ||
+		getenv("TERM_PROGRAM") == "iTerm.app" || getenv("TERM_PROGRAM") == "WezTerm"
+}
+
+// outerKitty reports a kitty or Ghostty terminal around tmux (tmux keeps the variables these
+// terminals set in the environment it started with).
+func outerKitty(getenv func(string) string) bool {
+	return getenv("KITTY_WINDOW_ID") != "" || getenv("GHOSTTY_RESOURCES_DIR") != "" || getenv("TERM") == "xterm-kitty"
+}
+
+// InTmuxCaps decides what werkz shows inside tmux. passthrough is tmux's allow-passthrough
+// option ("on", "all" or "off"). Kitty's images survive tmux through passthrough, because they are
+// drawn by ordinary text cells there; pictures placed at a position (iTerm2, Sixel) don't land
+// where tmux draws, so those terminals get the text-mode preview.
+func InTmuxCaps(c Caps, getenv func(string) string, passthrough string) Caps {
+	if !c.InTmux || strings.TrimSpace(getenv("WERKZ_IMAGES")) != "" {
+		return c
+	}
+	passthrough = strings.TrimSpace(passthrough)
+	if !outerKitty(getenv) {
+		return c
+	}
+	if passthrough == "on" || passthrough == "all" {
+		c.Proto, c.Placeholders = Kitty, true
+		return c
+	}
+	c.Hint = "tmux hides pictures: run  tmux set -g allow-passthrough on  and restart werkz to see the page as an image"
+	return c
 }

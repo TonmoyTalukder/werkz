@@ -6,7 +6,9 @@ import (
 	"context"
 	"io"
 	"os"
+	"os/exec"
 	"strings"
+	"time"
 
 	"golang.org/x/sys/unix"
 	"golang.org/x/term"
@@ -26,7 +28,10 @@ func Probe(ctx context.Context) Caps {
 		ws.Col > 0 && ws.Row > 0 && ws.Xpixel > 0 && ws.Ypixel > 0 {
 		caps.CellW, caps.CellH = int(ws.Xpixel)/int(ws.Col), int(ws.Ypixel)/int(ws.Row)
 	}
-	if caps.InTmux || strings.TrimSpace(os.Getenv("WERKZ_IMAGES")) != "" {
+	if caps.InTmux {
+		return InTmuxCaps(caps, os.Getenv, tmuxPassthrough(ctx))
+	}
+	if strings.TrimSpace(os.Getenv("WERKZ_IMAGES")) != "" {
 		return caps
 	}
 	old, err := term.MakeRaw(in)
@@ -71,4 +76,15 @@ func (p *pollReader) Read(b []byte) (int, error) {
 			return unix.Read(p.fd, b)
 		}
 	}
+}
+
+// tmuxPassthrough is the pane's allow-passthrough option ("" if tmux can't be asked).
+func tmuxPassthrough(ctx context.Context) string {
+	ctx, cancel := context.WithTimeout(ctx, time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, "tmux", "show-options", "-Apv", "allow-passthrough").Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
 }
