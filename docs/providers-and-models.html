@@ -143,15 +143,38 @@ Qwen and more) under one key. <code>/model</code> lists its models with their pr
 OpenCode's free models aren't listed: OpenCode lets them answer only inside its own app.</p>
 <h3 id="getting-an-opencode-zen-key">Getting an OpenCode Zen key<a class="anchor" href="#getting-an-opencode-zen-key" aria-label="Link to this section">#</a></h3>
 <ol>
-<li>Go to <a href="https://opencode.ai/console">opencode.ai/console</a> and sign in.</li>
-<li>Add your billing details and buy credits. Zen is pay as you go: each request is charged to your credits,
-at the prices <code>/model</code> shows. OpenCode adds a processing fee to each credit purchase, and can top your
-credits up automatically if you turn that on in the console's billing page.</li>
-<li>Copy your API key from the console.</li>
-<li>In werkz, run <code>/login</code>, move to <strong>OpenCode Zen</strong>, paste the key and press <strong>Ctrl+S</strong> to save and check it.
-Or set <code>OPENCODE_API_KEY</code> in your shell instead.</li>
-<li>Pick a model with <code>/model</code>: OpenCode Zen's models are listed under it, with their prices.</li>
+<li>
+<p>Go to <a href="https://opencode.ai/console">opencode.ai/console</a> and sign in.</p>
+</li>
+<li>
+<p>Make sure the workspace has credits. Zen is pay as you go: each request is charged at the prices <code>/model</code>
+shows. Whoever manages the workspace's billing adds the billing details and buys credits on its billing
+page; OpenCode adds a processing fee to each purchase and can top the credits up automatically.</p>
+</li>
+<li>
+<p>Create a <strong>personal API key</strong>: open the account menu at the top right, then <strong>Account</strong> → <strong>Personal API
+keys</strong> → <strong>Add API key</strong>, and fill in:</p>
+<ul>
+<li><strong>Workspace:</strong> the workspace whose models and credits werkz should use.</li>
+<li><strong>Key name:</strong> anything that tells you what it's for, such as <code>werkz</code>.</li>
+<li><strong>Expiration:</strong> how long the key works. When it runs out, create a new key and paste it into werkz again.</li>
+<li><strong>Permissions:</strong> <strong>Models only</strong>. That is all werkz needs: it lists the models and calls them. Don't
+give it more.</li>
+</ul>
+<p>Click <strong>Create</strong> and copy the key.</p>
+</li>
+<li>
+<p>In werkz, run <code>/login</code>, move to <strong>OpenCode Zen</strong>, paste the key and press <strong>Ctrl+S</strong> to save and check it.
+Or set <code>OPENCODE_API_KEY</code> in your shell instead.</p>
+</li>
+<li>
+<p>Pick a model with <code>/model</code>: OpenCode Zen's models are listed under it, with their prices.</p>
+</li>
 </ol>
+<p>A personal key calls models as you, so your own usage, budgets and model rules in that workspace apply. Any
+member of a workspace can create one; before October 2026 only owners and admins could make keys, for service
+accounts, and such a key works in werkz too. Owners and admins can see and revoke members' keys under
+<strong>Settings</strong> → <strong>Members</strong>, and leaving a workspace revokes your keys there.</p>
 <p>The key screen also shows where to get it: select <strong>OpenCode Zen</strong> and it says <code>get a key → opencode.ai/console</code>.</p>
 <p>Add or change keys at any time with <code>/login</code> (or <code>werkz --login</code>). Keys are checked when you save them.</p>
 <h2 id="using-a-subscription-instead-of-an-api-key">Using a subscription instead of an API key<a class="anchor" href="#using-a-subscription-instead-of-an-api-key" aria-label="Link to this section">#</a></h2>

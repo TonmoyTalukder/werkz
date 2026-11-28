@@ -88,6 +88,10 @@
 <td><em>&quot;out of API credits&quot;</em></td>
 <td>Top up in your provider's console, then run <code>/login</code> so werkz uses the provider again. Claude credit is managed at platform.claude.com</td>
 </tr>
+<tr id="row-opencode-zen-worked-then-every-request-fails">
+<td>OpenCode Zen worked, then every request fails</td>
+<td>Your personal API key expired (keys have an expiration you chose when creating them), was revoked by a workspace admin, or you left that workspace; or the workspace is out of credits. Create a new key (<a href="providers-and-models.html#getting-an-opencode-zen-key">how</a>) and paste it in <code>/login</code>, or ask whoever manages billing to add credits</td>
+</tr>
 <tr id="row-can-t-use-tools">
 <td><em>&quot;… can't use tools&quot;</em></td>
 <td>That model can't call tools, so it can't read or change files. Choose a tool-capable model with <code>/model</code> for coding work</td>
