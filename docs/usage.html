@@ -337,11 +337,19 @@ when needed.</li>
 signed in (a staging admin, a dashboard), connect it to your own Chrome for the session:</p>
 <ol>
 <li>
-<p>Start Chrome with a debugging port. <code>/browser connect</code> shows the exact command for your system, for example:</p>
+<p>Start Chrome with a debugging port. <code>/browser connect</code> shows the exact command for your system (and copies
+it to your clipboard). With Google Chrome installed in the usual place it is:</p>
+<p>Linux:</p>
 <pre><code class="language-bash">google-chrome --remote-debugging-port=9222 --user-data-dir=&quot;$HOME/.config/werkz/chrome-connect&quot;
 </code></pre>
+<p>macOS:</p>
+<pre><code class="language-bash">open -na &quot;Google Chrome&quot; --args --remote-debugging-port=9222 &quot;--user-data-dir=$HOME/Library/Application Support/werkz/chrome-connect&quot;
+</code></pre>
+<p>Windows (PowerShell):</p>
+<pre><code class="language-powershell">&amp; &quot;C:\Program Files\Google\Chrome\Application\chrome.exe&quot; --remote-debugging-port=9222 &quot;--user-data-dir=$env:APPDATA\werkz\chrome-connect&quot;
+</code></pre>
 <p>Chrome only allows this with a profile of its own (not your default one), so this is a separate profile: sign
-in there once to the sites werkz should use, and it remembers them.</p>
+in there once to the sites werkz should use, and it remembers them. Chromium, Edge and Brave work the same.</p>
 </li>
 <li>
 <p>In werkz, run <code>/browser connect</code> (or <code>/browser connect 9333</code> for another port) and confirm.</p>
@@ -357,7 +365,117 @@ own tabs can't download during that time; watching with <code>/browser view</cod
 Downloads folder, as any page you open can. Connecting is never saved: each session starts
 with werkz's own browser.</p>
 <h3 id="seeing-the-page-in-your-terminal">Seeing the page in your terminal<a class="anchor" href="#seeing-the-page-in-your-terminal" aria-label="Link to this section">#</a></h3>
-<p>werkz shows its browser inside the terminal when the terminal can draw pictures:</p>
+<p>When the model starts using the browser, the page opens by itself in a strip above the input and stays live:
+you see each page load, scroll and change as it happens. A click is marked with an orange ring and the field
+being typed into with a blue frame, for a moment. The strip closes a few seconds after the model's turn;
+<strong>Ctrl+G</strong> (or <code>/browser view</code>) shows the page full screen, and <strong>Esc</strong> goes back. The strip never takes your
+typing, and on a short window it gives way so approval prompts always fit.</p>
+<p>Frames come only when the page changes, sized to your window, and none are made while nothing shows them; on a
+still page werkz only looks again now and then (every 1 to 8 seconds), which costs next to nothing.
+<code>/browser view off</code> stops the strip from opening by itself (Ctrl+G still works); <code>/browser view auto</code> turns it
+back on. In the full view, <strong>r</strong> restarts the frames and <strong>Esc</strong> goes back.
+<code>/browser</code> says how your terminal shows the page.</p>
+<h4 id="how-live-is-it">How live is it?</h4>
+<p>Near real time, not video. The page is sent as a new picture each time it changes, a few times a second at
+most, so you see every page load, click and form being filled, but an animation or a video on the page looks
+choppy. Measured on Linux with Chrome 158:</p>
+<ul>
+<li><strong>From an action to the frame showing it:</strong> about 40 ms (25 to 48 ms across our test runs of 6 clicks each), before the terminal
+draws it.</li>
+<li><strong>Frames a second, at most:</strong> these caps keep werkz light; the terminal's own drawing adds to the time.</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>How your terminal shows it</th>
+<th>Frames a second</th>
+<th>Picture</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>kitty, Ghostty (kitty graphics)</td>
+<td>up to 15</td>
+<td>Full colour, sharp</td>
+<td>The fastest: the terminal draws the picture itself</td>
+</tr>
+<tr>
+<td>iTerm2, WezTerm (iTerm2 images)</td>
+<td>up to 8</td>
+<td>Full colour, sharp</td>
+<td>Untested here (see below)</td>
+</tr>
+<tr>
+<td>Sixel</td>
+<td>up to 4</td>
+<td>256 colours, a little soft</td>
+<td>Sixel takes 0.1 to 0.2 s to make each frame, so werkz makes them in the background</td>
+</tr>
+<tr>
+<td>Text (half-block characters)</td>
+<td>up to 5</td>
+<td>Two pixels per character cell: layout and colour, not small text</td>
+<td>Works everywhere; the title, address and last action are shown above the picture</td>
+</tr>
+<tr>
+<td>tmux</td>
+<td>as the terminal outside</td>
+<td></td>
+<td>With passthrough on, a picture as above (each frame crosses tmux, a little slower); otherwise text</td>
+</tr>
+</tbody>
+</table>
+<p>A full-screen text view at 8 frames a second used about 17% of one CPU core while the page kept changing (now
+capped at 5); a still page uses next to nothing. For a page with motion, or to see it exactly as it is, open
+the real window with <code>/browser show</code> (werkz's own Chrome) or work in your own Chrome with <code>/browser connect</code>:
+both show the page at the browser's full frame rate, and the terminal view keeps working alongside.</p>
+<p>Three ways to watch:</p>
+<table>
+<thead>
+<tr>
+<th></th>
+<th>In the terminal (<code>/browser view</code>)</th>
+<th>werkz's window (<code>/browser show</code>)</th>
+<th>Your Chrome (<code>/browser connect</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Where</td>
+<td>A strip above the input, or full screen</td>
+<td>A Chrome window on your desktop</td>
+<td>A tab of its own in your Chrome</td>
+</tr>
+<tr>
+<td>Speed</td>
+<td>Near real time (see above)</td>
+<td>The browser's full frame rate</td>
+<td>The browser's full frame rate</td>
+</tr>
+<tr>
+<td>Signed in to</td>
+<td>Nothing (werkz's own profile)</td>
+<td>Nothing (werkz's own profile)</td>
+<td>What you signed in to in that profile</td>
+</tr>
+<tr>
+<td>Works over SSH</td>
+<td>Yes</td>
+<td>No (needs a desktop)</td>
+<td>Only if Chrome runs where werkz runs</td>
+</tr>
+<tr>
+<td>Back</td>
+<td>Esc</td>
+<td><code>/browser hide</code> (the page stays open)</td>
+<td><code>/browser disconnect</code> closes werkz's tab, Chrome keeps running</td>
+</tr>
+</tbody>
+</table>
+<p>Checked on real terminals: tmux (with and without passthrough), GNOME Terminal and Ptyxis (VTE 0.84, built
+without Sixel, so they show text). kitty, Ghostty, WezTerm, iTerm2, foot and xterm were not available to test;
+what they show follows the protocols above.</p>
 <table>
 <thead>
 <tr>
@@ -368,21 +486,28 @@ with werkz's own browser.</p>
 <tbody>
 <tr>
 <td>kitty, Ghostty</td>
-<td>Screenshots right in the conversation, sized to the window; they scroll and resize with the text. <code>/browser view</code> shows the live page full screen</td>
+<td>The page as a picture, in the strip and full screen; screenshots right in the conversation. Pictures scroll and resize with the text</td>
 </tr>
 <tr>
-<td>iTerm2, WezTerm, terminals with Sixel (foot, Konsole, xterm with Sixel, recent GNOME Terminal builds)</td>
-<td><code>/browser view</code> shows the live page full screen; screenshots in the conversation are links</td>
+<td>iTerm2, WezTerm</td>
+<td>The same, drawn with iTerm2's image protocol</td>
 </tr>
 <tr>
-<td>Others, and inside tmux</td>
-<td>Screenshots are links to the files (Ctrl+click or ⌘+click in most terminals)</td>
+<td>Sixel terminals (foot, Konsole, xterm with Sixel, GNOME Terminal and Ptyxis when VTE was built with Sixel)</td>
+<td>The same, drawn as Sixel</td>
+</tr>
+<tr>
+<td>Any other terminal (including GNOME Terminal and Ptyxis without Sixel)</td>
+<td>The page drawn with coloured half-block characters (24-bit colour where the terminal has it), with the page's title, address, the last action, and a link to the full picture</td>
+</tr>
+<tr>
+<td>tmux</td>
+<td>Inside kitty or Ghostty with <code>set -g allow-passthrough on</code>: pictures. Otherwise the text drawing; werkz tells you when turning on passthrough would give pictures</td>
 </tr>
 </tbody>
 </table>
-<p><code>/browser view</code> refreshes every 1.5 seconds while werkz works; <strong>r</strong> refreshes now and <strong>Esc</strong> goes back. werkz
-asks the terminal what it supports when it starts; set <code>WERKZ_IMAGES=kitty</code>, <code>iterm2</code>, <code>sixel</code> or <code>off</code> to choose
-yourself (inside tmux, that also needs <code>set -g allow-passthrough on</code>).</p>
+<p>werkz asks the terminal what it supports when it starts; set <code>WERKZ_IMAGES=kitty</code>, <code>iterm2</code>, <code>sixel</code> or <code>text</code>
+to choose yourself (<code>off</code> is the same as <code>text</code>).</p>
 <p>What asks first:</p>
 <table>
 <thead>

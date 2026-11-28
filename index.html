@@ -54,6 +54,7 @@
     <nav id="topnav" aria-label="Main">
       <a href="#features">Features</a>
       <a href="docs/">Docs</a>
+      <a href="#live">Browser</a>
       <a href="#install">Install</a>
       <a href="#subscriptions">Subscriptions</a>
       <a href="docs/releases.html">Releases</a>
@@ -133,6 +134,49 @@ sudo dnf install werkz</code></pre><button class="copy" type="button"><svg class
 </section>
 
 
+
+<section class="section" id="one" aria-labelledby="one-title">
+  <div class="wrap">
+    <div class="section-head center one-head">
+      <p class="kicker">Everything in one terminal</p>
+      <h2 id="one-title">Your Claude Code and Claude API coding experience from <span class="hl">one platform, one terminal.</span></h2>
+      <p>Your subscription and your API keys side by side, a browser you can watch, and several repos in one request. Switch between them without leaving the conversation.</p>
+    </div>
+    <div class="one-grid">
+      <article class="one-card">
+        <div class="one-vis sw" aria-hidden="true">
+          <div class="sw-list">
+            <span class="sw-row r1"><b>❯</b> Opus 5.5 <em>(Claude Code)</em></span>
+            <span class="sw-row r2"><b>❯</b> Opus 5.5 <em>API key</em></span>
+          </div>
+          <div class="sw-status"><span class="s1">Claude subscription · 5h 23%</span><span class="s2">Claude API · $0.04</span></div>
+        </div>
+        <h3>Subscription and API, side by side</h3>
+        <p>Pick a <b>(Claude Code)</b> model in <code>/model</code> to work on your Claude subscription, or an API model with your key, and switch mid-conversation. The next model knows what the last one read and ran, and werkz's browser, dev servers and MCP tools work with both.</p>
+        <a class="one-more" href="docs/providers-and-models.html#using-a-subscription-instead-of-an-api-key">Subscriptions and API keys</a>
+      </article>
+      <article class="one-card">
+        <div class="one-vis br" aria-hidden="true">
+          <div class="br-strip"><span class="br-head">◉ browser · localhost:3000</span><span class="br-page"><i></i><i></i><i class="btn"></i><span class="br-ring"></span></span></div>
+          <div class="br-input"><b>❯</b> <span>the form does nothing, fix it</span></div>
+        </div>
+        <h3>A browser you can watch</h3>
+        <p>When werkz opens a page, it shows above your input, live, with each click marked. <kbd>Ctrl</kbd>+<kbd>G</kbd> for full screen, or open the real window with <code>/browser show</code>.</p>
+        <a class="one-more" href="#live">Watch it browse</a>
+      </article>
+      <article class="one-card">
+        <div class="one-vis ws" aria-hidden="true">
+          <div class="ws-col"><b>web</b><span>Price.tsx</span><em>+3 −1</em></div>
+          <div class="ws-col"><b>api</b><span>prices.go</span><em>+5 −2</em></div>
+          <div class="ws-req"><b>❯</b> prices come in cents: fix both</div>
+        </div>
+        <h3>Several repos, one request</h3>
+        <p>A workspace groups a frontend, its API and their settings, so one request can change both. Mentions name the repo: <code>@api/prices.go</code>.</p>
+        <a class="one-more" href="docs/workspaces.html">Workspaces</a>
+      </article>
+    </div>
+  </div>
+</section>
 
 <section class="section" id="features" aria-labelledby="features-title">
   <div class="wrap">
@@ -220,6 +264,121 @@ sudo dnf install werkz</code></pre><button class="copy" type="button"><svg class
       </div>
     </div>
   </div>
+</section>
+
+<section class="section stage" id="live" aria-labelledby="live-title">
+  <div class="wrap">
+    <div class="section-head center">
+      <h2 id="live-title">Watch it browse, right in your terminal</h2>
+      <p>When werkz opens a page, it opens above your input too, live. Every page load, scroll and keystroke shows as it happens, and each click is marked. <kbd>Ctrl</kbd>+<kbd>G</kbd> shows it full screen.</p>
+    </div>
+    <div class="live-demo" data-live>
+      <div class="live-switch" role="group" aria-label="How your terminal shows the page">
+        <button type="button" aria-pressed="true" data-look="pic">Picture <small>kitty · Ghostty · iTerm2 · WezTerm · Sixel</small></button>
+        <button type="button" aria-pressed="false" data-look="text">Text drawing <small>any other terminal</small></button>
+      </div>
+      <div class="window live-win">
+        <div class="window-bar"><i class="d1"></i><i class="d2"></i><i class="d3"></i><span>werkz — ~/code/shop</span></div>
+        <div class="lv-term" aria-hidden="true">
+          <div class="lv-log">
+            <div class="lv-l l0"><b class="p">❯</b> the newsletter form does nothing, fix it and check it</div>
+            <div class="lv-l l1"><b class="g">⏺</b> <b>Browse</b><i>(localhost:3000)</i></div>
+            <div class="lv-l l2"><b class="g">⏺</b> <b>Act</b><i>(scroll down)</i></div>
+            <div class="lv-l l3"><b class="g">⏺</b> <b>Type</b><i>(ref_7 ← "ada@example.com")</i></div>
+            <div class="lv-l l4"><b class="g">⏺</b> <b>Click</b><i>(ref_8 Subscribe)</i></div>
+          </div>
+          <div class="lv-head"><b class="s">◉</b> <span class="grad">browser</span><i> · Shop · localhost:3000 · last: </i><span class="lv-last"><em class="a1">Browse(localhost:3000)</em><em class="a2">Act(scroll down)</em><em class="a3">Type(ref_7)</em><em class="a4">Click(ref_8)</em></span><i class="lv-key"> · ctrl+g full view</i></div>
+          <div class="lv-page-wrap">
+            <div class="lv-page">
+              <div class="lv-scroll">
+                <div class="lv-nav"><span class="lv-logo">shop</span><span>New</span><span>Sale</span><span>Help</span></div>
+                <div class="lv-hero"><span class="lv-h1">Autumn collection</span><span class="lv-sub">Warm layers, made to last.</span></div>
+                <div class="lv-cards"><span></span><span></span><span></span></div>
+                <div class="lv-news">
+                  <span class="lv-h2">Get the newsletter</span>
+                  <div class="lv-form"><span class="lv-input"><span class="lv-typed">ada@example.com</span><span class="lv-caret"></span></span><span class="lv-btn">Subscribe</span></div>
+                  <span class="lv-thanks">✓ Thanks, you're subscribed</span>
+                </div>
+              </div>
+              <span class="lv-ring"></span>
+            </div>
+          </div>
+          <div class="lv-input-line"><b class="p">❯</b> <i>Try "explain this repo" · / for commands</i></div>
+        </div>
+      </div>
+      <p class="live-note">An illustration of werkz's live view. Frames come only when the page changes, sized to your window, and stop when nothing shows them.</p>
+    </div>
+    <div class="speed-head">
+      <h3>How live is it?</h3>
+      <p><b>Near real time, not video.</b> A new picture comes each time the page changes: you see every load, click and keystroke about 40&nbsp;ms after it happens, then a few frames a second at most. Animations and videos on the page look choppy.</p>
+    </div>
+    <div class="termtable">
+      <table>
+        <caption class="sr">What each terminal shows, and how fast</caption>
+        <thead><tr><th scope="col">Terminal</th><th scope="col">The page</th><th scope="col">Speed</th><th scope="col">Screenshots in the conversation</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">kitty, Ghostty</th><td data-label="The page"><span class="pill yes">Picture</span> <small>kitty graphics, full colour</small></td><td data-label="Speed"><span class="meter" style="--m:1" role="img" aria-label="Fastest"><i></i></span> <small>up to 15 frames a second</small></td><td data-label="Screenshots"><span class="pill yes">Picture</span></td></tr>
+          <tr><th scope="row">iTerm2, WezTerm</th><td data-label="The page"><span class="pill yes">Picture</span> <small>iTerm2 images, full colour</small></td><td data-label="Speed"><span class="meter" style="--m:.55" role="img" aria-label="Fast"><i></i></span> <small>up to 8 frames a second</small></td><td data-label="Screenshots"><span class="pill yes">Picture</span></td></tr>
+          <tr><th scope="row">foot, Konsole, xterm<small>and VTE terminals built with Sixel</small></th><td data-label="The page"><span class="pill yes">Picture</span> <small>Sixel, 256 colours, a little soft</small></td><td data-label="Speed"><span class="meter" style="--m:.27" role="img" aria-label="Slower"><i></i></span> <small>up to 4 frames a second</small></td><td data-label="Screenshots"><span class="pill yes">Picture</span></td></tr>
+          <tr><th scope="row">GNOME Terminal, Ptyxis<small>and any other terminal</small></th><td data-label="The page"><span class="pill ask">Text drawing</span> <small>colour half blocks: layout and colour, not small text; with title, address and a link to the picture</small></td><td data-label="Speed"><span class="meter" style="--m:.33" role="img" aria-label="Moderate"><i></i></span> <small>up to 5 frames a second</small></td><td data-label="Screenshots"><span class="pill ask">Link</span></td></tr>
+          <tr><th scope="row">tmux</th><td data-label="The page"><span class="pill yes">Picture</span> <small>in kitty or Ghostty with <code>allow-passthrough on</code>; otherwise text, and werkz says how to turn it on</small></td><td data-label="Speed"><small>as the terminal outside, a little slower</small></td><td data-label="Screenshots"><span class="pill ask">Same</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="tested">Measured on Linux with Chrome 158. Tried on real terminals: tmux, GNOME Terminal and Ptyxis. kitty, Ghostty, iTerm2, WezTerm, foot and xterm weren't available to test; they follow the protocols above.</p>
+
+    <div class="watch3-head">
+      <h3>Want it fully live? Open the real window.</h3>
+      <p>The terminal view is there wherever werkz runs, even over SSH. For a page with motion, or to see it exactly as it is, watch in a browser at its own full frame rate. The terminal view keeps working alongside.</p>
+    </div>
+    <div class="watch3">
+      <article class="w3 w3-term">
+        <div class="w3-vis" aria-hidden="true"><div class="w3-screen"><span class="w3-dot"></span></div><span class="w3-tag">a few frames a second</span></div>
+        <h4>In the terminal</h4>
+        <p class="w3-cmd"><code>/browser view</code> or <kbd>Ctrl</kbd>+<kbd>G</kbd></p>
+        <ul><li>A strip above the input, or full screen</li><li>werkz's own profile, signed in to nothing</li><li>Works over SSH</li><li><kbd>Esc</kbd> goes back, <kbd>r</kbd> restarts the frames</li></ul>
+      </article>
+      <article class="w3 w3-show">
+        <div class="w3-vis" aria-hidden="true"><div class="w3-screen w3-chrome"><span class="w3-bar"></span><span class="w3-dot"></span></div><span class="w3-tag">the browser's full frame rate</span></div>
+        <h4>werkz's window</h4>
+        <p class="w3-cmd"><code>/browser show</code></p>
+        <ul><li>werkz's Chrome opens on your desktop</li><li>The same profile, signed in to nothing</li><li><code>/browser hide</code> puts it back in the background, the page stays open</li><li><code>/browser close</code> closes it</li></ul>
+      </article>
+      <article class="w3 w3-conn">
+        <div class="w3-vis" aria-hidden="true"><div class="w3-screen w3-chrome"><span class="w3-tabs"><i></i><i></i><i class="w"></i></span><span class="w3-dot"></span></div><span class="w3-banner">connected to your Chrome</span></div>
+        <h4>Your own Chrome</h4>
+        <p class="w3-cmd"><code>/browser connect</code></p>
+        <ul><li>For sites where you're signed in, like a staging admin</li><li>werkz uses one tab of its own and never reads your other tabs</li><li>Passwords and payment fields are never typed into; forms always ask</li><li><code>/browser disconnect</code> closes only werkz's tab</li></ul>
+      </article>
+    </div>
+    <div class="install connect-cmd" data-tabs>
+      <div class="tabs" role="tablist" aria-label="Start Chrome for /browser connect">
+        <button role="tab" id="t-cl" aria-controls="p-cl" aria-selected="true">Linux</button>
+        <button role="tab" id="t-cm" aria-controls="p-cm" aria-selected="false" tabindex="-1">macOS</button>
+        <button role="tab" id="t-cw" aria-controls="p-cw" aria-selected="false" tabindex="-1">Windows</button>
+      </div>
+      <div class="panel" role="tabpanel" id="p-cl" aria-labelledby="t-cl">
+        <div class="cmd"><pre><code>google-chrome --remote-debugging-port=9222 --user-data-dir="$HOME/.config/werkz/chrome-connect"</code></pre><button class="copy" type="button"><svg class="icon copy-icon" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button></div>
+      </div>
+      <div class="panel" role="tabpanel" id="p-cm" aria-labelledby="t-cm" hidden>
+        <div class="cmd"><pre><code>open -na "Google Chrome" --args --remote-debugging-port=9222 "--user-data-dir=$HOME/Library/Application Support/werkz/chrome-connect"</code></pre><button class="copy" type="button"><svg class="icon copy-icon" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button></div>
+      </div>
+      <div class="panel" role="tabpanel" id="p-cw" aria-labelledby="t-cw" hidden>
+        <div class="cmd"><pre><code>&amp; "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 "--user-data-dir=$env:APPDATA\werkz\chrome-connect"</code></pre><button class="copy" type="button"><svg class="icon copy-icon" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button></div>
+      </div>
+      <p class="connect-note">Start Chrome like this, then run <code>/browser connect</code> in werkz. It's a profile of its own (Chrome requires that): sign in there once to the sites werkz should use. <code>/browser connect</code> shows the exact command for your system and copies it for you.</p>
+    </div>
+    <p class="live-more"><a href="docs/usage.html#seeing-the-page-in-your-terminal">How the live view works</a> · <a href="docs/usage.html#using-your-own-chrome">Using your own Chrome</a> · <code>/browser view off</code> keeps the strip closed until you press <kbd>Ctrl</kbd>+<kbd>G</kbd></p>
+  </div>
+  <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute">
+    <filter id="lv-blocks" x="0" y="0" width="100%" height="100%">
+      <feFlood x="2" y="2" height="1" width="1"/>
+      <feComposite width="5" height="5"/>
+      <feTile result="a"/>
+      <feComposite in="SourceGraphic" in2="a" operator="in"/>
+      <feMorphology operator="dilate" radius="2.5"/>
+    </filter>
+  </svg>
 </section>
 
 <section class="section soft" id="subscriptions" aria-labelledby="subs-title">
@@ -464,6 +623,7 @@ sudo dnf install werkz</code></pre><button class="copy" type="button"><svg class
   <div class="foot-base">
     <span>© Tonmoy Talukder and contributors</span>
     <a href="https://github.com/TonmoyTalukder/werkz"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg>TonmoyTalukder/werkz</a>
+    <p class="foot-note">werkz is an independent open-source project, not affiliated with or endorsed by Anthropic or OpenAI. Claude and Claude Code are trademarks of Anthropic; ChatGPT is a trademark of OpenAI.</p>
   </div>
 </footer>
 

@@ -306,3 +306,32 @@
     targets.forEach((_, el) => io.observe(el));
   }
 })();
+
+// The live browser view demo: plays while on screen; the switch shows a picture or the text drawing.
+(() => {
+  const demo = document.querySelector("[data-live]");
+  if (!demo) return;
+  const buttons = demo.querySelectorAll(".live-switch [data-look]");
+  buttons.forEach((b) => b.addEventListener("click", () => {
+    buttons.forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+    demo.classList.toggle("lv-text", b.dataset.look === "text");
+  }));
+  // the click ring lands on the Subscribe button wherever the layout puts it
+  const place = () => {
+    const page = demo.querySelector(".lv-page"), btn = demo.querySelector(".lv-btn"), scroll = demo.querySelector(".lv-scroll");
+    if (!page || !btn) return;
+    demo.classList.remove("on"); // measure the page unscrolled
+    const p = page.getBoundingClientRect(), s = scroll.getBoundingClientRect(), r = btn.getBoundingClientRect();
+    const shift = Math.max(s.height - p.height + 6, 0); // scroll so the end of the page is in view
+    scroll.style.setProperty("--sy", (-shift / s.height * 100).toFixed(2) + "%");
+    const x = ((r.left + r.width / 2) - p.left) / p.width * 100, y = ((r.top + r.height / 2) - p.top - shift) / p.height * 100;
+    page.style.setProperty("--rx", x.toFixed(1) + "%");
+    page.style.setProperty("--ry", y.toFixed(1) + "%");
+  };
+  let visible = false;
+  addEventListener("resize", () => { place(); if (visible) demo.classList.add("on"); });
+  new IntersectionObserver(([en]) => {
+    visible = en.isIntersecting;
+    if (visible) { place(); demo.classList.add("on"); } else demo.classList.remove("on");
+  }, { threshold: 0.25 }).observe(demo);
+})();

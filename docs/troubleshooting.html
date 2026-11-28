@@ -127,8 +127,12 @@
 <td>Chrome must be started with a debugging port and its own profile (Chrome ignores the port on your default profile). Run the command <code>/browser connect</code> shows (it's also copied to your clipboard), then connect again</td>
 </tr>
 <tr>
-<td>Screenshots show as links, not pictures</td>
-<td>Your terminal can't show images (or werkz runs in tmux). Use kitty, Ghostty, iTerm2, WezTerm or a Sixel terminal, or set <code>WERKZ_IMAGES</code> (see <a href="usage.html#seeing-the-page-in-your-terminal">The browser</a>)</td>
+<td>The page shows as coloured blocks, not a picture</td>
+<td>Your terminal can't draw pictures, or tmux is in the way: <code>/browser</code> says which and how to fix it (in tmux inside kitty or Ghostty, <code>set -g allow-passthrough on</code>). kitty, Ghostty, iTerm2, WezTerm and Sixel terminals show pictures; <code>WERKZ_IMAGES</code> chooses (see <a href="usage.html#seeing-the-page-in-your-terminal">The browser</a>)</td>
+</tr>
+<tr>
+<td>The page opens above the input when you'd rather it didn't</td>
+<td><code>/browser view off</code>; Ctrl+G still shows it when you want</td>
 </tr>
 <tr>
 <td>An MCP server <em>&quot;didn't start&quot;</em></td>

@@ -141,7 +141,8 @@ Qwen and more) under one key. <code>/model</code> lists its models with their pr
 OpenCode's free models aren't listed: OpenCode lets them answer only inside its own app.</p>
 <p>Add or change keys at any time with <code>/login</code> (or <code>werkz --login</code>). Keys are checked when you save them.</p>
 <h2 id="using-a-subscription-instead-of-an-api-key">Using a subscription instead of an API key<a class="anchor" href="#using-a-subscription-instead-of-an-api-key" aria-label="Link to this section">#</a></h2>
-<p>You can use the API and your subscription side by side: pick either from <code>/model</code>.</p>
+<p>You can use the API and your subscription side by side, in one conversation: pick either from <code>/model</code> and
+switch whenever you like. werkz's browser, dev servers and your MCP tools work with both.</p>
 <h3 id="chatgpt-plan-sign-in-with-chatgpt">ChatGPT plan (Sign in with ChatGPT)<a class="anchor" href="#chatgpt-plan-sign-in-with-chatgpt" aria-label="Link to this section">#</a></h3>
 <pre><code class="language-text">/login chatgpt
 </code></pre>
@@ -184,7 +185,10 @@ screenshots, also in your own Chrome after <code>/browser connect</code>), DevSe
 werkz runs these itself, so you watch the browser with <code>/browser view</code> and each call goes through werkz's
 own permission rules, as with any other model.</li>
 <li>Claude Code keeps the conversation and compacts it itself; werkz's <code>/compact</code> and caching settings don't
-apply. Switching to Claude Code mid-conversation passes the conversation so far along.</li>
+apply. Switching to Claude Code mid-conversation passes the conversation so far along. Switching from
+Claude Code to an API model passes along Claude Code's answers and the tools it used, with the start of
+each result (the latest three turns whole, older ones shortened), so the next model knows what was read,
+run and found. Like any tool result, that can include parts of files Claude Code read.</li>
 <li>werkz removes <code>ANTHROPIC_API_KEY</code> from Claude Code's environment, so it uses your subscription rather than
 billing that key.</li>
 <li><strong>Limits:</strong> Claude Code reports your plan's usage windows with every request: the 5-hour window, the weekly
