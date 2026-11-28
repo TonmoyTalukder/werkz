@@ -119,6 +119,10 @@
 <td>On Linux werkz uses <code>wl-copy</code>, <code>xclip</code> or <code>xsel</code> when installed, and otherwise serves the clipboard itself on any desktop with X11 (including GNOME and KDE on Wayland), so it works with nothing installed. Over SSH it uses OSC 52, which some terminals (GNOME Terminal, older xterm) ignore: press <strong>Ctrl+S</strong> and select with the terminal, or use <code>/copy</code> and press <strong>w</strong> to write a file</td>
 </tr>
 <tr>
+<td>A reply or tool line starts with an emoji instead of a dot</td>
+<td>Update werkz (0.1.11 or later): it draws ● on Linux, Windows and in Ghostty, where ⏺ could show as a colour emoji. macOS terminals other than Ghostty keep ⏺</td>
+</tr>
+<tr>
 <td>The browser tools aren't offered, or <em>&quot;no browser found&quot;</em></td>
 <td>werkz uses an installed Chrome, Chromium or Edge and never downloads one. Install one, or point <code>WERKZ_BROWSER</code> at its executable</td>
 </tr>

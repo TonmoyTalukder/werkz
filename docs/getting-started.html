@@ -73,7 +73,8 @@ werkz
 <p><strong>Connect at least one provider.</strong> The first run opens the key screen. Paste any keys you have, press
 <strong>Ctrl+S</strong> to save and verify them, then <strong>Enter</strong> to start. No keys at all? Install
 <a href="https://ollama.com/download">Ollama</a>, run <code>ollama pull llama3.2</code> and press <strong>Esc</strong>.
-See <a href="providers-and-models.html">Providers and models</a> for where to get keys.</p>
+See <a href="providers-and-models.html">Providers and models</a> for where to get keys (and
+<a href="providers-and-models.html#getting-an-opencode-zen-key">Getting an OpenCode Zen key</a> for OpenCode Zen).</p>
 </li>
 <li>
 <p><strong>Ask for something:</strong></p>
@@ -91,15 +92,15 @@ running it. Choose with <strong>↑/↓</strong> and <strong>Enter</strong>: yes
 <h2 id="what-a-session-looks-like">What a session looks like<a class="anchor" href="#what-a-session-looks-like" aria-label="Link to this section">#</a></h2>
 <pre><code class="language-text">❯ the login form accepts empty passwords, fix it and add a test
 
-⏺ Grep(password in src)
+● Grep(password in src)
   ⎿  3 files
-⏺ Read(src/auth/login.ts)
+● Read(src/auth/login.ts)
   ⎿  Read 84 lines
-⏺ Edit(src/auth/login.ts)
+● Edit(src/auth/login.ts)
   ⎿  +4 −1 lines
-⏺ Bash(npm test -- login)
+● Bash(npm test -- login)
   ⎿  exit 0
-⏺ Empty and whitespace-only passwords are now rejected before the API call, with a test covering both.
+● Empty and whitespace-only passwords are now rejected before the API call, with a test covering both.
 </code></pre>
 <h2 id="make-the-most-of-it">Make the most of it<a class="anchor" href="#make-the-most-of-it" aria-label="Link to this section">#</a></h2>
 <ul>

@@ -110,8 +110,8 @@
 </tr>
 <tr>
 <td><strong>OpenCode Zen</strong></td>
-<td>paid</td>
-<td><a href="https://opencode.ai/console">opencode.ai/console</a></td>
+<td>paid (prepaid credits)</td>
+<td><a href="https://opencode.ai/console">opencode.ai/console</a> (<a href="#getting-an-opencode-zen-key">how</a>)</td>
 <td><code>OPENCODE_API_KEY</code></td>
 </tr>
 <tr>
@@ -139,6 +139,18 @@
 <p><strong>OpenCode Zen</strong> is <a href="https://opencode.ai">OpenCode</a>'s hosted models (Claude, GPT, Gemini, Kimi, DeepSeek, GLM,
 Qwen and more) under one key. <code>/model</code> lists its models with their prices, which werkz reads from OpenCode.
 OpenCode's free models aren't listed: OpenCode lets them answer only inside its own app.</p>
+<h3 id="getting-an-opencode-zen-key">Getting an OpenCode Zen key<a class="anchor" href="#getting-an-opencode-zen-key" aria-label="Link to this section">#</a></h3>
+<ol>
+<li>Go to <a href="https://opencode.ai/console">opencode.ai/console</a> and sign in.</li>
+<li>Add your billing details and buy credits. Zen is pay as you go: each request is charged to your credits,
+at the prices <code>/model</code> shows. OpenCode adds a processing fee to each credit purchase, and can top your
+credits up automatically if you turn that on in the console's billing page.</li>
+<li>Copy your API key from the console.</li>
+<li>In werkz, run <code>/login</code>, move to <strong>OpenCode Zen</strong>, paste the key and press <strong>Ctrl+S</strong> to save and check it.
+Or set <code>OPENCODE_API_KEY</code> in your shell instead.</li>
+<li>Pick a model with <code>/model</code>: OpenCode Zen's models are listed under it, with their prices.</li>
+</ol>
+<p>The key screen also shows where to get it: select <strong>OpenCode Zen</strong> and it says <code>get a key → opencode.ai/console</code>.</p>
 <p>Add or change keys at any time with <code>/login</code> (or <code>werkz --login</code>). Keys are checked when you save them.</p>
 <h2 id="using-a-subscription-instead-of-an-api-key">Using a subscription instead of an API key<a class="anchor" href="#using-a-subscription-instead-of-an-api-key" aria-label="Link to this section">#</a></h2>
 <p>You can use the API and your subscription side by side, in one conversation: pick either from <code>/model</code> and
