@@ -10,7 +10,8 @@
 2. **Connect at least one provider.** The first run opens the key screen. Paste any keys you have, press
    **Ctrl+S** to save and verify them, then **Enter** to start. No keys at all? Install
    [Ollama](https://ollama.com/download), run `ollama pull llama3.2` and press **Esc**.
-   See [Providers and models](providers-and-models.md) for where to get keys.
+   See [Providers and models](providers-and-models.md) for where to get keys (and
+   [Getting an OpenCode Zen key](providers-and-models.md#getting-an-opencode-zen-key) for OpenCode Zen).
 
 3. **Ask for something:**
 
@@ -29,15 +30,15 @@
 ```text
 ❯ the login form accepts empty passwords, fix it and add a test
 
-⏺ Grep(password in src)
+● Grep(password in src)
   ⎿  3 files
-⏺ Read(src/auth/login.ts)
+● Read(src/auth/login.ts)
   ⎿  Read 84 lines
-⏺ Edit(src/auth/login.ts)
+● Edit(src/auth/login.ts)
   ⎿  +4 −1 lines
-⏺ Bash(npm test -- login)
+● Bash(npm test -- login)
   ⎿  exit 0
-⏺ Empty and whitespace-only passwords are now rejected before the API call, with a test covering both.
+● Empty and whitespace-only passwords are now rejected before the API call, with a test covering both.
 ```
 
 ## Make the most of it

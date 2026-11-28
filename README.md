@@ -30,13 +30,13 @@ changes and checks its work, asking before it does anything risky.
 ```text
 ❯ the login form accepts empty passwords, fix it and add a test
 
-⏺ Grep(password in src)
+● Grep(password in src)
   ⎿  3 files
-⏺ Edit(src/auth/login.ts)
+● Edit(src/auth/login.ts)
   ⎿  +4 −1 lines
-⏺ Bash(npm test -- login)
+● Bash(npm test -- login)
   ⎿  exit 0
-⏺ Empty and whitespace-only passwords are now rejected before the API call, with a test covering both.
+● Empty and whitespace-only passwords are now rejected before the API call, with a test covering both.
 ```
 
 ## Highlights
@@ -106,7 +106,8 @@ cd ~/code/my-app
 werkz
 ```
 
-On first run, paste any API keys you have, or press **Esc** to start with a local
+On first run, paste any API keys you have (each provider shows where to get one; for OpenCode Zen see
+[Getting an OpenCode Zen key](docs/providers-and-models.md#getting-an-opencode-zen-key)), or press **Esc** to start with a local
 [Ollama](https://ollama.com/download) model. To use a subscription instead, type `/login chatgpt` for your
 ChatGPT plan, or pick a "(Claude Code)" model in `/model` for your Claude subscription. Then describe what you
 want done. werkz shows each command and edit before running it; choose with

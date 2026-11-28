@@ -8,7 +8,7 @@
 | **Google Gemini** | free tier* | [aistudio.google.com](https://aistudio.google.com/apikey) | `GEMINI_API_KEY` |
 | **OpenRouter** | `:free` models; paid models optional | [openrouter.ai/keys](https://openrouter.ai/keys) | `OPENROUTER_API_KEY` |
 | **Groq** | free tier* | [console.groq.com](https://console.groq.com/keys) | `GROQ_API_KEY` |
-| **OpenCode Zen** | paid | [opencode.ai/console](https://opencode.ai/console) | `OPENCODE_API_KEY` |
+| **OpenCode Zen** | paid (prepaid credits) | [opencode.ai/console](https://opencode.ai/console) ([how](#getting-an-opencode-zen-key)) | `OPENCODE_API_KEY` |
 | **Ollama** | free, local, offline | [ollama.com](https://ollama.com/download) (no key) | `OLLAMA_HOST` |
 | **ChatGPT plan** | your ChatGPT subscription | `/login chatgpt` (browser sign-in, no key) | |
 | **Claude Code** | your Claude subscription | install [Claude Code](https://code.claude.com) and sign in to it | |
@@ -19,6 +19,19 @@
 **OpenCode Zen** is [OpenCode](https://opencode.ai)'s hosted models (Claude, GPT, Gemini, Kimi, DeepSeek, GLM,
 Qwen and more) under one key. `/model` lists its models with their prices, which werkz reads from OpenCode.
 OpenCode's free models aren't listed: OpenCode lets them answer only inside its own app.
+
+### Getting an OpenCode Zen key
+
+1. Go to [opencode.ai/console](https://opencode.ai/console) and sign in.
+2. Add your billing details and buy credits. Zen is pay as you go: each request is charged to your credits,
+   at the prices `/model` shows. OpenCode adds a processing fee to each credit purchase, and can top your
+   credits up automatically if you turn that on in the console's billing page.
+3. Copy your API key from the console.
+4. In werkz, run `/login`, move to **OpenCode Zen**, paste the key and press **Ctrl+S** to save and check it.
+   Or set `OPENCODE_API_KEY` in your shell instead.
+5. Pick a model with `/model`: OpenCode Zen's models are listed under it, with their prices.
+
+The key screen also shows where to get it: select **OpenCode Zen** and it says `get a key → opencode.ai/console`.
 
 Add or change keys at any time with `/login` (or `werkz --login`). Keys are checked when you save them.
 
