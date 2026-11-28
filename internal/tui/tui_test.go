@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"time"
 
 	"github.com/TonmoyTalukder/werkz/internal/agent"
+	"github.com/TonmoyTalukder/werkz/internal/browser"
 	"github.com/TonmoyTalukder/werkz/internal/catalog"
 	"github.com/TonmoyTalukder/werkz/internal/config"
 	"github.com/TonmoyTalukder/werkz/internal/llm"
@@ -676,5 +678,35 @@ func TestBypassNeedsConfirmationAndIsNotSaved(t *testing.T) {
 	b, _ := os.ReadFile(config.Path())
 	if strings.Contains(string(b), `"bypass"`) {
 		t.Fatal("bypass written to the config file")
+	}
+}
+
+// /browser connect explains each way connecting to the user's own Chrome can fail.
+func TestConnectDoneMessages(t *testing.T) {
+	for _, c := range []struct {
+		addr string
+		err  error
+		want []string
+	}{
+		{"", browser.ErrNoActiveChrome, []string{browser.RemoteDebuggingPage, "Allow remote debugging for this browser instance"}},
+		{"", browser.ErrChromeDeclined, []string{"Cancel was clicked", "click Allow"}},
+		{"", browser.ErrChromeNoAnswer, []string{"nobody answered it in time"}},
+		{"9333", errors.New("could not reach Chrome at 127.0.0.1:9333: refused"), []string{"your Chrome at 127.0.0.1:9333", browser.RemoteDebuggingPage, "--remote-debugging-port=9333"}},
+		{"", nil, []string{"Connected to your Chrome."}},
+	} {
+		t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+		cfg := config.Load()
+		cfg.Onboarded = true
+		m := newModel(cfg)
+		m.handleConnectDone(connectDoneMsg{addr: c.addr, err: c.err})
+		var all strings.Builder
+		for _, e := range m.entries {
+			all.WriteString(ansi.Strip(e.render(400)))
+		}
+		for _, w := range c.want {
+			if !strings.Contains(all.String(), w) {
+				t.Errorf("%v: lacks %q in %q", c.err, w, all.String())
+			}
+		}
 	}
 }

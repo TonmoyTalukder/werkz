@@ -158,6 +158,7 @@ type Browser struct {
 	connected bool         // attached to the user's own Chrome (see Connect)
 	pol       *fencePolicy // connected mode: the targets werkz may touch
 	wsURL     string       // connected mode: the browser's debugging address
+	mux       *mux         // connected mode: the one connection, shared by the driver and the guard
 
 	guardKey string
 	g        *guard

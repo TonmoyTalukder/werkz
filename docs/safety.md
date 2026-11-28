@@ -42,7 +42,8 @@ it. Credential locations stay blocked even in bypass.
   form that posts data, uploads and downloads ask in every mode, including bypass (search-style GET forms open
   like links, under the site rules, and are reported); password and payment fields are never typed into, and
   JavaScript asks on any page that has one. Connecting it to your own Chrome (`/browser connect`) is opt-in
-  per session, shows a red banner, and uses only the tab werkz opens. See [The browser](usage.md#the-browser).
+  per session: you tick a box in Chrome once, and Chrome asks you to click Allow every time werkz connects.
+  It shows a red banner, and werkz uses only the tab it opens. See [The browser](usage.md#the-browser).
 - **MCP servers** from a project's `.werkz/mcp.json` start only after you approve them (again if their command
   changes); each MCP tool asks the first time it runs, and its results are marked as untrusted.
 - Text from models, tools and files is cleaned of terminal escape sequences before it's displayed.

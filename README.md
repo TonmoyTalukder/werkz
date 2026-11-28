@@ -67,7 +67,8 @@ changes and checks its work, asking before it does anything risky.
   being typed into marked, in every terminal (pictures in kitty, Ghostty, iTerm2, WezTerm and Sixel terminals,
   coloured text elsewhere); Ctrl+G shows it full screen. It's near real time (a new frame about 40 ms after
   each action, up to 4 to 15 frames a second by terminal); `/browser show` opens the real window for full
-  speed, and `/browser connect` lets it work in your own Chrome, in a tab of its own.
+  speed, and `/browser connect` lets it work in the Chrome you already have open (tick one box in Chrome, click
+  Allow), in a tab of its own.
 - **MCP servers:** use tools from any MCP server (stdio or HTTP with OAuth sign-in), configured the same way as in
   Claude Code; a project's servers start only once you approve them.
 - **Made for daily use:** type `@` to attach files (with `@repo/path` across repos), drag to select and copy

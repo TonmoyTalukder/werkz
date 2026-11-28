@@ -155,32 +155,48 @@ and after a change. For example: "the signup button does nothing, fix it and che
 ### Using your own Chrome
 
 By default werkz uses its own browser profile, signed in to nothing. To let it work on sites where you are
-signed in (a staging admin, a dashboard), connect it to your own Chrome for the session:
+signed in (a staging admin, a dashboard), connect it to the Chrome you already have open:
 
-1. Start Chrome with a debugging port. `/browser connect` shows the exact command for your system (and copies
-   it to your clipboard). With Google Chrome installed in the usual place it is:
+1. In Chrome, go to `chrome://inspect/#remote-debugging` and tick **Allow remote debugging for this browser
+   instance**. You do this once; Chrome remembers it. It needs Chrome 144 or later (Edge, Brave and other
+   browsers built on Chrome have the same page when they are on that version).
+2. In werkz, run `/browser connect` and confirm. Chrome asks **Allow remote debugging?**: click **Allow**.
 
-   Linux:
+That's all: no command to run and no separate profile. If the box isn't ticked yet, `/browser connect` says so
+and copies the page's address to your clipboard. werkz finds the Chrome by itself (Chrome, Chromium, Edge,
+Brave and Vivaldi, on Linux, macOS and Windows); with more than one open, it uses the one you allowed most
+recently. Chrome asks again each time werkz connects, so nothing connects to your browser without you
+clicking Allow. To stop allowing it, untick the box (or click **Turn off in settings** in Chrome's question).
 
-   ```bash
-   google-chrome --remote-debugging-port=9222 --user-data-dir="$HOME/.config/werkz/chrome-connect"
-   ```
+<details>
+<summary>Older Chrome, or a Chrome you start yourself</summary>
 
-   macOS:
+Before Chrome 144 the only way was to start Chrome with a debugging port, and Chrome allows that only with a
+profile of its own (not your default one), so sign in there once to the sites werkz should use. When
+`/browser connect` can't find a Chrome that allows it, it also shows this command for your system and copies
+it. With Google Chrome installed in the usual place it is:
 
-   ```bash
-   open -na "Google Chrome" --args --remote-debugging-port=9222 "--user-data-dir=$HOME/Library/Application Support/werkz/chrome-connect"
-   ```
+Linux:
 
-   Windows (PowerShell):
+```bash
+google-chrome --remote-debugging-port=9222 --user-data-dir="$HOME/.config/werkz/chrome-connect"
+```
 
-   ```powershell
-   & "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 "--user-data-dir=$env:APPDATA\werkz\chrome-connect"
-   ```
+macOS:
 
-   Chrome only allows this with a profile of its own (not your default one), so this is a separate profile: sign
-   in there once to the sites werkz should use, and it remembers them. Chromium, Edge and Brave work the same.
-2. In werkz, run `/browser connect` (or `/browser connect 9333` for another port) and confirm.
+```bash
+open -na "Google Chrome" --args --remote-debugging-port=9222 "--user-data-dir=$HOME/Library/Application Support/werkz/chrome-connect"
+```
+
+Windows (PowerShell):
+
+```powershell
+& "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 "--user-data-dir=$env:APPDATA\werkz\chrome-connect"
+```
+
+Then run `/browser connect` (or `/browser connect 9333` for another port).
+
+</details>
 
 While connected, a red **connected to your Chrome** line shows at the bottom. werkz opens one tab of its own and
 uses only that tab and the popups it opens: it never reads or touches your other tabs, and it never closes
@@ -239,9 +255,9 @@ Three ways to watch:
 | Works over SSH | Yes | No (needs a desktop) | Only if Chrome runs where werkz runs |
 | Back | Esc | `/browser hide` (the page stays open) | `/browser disconnect` closes werkz's tab, Chrome keeps running |
 
-Checked on real terminals: tmux (with and without passthrough), GNOME Terminal and Ptyxis (VTE 0.84, built
-without Sixel, so they show text). kitty, Ghostty, WezTerm, iTerm2, foot and xterm were not available to test;
-what they show follows the protocols above.
+Checked on real terminals: kitty and Ghostty (pictures, live at the page's own rate), xterm started with
+`-ti vt340` (Sixel), tmux (with and without passthrough), GNOME Terminal and Ptyxis (VTE 0.84, built without
+Sixel, so they show text). WezTerm, foot and iTerm2 were not tested; what they show follows the protocols above.
 
 | Terminal | What you see |
 |---|---|

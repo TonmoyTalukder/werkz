@@ -236,7 +236,7 @@ sudo dnf install werkz</code></pre><button class="copy" type="button"><svg class
 </div>
 <div class="scene" id="ts-chrome" role="tabpanel" aria-labelledby="tt-chrome" hidden>
 <pre class="frame"><div data-a="type"><i class="p">❯ </i>/browser connect</div><div data-a="in"><i class="rd">╭───────────────────────────────────────────────╮</i></div><div data-a="in"><i class="rd">│</i> <i class="r b">Connect werkz to your own Chrome?</i>             <i class="rd">│</i></div><div data-a="in"><i class="rd">│</i> werkz opens a window of its own there and     <i class="rd">│</i></div><div data-a="in"><i class="rd">│</i> uses only its tabs, never your other tabs.    <i class="rd">│</i></div><div data-a="in"><i class="rd">│</i>   <i class="f">No (esc)</i>                                    <i class="rd">│</i></div><div data-a="in"><i class="rd">│</i> <i class="p">❯ Yes, connect to my Chrome for this session</i>  <i class="rd">│</i></div><div data-a="in"><i class="rd">╰───────────────────────────────────────────────╯</i></div></pre>
-<pre class="frame"><div><i class="s">✦ </i>Connected to your Chrome at 127.0.0.1:9222.</div><div data-a="type"><i class="p">❯ </i>export last week's report from the admin</div><div data-a="in"><i class="g">⏺</i> <i class="b">Browse</i><i class="d">(admin.staging.acme.dev/reports)</i></div><div data-a="in"><i class="d">  ⎿  Reports · signed in as ada</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">Click</i><i class="d">(Export CSV)</i><i class="y">  ⚠ downloads a file: asked</i></div><div data-a="in"><i class="d">  ⎿  report-2026-W47.csv saved by Chrome</i></div><div> </div><div> </div><div> </div><div class="banner"><i class="r b">● werkz is connected to your Chrome</i><i class="d"> · /browser disconnect</i></div></pre>
+<pre class="frame"><div><i class="s">✦ </i>Connected to your Chrome.</div><div data-a="type"><i class="p">❯ </i>export last week's report from the admin</div><div data-a="in"><i class="g">⏺</i> <i class="b">Browse</i><i class="d">(admin.staging.acme.dev/reports)</i></div><div data-a="in"><i class="d">  ⎿  Reports · signed in as ada</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">Click</i><i class="d">(Export CSV)</i><i class="y">  ⚠ downloads a file: asked</i></div><div data-a="in"><i class="d">  ⎿  report-2026-W47.csv saved by Chrome</i></div><div> </div><div> </div><div> </div><div class="banner"><i class="r b">● werkz is connected to your Chrome</i><i class="d"> · /browser disconnect</i></div></pre>
 </div>
 <div class="scene" id="ts-web" role="tabpanel" aria-labelledby="tt-web" hidden>
 <pre class="frame"><div data-a="type"><i class="p">❯ </i>how do I add an MCP server to werkz? check the docs</div><div data-a="in"><i class="g">⏺</i> <i class="b">WebSearch</i><i class="d">(werkz MCP servers setup)</i></div><div data-a="in"><i class="d">  ⎿  6 results · Claude web search</i></div><div data-a="in"><i class="g">⏺</i> <i class="b">WebFetch</i><i class="d">(tonmoytalukder.github.io/werkz/docs/…)</i></div><div data-a="in"><i class="d">  ⎿  Usage · werkz · 18 KB</i></div><div data-a="in"><i class="v">⏺</i> Add it to <i class="cd">~/.config/werkz/mcp.json</i>, in the same</div><div data-a="in">  format as Claude Code, then run <i class="cd">/mcp</i> to see it</div><div data-a="in">  start. A project's servers go in <i class="cd">.werkz/mcp.json</i>.</div></pre>
@@ -325,7 +325,7 @@ sudo dnf install werkz</code></pre><button class="copy" type="button"><svg class
         </tbody>
       </table>
     </div>
-    <p class="tested">Measured on Linux with Chrome 158. Tried on real terminals: tmux, GNOME Terminal and Ptyxis. kitty, Ghostty, iTerm2, WezTerm, foot and xterm weren't available to test; they follow the protocols above.</p>
+    <p class="tested">Measured on Linux with Chrome 158. Tried on real terminals: kitty, Ghostty, xterm (Sixel), tmux, GNOME Terminal and Ptyxis. WezTerm, foot and iTerm2 weren't tested; they follow the protocols above.</p>
 
     <div class="watch3-head">
       <h3>Want it fully live? Open the real window.</h3>
@@ -348,25 +348,17 @@ sudo dnf install werkz</code></pre><button class="copy" type="button"><svg class
         <div class="w3-vis" aria-hidden="true"><div class="w3-screen w3-chrome"><span class="w3-tabs"><i></i><i></i><i class="w"></i></span><span class="w3-dot"></span></div><span class="w3-banner">connected to your Chrome</span></div>
         <h4>Your own Chrome</h4>
         <p class="w3-cmd"><code>/browser connect</code></p>
-        <ul><li>For sites where you're signed in, like a staging admin</li><li>werkz uses one tab of its own and never reads your other tabs</li><li>Passwords and payment fields are never typed into; forms always ask</li><li><code>/browser disconnect</code> closes only werkz's tab</li></ul>
+        <ul><li>For sites where you're signed in, like a staging admin</li><li>The Chrome you have open: tick one box once, click Allow</li><li>werkz uses one tab of its own and never reads your other tabs</li><li>Passwords and payment fields are never typed into; forms always ask</li><li><code>/browser disconnect</code> closes only werkz's tab</li></ul>
       </article>
     </div>
-    <div class="install connect-cmd" data-tabs>
-      <div class="tabs" role="tablist" aria-label="Start Chrome for /browser connect">
-        <button role="tab" id="t-cl" aria-controls="p-cl" aria-selected="true">Linux</button>
-        <button role="tab" id="t-cm" aria-controls="p-cm" aria-selected="false" tabindex="-1">macOS</button>
-        <button role="tab" id="t-cw" aria-controls="p-cw" aria-selected="false" tabindex="-1">Windows</button>
-      </div>
-      <div class="panel" role="tabpanel" id="p-cl" aria-labelledby="t-cl">
-        <div class="cmd"><pre><code>google-chrome --remote-debugging-port=9222 --user-data-dir="$HOME/.config/werkz/chrome-connect"</code></pre><button class="copy" type="button"><svg class="icon copy-icon" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button></div>
-      </div>
-      <div class="panel" role="tabpanel" id="p-cm" aria-labelledby="t-cm" hidden>
-        <div class="cmd"><pre><code>open -na "Google Chrome" --args --remote-debugging-port=9222 "--user-data-dir=$HOME/Library/Application Support/werkz/chrome-connect"</code></pre><button class="copy" type="button"><svg class="icon copy-icon" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button></div>
-      </div>
-      <div class="panel" role="tabpanel" id="p-cw" aria-labelledby="t-cw" hidden>
-        <div class="cmd"><pre><code>&amp; "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 "--user-data-dir=$env:APPDATA\werkz\chrome-connect"</code></pre><button class="copy" type="button"><svg class="icon copy-icon" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button></div>
-      </div>
-      <p class="connect-note">Start Chrome like this, then run <code>/browser connect</code> in werkz. It's a profile of its own (Chrome requires that): sign in there once to the sites werkz should use. <code>/browser connect</code> shows the exact command for your system and copies it for you.</p>
+    <div class="install connect-cmd">
+      <ol class="connect-steps">
+        <li><span class="cs-n" aria-hidden="true">1</span><div><p><b>Once, in Chrome:</b> open this page and tick <b>Allow remote debugging for this browser instance</b>. Chrome remembers it.</p>
+          <div class="cmd"><pre><code>chrome://inspect/#remote-debugging</code></pre><button class="copy" type="button"><svg class="icon copy-icon" aria-hidden="true"><use href="#i-copy"/></svg><svg class="icon done-icon" aria-hidden="true"><use href="#i-check"/></svg><span>Copy</span></button></div></div></li>
+        <li><span class="cs-n" aria-hidden="true">2</span><div><p><b>In werkz:</b> run <code>/browser connect</code>. Chrome asks <b>Allow remote debugging?</b>, click <b>Allow</b>.</p>
+          <div class="cs-ask" aria-hidden="true"><span>Allow remote debugging?</span><i>Cancel</i><i class="ok">Allow</i></div></div></li>
+      </ol>
+      <p class="connect-note">No command to start Chrome and no separate profile: werkz uses the Chrome you already have open, with your sign-ins. Chrome asks every time werkz connects, so nothing gets in without your click. Needs Chrome 144 or later (Edge and Brave too); <a href="docs/usage.html#using-your-own-chrome">older versions</a> start Chrome with a command instead.</p>
     </div>
     <p class="live-more"><a href="docs/usage.html#seeing-the-page-in-your-terminal">How the live view works</a> · <a href="docs/usage.html#using-your-own-chrome">Using your own Chrome</a> · <code>/browser view off</code> keeps the strip closed until you press <kbd>Ctrl</kbd>+<kbd>G</kbd></p>
   </div>

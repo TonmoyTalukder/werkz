@@ -2,6 +2,7 @@ package tui
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"runtime"
@@ -57,7 +58,7 @@ func (m *model) browserCommand(args []string) tea.Cmd {
 		}
 		return m.openLiveView()
 	case "connect":
-		addr := "9222"
+		addr := "" // the Chrome you have open (or one on port 9222)
 		if len(args) > 1 {
 			addr = args[1]
 		}
@@ -159,38 +160,62 @@ func (m *model) connectKey(k tea.KeyMsg) tea.Cmd {
 			return nil
 		}
 		eng, addr := m.eng, m.connAddr
-		return func() tea.Msg {
-			ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		note := m.printS(renderNotice("info", "Connecting… if Chrome asks whether to allow remote debugging, click Allow there."))
+		return tea.Batch(note, func() tea.Msg {
+			// Chrome asks you to allow werkz; that can take a moment
+			ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
 			defer cancel()
 			return connectDoneMsg{addr: addr, err: eng.ConnectBrowser(ctx, addr)}
-		}
+		})
 	}
 	return nil
 }
 
 func (m *model) handleConnectDone(msg connectDoneMsg) tea.Cmd {
 	if msg.err == nil {
-		return m.printS(renderNotice("info", "Connected to your Chrome at "+chromeAddr(msg.addr)+". werkz opened its own window there "+
+		return m.printS(renderNotice("info", "Connected to "+chromeAddr(msg.addr)+". werkz opened its own window there "+
 			"and uses only it; /browser disconnect closes it."))
 	}
-	reason, _, _ := strings.Cut(msg.err.Error(), "Start it with")
-	reason = strings.TrimRight(strings.TrimSpace(reason), ".:")
+	if msg.addr == "" && errors.Is(msg.err, browser.ErrNoActiveChrome) {
+		return tea.Batch(
+			m.printS(renderNotice("info", "To let werkz use the Chrome you have open: in Chrome, go to "+browser.RemoteDebuggingPage+
+				" (copied to your clipboard), tick \"Allow remote debugging for this browser instance\", then run /browser connect again. "+
+				"Chrome asks you to allow werkz when it connects. This needs Chrome 144 or later; for an older Chrome, "+
+				"see /browser connect in the docs.")),
+			copyText("the Chrome page", browser.RemoteDebuggingPage))
+	}
+	if errors.Is(msg.err, browser.ErrChromeDeclined) || errors.Is(msg.err, browser.ErrChromeNoAnswer) {
+		what := "Cancel was clicked"
+		if errors.Is(msg.err, browser.ErrChromeNoAnswer) {
+			what = "nobody answered it in time"
+		}
+		return m.printS(renderNotice("info", "Chrome asked whether to allow remote debugging and "+what+", so werkz isn't connected. "+
+			"Run /browser connect again and click Allow in Chrome."))
+	}
+	reason := strings.TrimRight(strings.TrimSpace(msg.err.Error()), ".:")
 	command := browser.LaunchCommand()
 	if port := chromePort(msg.addr); port != "9222" {
 		command = strings.Replace(command, "--remote-debugging-port=9222", "--remote-debugging-port="+port, 1)
 	}
 	return tea.Batch(
-		m.printS(renderNotice("error", "Couldn't connect to your Chrome at "+chromeAddr(msg.addr)+": "+reason+".")),
-		m.printS(renderNotice("info", "Start Chrome ready for werkz with this command (copied to your clipboard), then run "+
-			"/browser connect again. It uses a separate profile, since Chrome doesn't allow this on its default one: sign in "+
-			"there once to the sites werkz should use.")),
+		m.printS(renderNotice("error", "Couldn't connect to "+chromeAddr(msg.addr)+": "+reason+".")),
+		m.printS(renderNotice("info", "Easiest: in the Chrome you have open, go to "+browser.RemoteDebuggingPage+", tick \"Allow remote "+
+			"debugging for this browser instance\" and run /browser connect with no port. Or start a Chrome with this command "+
+			"(copied to your clipboard; a separate profile) and connect again:")),
 		m.printS("  "+sText.Render(command)),
 		copyText("the Chrome command", command))
 }
 
-// chromeAddr and chromePort read /browser connect's argument: a port, host:port or a URL.
+// chromeAddr and chromePort read /browser connect's argument: none, a port, host:port or a URL.
 func chromeAddr(addr string) string {
-	a := strings.TrimPrefix(strings.TrimPrefix(addr, "http://"), "ws://")
+	if strings.TrimSpace(addr) == "" {
+		return "your Chrome"
+	}
+	return "your Chrome at " + chromeHostPort(addr)
+}
+
+func chromeHostPort(addr string) string {
+	a := strings.TrimPrefix(strings.TrimPrefix(strings.TrimSpace(addr), "http://"), "ws://")
 	a = strings.TrimSuffix(a, "/")
 	if !strings.Contains(a, ":") {
 		a = "127.0.0.1:" + a
@@ -199,14 +224,17 @@ func chromeAddr(addr string) string {
 }
 
 func chromePort(addr string) string {
-	a := chromeAddr(addr)
+	if strings.TrimSpace(addr) == "" {
+		return "9222"
+	}
+	a := chromeHostPort(addr)
 	return a[strings.LastIndex(a, ":")+1:]
 }
 
 func (m *model) connectView() string {
 	var b strings.Builder
 	b.WriteString(sRed.Bold(true).Render("Connect werkz to your own Chrome?") + "\n\n")
-	b.WriteString(wrapTo(sText.Render("werkz will open a window in your Chrome at "+chromeAddr(m.connAddr)+", where you are signed in to sites, "+
+	b.WriteString(wrapTo(sText.Render("werkz will open a window in "+chromeAddr(m.connAddr)+", where you are signed in to sites, "+
 		"and use only that window's tabs: it never reads your other tabs. Sites other than this machine ask first (even in bypass), "+
 		"sending forms, uploads and downloads always ask, and password and payment fields are never typed into."), max(m.w-8, 20)) + "\n")
 	b.WriteString(sDim.Render("It lasts until /browser disconnect or you quit werkz.") + "\n\n")

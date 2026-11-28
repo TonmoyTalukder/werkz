@@ -28,20 +28,16 @@ const connectPort = "9222"
 // Connect) rather than a browser it started itself.
 func (b *Browser) Connected() bool { return b.connected }
 
-// Connect attaches to a Chrome the user started with --remote-debugging-port.
-// addr is "9222", "127.0.0.1:9222" or "http://127.0.0.1:9222" (an empty addr
-// means 9222). Only loopback addresses are accepted. It opens one new window
-// with one blank tab for werkz, in the user's default profile so their
-// sign-ins apply, and drives only the tabs werkz opened (and popups they
-// open). Every other tab of the user's stays out of reach: see fence.
-// AllowHost and ShotDir of o apply; ExecPath, ProfileDir and Headless are
-// ignored.
+// Connect attaches to the user's own Chrome. With no addr it finds the Chrome they have open
+// that allows remote debugging (chrome://inspect/#remote-debugging, Chrome 144 and later; Chrome
+// asks the user to allow werkz), or else one started with --remote-debugging-port=9222. addr is
+// "9222", "127.0.0.1:9222" or "http://127.0.0.1:9222" to pick a port. Only loopback addresses are
+// accepted. It opens one new window with one blank tab for werkz, in the user's profile so their
+// sign-ins apply, and drives only the tabs werkz opened (and popups they open). Every other tab
+// of the user's stays out of reach: see fence. AllowHost and ShotDir of o apply; ExecPath,
+// ProfileDir and Headless are ignored.
 func Connect(ctx context.Context, addr string, o Options) (*Browser, error) {
-	hostport, err := parseConnectAddr(addr)
-	if err != nil {
-		return nil, err
-	}
-	ws, err := browserWS(ctx, hostport)
+	ws, err := connectWS(ctx, addr)
 	if err != nil {
 		return nil, err
 	}
@@ -60,9 +56,36 @@ func Connect(ctx context.Context, addr string, o Options) (*Browser, error) {
 	}
 	b.pol.download = b.connectedDownload
 	if err := b.attach(ctx); err != nil {
-		return nil, fmt.Errorf("%w (to start Chrome for werkz run: %s)", err, LaunchCommand())
+		return nil, err
 	}
 	return b, nil
+}
+
+// connectWS finds the browser socket to connect to: an open Chrome that allows remote
+// debugging (from its DevToolsActivePort file), or a debugging port that answers /json/version.
+func connectWS(ctx context.Context, addr string) (string, error) {
+	port := 0
+	hostport := net.JoinHostPort("127.0.0.1", connectPort)
+	if strings.TrimSpace(addr) != "" {
+		hp, err := parseConnectAddr(addr)
+		if err != nil {
+			return "", err
+		}
+		hostport = hp
+		_, p, _ := net.SplitHostPort(hp)
+		port, _ = strconv.Atoi(p)
+	}
+	if found := activeChromes(port); len(found) > 0 {
+		return found[0].WS, nil
+	}
+	ws, err := browserWS(ctx, hostport)
+	if err == nil {
+		return ws, nil
+	}
+	if strings.TrimSpace(addr) == "" {
+		return "", ErrNoActiveChrome
+	}
+	return "", err
 }
 
 // parseConnectAddr turns addr into a loopback host:port, refusing anything
@@ -112,7 +135,7 @@ func validHostPort(host, port, orig string) (string, error) {
 // socket. The answer lists no tabs.
 func browserWS(ctx context.Context, hostport string) (string, error) {
 	fail := func(err error) (string, error) {
-		return "", fmt.Errorf("could not reach Chrome at %s: %v. Is it running with --remote-debugging-port? Start it with: %s", hostport, err, LaunchCommand())
+		return "", fmt.Errorf("could not reach Chrome at %s: %v", hostport, err)
 	}
 	rctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -159,10 +182,16 @@ func (a *fenceAllocator) Attaches() bool { return true }
 // attach opens werkz's tab in the user's Chrome and prepares it.
 func (b *Browser) attach(ctx context.Context) error {
 	raw, err := remote.DialContext(ctx, b.wsURL)
-	if err != nil {
+	switch {
+	case err != nil && strings.Contains(err.Error(), "403"):
+		return ErrChromeDeclined
+	case err != nil && ctx.Err() != nil:
+		return ErrChromeNoAnswer
+	case err != nil:
 		return fmt.Errorf("could not connect to Chrome: %w", err)
 	}
-	f := newFence(b.pol, raw)
+	b.mux = newMux(raw) // one connection: Chrome asks the user to allow each one
+	f := newFence(b.pol, b.mux.conn())
 	wctx, wcancel := context.WithCancel(context.Background())
 	fa := &fenceAllocator{f: f, ctx: wctx}
 	allocCtx, allocCancel := chromedp.NewAllocatorContext(context.Background(), fa)
@@ -204,11 +233,10 @@ func (b *Browser) startGuardConnected(ctx context.Context, tab context.Context) 
 	if c == nil || c.Target == nil {
 		return errors.New("the browser tab is not attached")
 	}
-	raw, err := remote.DialContext(ctx, b.wsURL)
-	if err != nil {
-		return fmt.Errorf("could not connect to Chrome: %w", err)
+	if b.mux == nil {
+		return errors.New("not connected to Chrome")
 	}
-	g := newGuard(b, newFence(b.pol, raw), c.Target.TargetID)
+	g := newGuard(b, newFence(b.pol, b.mux.conn()), c.Target.TargetID)
 	b.mu.Lock()
 	b.g = g
 	b.mu.Unlock()
