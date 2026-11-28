@@ -23,13 +23,26 @@ OpenCode's free models aren't listed: OpenCode lets them answer only inside its 
 ### Getting an OpenCode Zen key
 
 1. Go to [opencode.ai/console](https://opencode.ai/console) and sign in.
-2. Add your billing details and buy credits. Zen is pay as you go: each request is charged to your credits,
-   at the prices `/model` shows. OpenCode adds a processing fee to each credit purchase, and can top your
-   credits up automatically if you turn that on in the console's billing page.
-3. Copy your API key from the console.
+2. Make sure the workspace has credits. Zen is pay as you go: each request is charged at the prices `/model`
+   shows. Whoever manages the workspace's billing adds the billing details and buys credits on its billing
+   page; OpenCode adds a processing fee to each purchase and can top the credits up automatically.
+3. Create a **personal API key**: open the account menu at the top right, then **Account** → **Personal API
+   keys** → **Add API key**, and fill in:
+   - **Workspace:** the workspace whose models and credits werkz should use.
+   - **Key name:** anything that tells you what it's for, such as `werkz`.
+   - **Expiration:** how long the key works. When it runs out, create a new key and paste it into werkz again.
+   - **Permissions:** **Models only**. That is all werkz needs: it lists the models and calls them. Don't
+     give it more.
+
+   Click **Create** and copy the key.
 4. In werkz, run `/login`, move to **OpenCode Zen**, paste the key and press **Ctrl+S** to save and check it.
    Or set `OPENCODE_API_KEY` in your shell instead.
 5. Pick a model with `/model`: OpenCode Zen's models are listed under it, with their prices.
+
+A personal key calls models as you, so your own usage, budgets and model rules in that workspace apply. Any
+member of a workspace can create one; before October 2026 only owners and admins could make keys, for service
+accounts, and such a key works in werkz too. Owners and admins can see and revoke members' keys under
+**Settings** → **Members**, and leaving a workspace revokes your keys there.
 
 The key screen also shows where to get it: select **OpenCode Zen** and it says `get a key → opencode.ai/console`.
 

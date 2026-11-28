@@ -6,6 +6,7 @@
 | *"rate limited"* on a free model | Free tiers allow only a few requests per minute. Wait a moment, pick another model with `/model`, or turn on [fallback](fallback.md) |
 | *"model not found"* or *"unavailable for free"* | That model isn't available to your key: werkz shows the provider's own reason after it (OpenRouter withdraws free models from time to time; Google retires Gemini models for new keys). Choose one from `/model` |
 | *"out of API credits"* | Top up in your provider's console, then run `/login` so werkz uses the provider again. Claude credit is managed at platform.claude.com |
+| OpenCode Zen worked, then every request fails | Your personal API key expired (keys have an expiration you chose when creating them), was revoked by a workspace admin, or you left that workspace; or the workspace is out of credits. Create a new key ([how](providers-and-models.md#getting-an-opencode-zen-key)) and paste it in `/login`, or ask whoever manages billing to add credits |
 | *"… can't use tools"* | That model can't call tools, so it can't read or change files. Choose a tool-capable model with `/model` for coding work |
 | *"fallback is off"* | The model failed and fallback is off (the default). Switch model with `/model`, or choose a mode with `/fallback` |
 | werkz takes a few seconds to appear in some terminals | At start-up the UI library asks the terminal for its background colour; terminals that never answer delay it by up to 5 seconds. Wait for the screen before typing |
