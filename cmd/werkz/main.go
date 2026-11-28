@@ -65,7 +65,7 @@ func main() {
 	showVersion := flag.Bool("version", false, "print version")
 	login := flag.Bool("login", false, "open the API key screen on start")
 	modelFlag := flag.String("model", "", "model id for this session, e.g. claude-sonnet-5-5 (not saved)")
-	providerFlag := flag.String("provider", "", "provider of --model: anthropic, openai, xai, gemini, openrouter, groq, ollama, chatgpt or claudecode (default: guessed)")
+	providerFlag := flag.String("provider", "", "provider of --model: anthropic, openai, xai, gemini, openrouter, groq, opencode, ollama, chatgpt or claudecode (default: guessed)")
 	wsFlag := flag.String("w", "", "open a saved workspace by name (default: no workspace)")
 	updateFlag := flag.Bool("update", false, "check for a new release, install it and exit")
 	var cont, resume bool

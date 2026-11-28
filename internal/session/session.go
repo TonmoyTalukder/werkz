@@ -46,6 +46,7 @@ type Msg struct {
 	ToolCallID string         `json:"tool_call_id,omitempty"`
 	ToolName   string         `json:"tool_name,omitempty"`
 	IsError    bool           `json:"is_error,omitempty"`
+	Steps      string         `json:"steps,omitempty"` // Claude Code's tool steps (llm.Msg.Steps)
 }
 
 // Meta describes a saved conversation.
@@ -87,7 +88,7 @@ func validID(id string) bool {
 func FromHistory(h []llm.Msg) []Msg {
 	out := make([]Msg, len(h))
 	for i, m := range h {
-		out[i] = Msg{Role: m.Role, Text: m.Text, ToolCalls: m.ToolCalls, ToolCallID: m.ToolCallID, ToolName: m.ToolName, IsError: m.IsError}
+		out[i] = Msg{Role: m.Role, Text: m.Text, ToolCalls: m.ToolCalls, ToolCallID: m.ToolCallID, ToolName: m.ToolName, IsError: m.IsError, Steps: m.Steps}
 	}
 	return out
 }
@@ -96,7 +97,7 @@ func FromHistory(h []llm.Msg) []Msg {
 func ToHistory(h []Msg) []llm.Msg {
 	out := make([]llm.Msg, len(h))
 	for i, m := range h {
-		out[i] = llm.Msg{Role: m.Role, Text: m.Text, ToolCalls: m.ToolCalls, ToolCallID: m.ToolCallID, ToolName: m.ToolName, IsError: m.IsError}
+		out[i] = llm.Msg{Role: m.Role, Text: m.Text, ToolCalls: m.ToolCalls, ToolCallID: m.ToolCallID, ToolName: m.ToolName, IsError: m.IsError, Steps: m.Steps}
 	}
 	return out
 }

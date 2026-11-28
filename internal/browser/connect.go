@@ -292,7 +292,8 @@ func launchCommand(goos, exe, profile string) string {
 		if exe == "" {
 			exe = `C:\Program Files\Google\Chrome\Application\chrome.exe`
 		}
-		return `"` + exe + `" ` + port + ` "--user-data-dir=` + profile + `"`
+		// PowerShell, the default shell of Windows Terminal, runs a quoted path only after "&".
+		return `& "` + exe + `" ` + port + ` "--user-data-dir=` + profile + `"`
 	case "darwin":
 		app := "Google Chrome"
 		if i := strings.Index(exe, ".app/"); i >= 0 {

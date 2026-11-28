@@ -151,6 +151,9 @@ func transcript(h []llm.Msg) string {
 		case llm.RoleUser:
 			b.WriteString("User: " + m.Text + "\n\n")
 		case llm.RoleAssistant:
+			if m.Steps != "" {
+				b.WriteString("Assistant's tool steps:\n" + textutil.Truncate(m.Steps, 2000) + "\n\n")
+			}
 			if m.Text != "" {
 				b.WriteString("Assistant: " + m.Text + "\n\n")
 			}
@@ -407,6 +410,7 @@ func parse(r io.Reader, h llm.Handlers, hosted map[string]bool) (*llm.Turn, erro
 	streamed := false // text arrived as deltas for the current message
 	names := map[string]string{}
 	var last *usage
+	steps := stepLog{}
 	sc := bufio.NewScanner(r)
 	sc.Buffer(make([]byte, 1024*1024), 64*1024*1024)
 	for sc.Scan() {
@@ -471,6 +475,7 @@ func parse(r io.Reader, h llm.Handlers, hosted map[string]bool) (*llm.Turn, erro
 					}
 				case "tool_use":
 					names[b.ID] = b.Name
+					steps.call(b.ID, strings.TrimPrefix(b.Name, toolPrefix), string(b.Input))
 					if own(b.Name) {
 						continue
 					}
@@ -488,6 +493,9 @@ func parse(r io.Reader, h llm.Handlers, hosted map[string]bool) (*llm.Turn, erro
 				continue
 			}
 			for _, b := range ev.Message.Content {
+				if b.Type == "tool_result" {
+					steps.result(b.ToolUseID, b.IsError, resultText(b.Content))
+				}
 				if b.Type == "tool_result" && h.OnExternalToolResult != nil && !own(names[b.ToolUseID]) {
 					h.OnExternalToolResult(b.ToolUseID, names[b.ToolUseID], b.IsError, resultText(b.Content))
 				}
@@ -496,7 +504,7 @@ func parse(r io.Reader, h llm.Handlers, hosted map[string]bool) (*llm.Turn, erro
 			if ev.IsError || strings.HasPrefix(ev.Subtype, "error") {
 				return nil, resultError(ev)
 			}
-			turn := &llm.Turn{Text: text.String(), StopReason: "end_turn"}
+			turn := &llm.Turn{Text: text.String(), StopReason: "end_turn", Steps: steps.String()}
 			if turn.Text == "" {
 				turn.Text = ev.Result
 			}
@@ -510,6 +518,65 @@ func parse(r io.Reader, h llm.Handlers, hosted map[string]bool) (*llm.Turn, erro
 		}
 	}
 	return nil, sc.Err()
+}
+
+// stepLog writes down Claude Code's tool calls and the start of their results, so a model
+// picked after it knows what was read, run and found, not only Claude Code's final answer.
+type stepLog struct {
+	b     strings.Builder
+	calls map[string]string // tool_use id → "Name(args)" not yet written
+	order []string
+	cut   bool
+}
+
+const (
+	stepArgs   = 200   // characters of a tool call's input kept
+	stepResult = 600   // characters of a result kept
+	stepsMax   = 12000 // characters kept for a whole turn
+)
+
+func (l *stepLog) call(id, name, args string) {
+	if l.calls == nil {
+		l.calls = map[string]string{}
+	}
+	l.calls[id] = name + "(" + textutil.Truncate(args, stepArgs) + ")"
+	l.order = append(l.order, id)
+}
+
+func (l *stepLog) result(id string, isError bool, out string) {
+	c, ok := l.calls[id]
+	if !ok {
+		return
+	}
+	delete(l.calls, id)
+	label := "→ "
+	if isError {
+		label = "→ error: "
+	}
+	l.add("- " + c + "\n  " + label + strings.ReplaceAll(textutil.Truncate(out, stepResult), "\n", "\n  ") + "\n")
+}
+
+func (l *stepLog) add(s string) {
+	if l.cut {
+		return
+	}
+	if l.b.Len()+len(s) > stepsMax {
+		l.b.WriteString("- (later steps left out)\n")
+		l.cut = true
+		return
+	}
+	l.b.WriteString(s)
+}
+
+// String is the log, with calls that never got a result listed at the end.
+func (l *stepLog) String() string {
+	for _, id := range l.order {
+		if c, ok := l.calls[id]; ok {
+			delete(l.calls, id)
+			l.add("- " + c + "\n  → (no result)\n")
+		}
+	}
+	return strings.TrimSpace(l.b.String())
 }
 
 func emitText(h llm.Handlers, s string) {

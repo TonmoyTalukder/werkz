@@ -213,6 +213,7 @@ func shrinkForSummary(h []llm.Msg) []llm.Msg {
 		if m.Role == llm.RoleTool {
 			m.Text = clip(m.Text)
 		}
+		m.Steps = clip(m.Steps)
 		if len(m.ToolCalls) > 0 {
 			calls := make([]llm.ToolCall, len(m.ToolCalls))
 			for i, tc := range m.ToolCalls {

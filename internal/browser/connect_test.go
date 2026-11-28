@@ -88,7 +88,7 @@ func TestLaunchCommand(t *testing.T) {
 		t.Errorf("mac: %s", mac)
 	}
 	win := launchCommand("windows", "", `C:\Users\me\AppData\Roaming\werkz\chrome-connect`)
-	if win != `"C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 "--user-data-dir=C:\Users\me\AppData\Roaming\werkz\chrome-connect"` {
+	if win != `& "C:\Program Files\Google\Chrome\Application\chrome.exe" --remote-debugging-port=9222 "--user-data-dir=C:\Users\me\AppData\Roaming\werkz\chrome-connect"` {
 		t.Errorf("windows: %s", win)
 	}
 	if cmd := LaunchCommand(); !strings.Contains(cmd, "--remote-debugging-port=9222") || !strings.Contains(cmd, filepath.Join("werkz", "chrome-connect")) {

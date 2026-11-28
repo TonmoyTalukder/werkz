@@ -159,8 +159,8 @@ func (e *Engine) Run(ctx context.Context, userText string, settings config.Confi
 		}
 		// An empty reply (e.g. a refusal with no content) is not stored: an assistant message
 		// without content would make every later request fail.
-		if turn.Text != "" || len(turn.ToolCalls) > 0 {
-			e.appendHistory(llm.Msg{Role: llm.RoleAssistant, Text: turn.Text, ToolCalls: turn.ToolCalls, ClaudeRaw: turn.Raw, RespItems: turn.Items})
+		if turn.Text != "" || len(turn.ToolCalls) > 0 || turn.Steps != "" {
+			e.appendHistory(llm.Msg{Role: llm.RoleAssistant, Text: turn.Text, ToolCalls: turn.ToolCalls, ClaudeRaw: turn.Raw, RespItems: turn.Items, Steps: turn.Steps})
 		}
 		switch turn.StopReason {
 		case string(anthropic.BetaStopReasonRefusal):
@@ -276,6 +276,8 @@ func (e *Engine) attemptOnce(ctx context.Context, sys string, a attempt) (*llm.T
 		Fast: fast, TTL1h: e.cfg.TTL1h(), CacheKey: e.sessionID, Dirs: e.dirs(), Mode: e.mode(), Window: e.cfg.ContextWindow}
 	if a.provider == "claudecode" {
 		req.HostTools = e.hostToolDefs()
+	} else {
+		req.History = llm.WithSteps(req.History) // what Claude Code's own tools found, for this model
 	}
 	e.lastProvider = a.provider
 	reqStart := time.Now()

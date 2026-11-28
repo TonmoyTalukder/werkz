@@ -188,16 +188,23 @@ func (b *Browser) pollFrame(c *caster) {
 	tab := b.tab
 	b.mu.Unlock()
 	var data []byte
+	var vw, vh float64
 	if tab != nil {
 		ctx, cancel := context.WithTimeout(tab, 2*time.Second)
 		params := page.CaptureScreenshotParams{Format: page.CaptureScreenshotFormatJpeg, Quality: new(int64(80))}
 		if !c.jpeg {
 			params = page.CaptureScreenshotParams{Format: page.CaptureScreenshotFormatPng}
 		}
-		if b.viewportClip(ctx, &params) == nil {
-			if cl := params.Clip; cl != nil && cl.Width > 0 {
-				cl.Scale = min(1, float64(c.maxW)/cl.Width, float64(c.maxH)/max(cl.Height, 1))
+		if v, err := b.viewport(ctx); err == nil && v.w > 0 && v.h > 0 {
+			// One image pixel per CSS pixel at most, then down to the frame size limit, like the
+			// screencast's frames.
+			dpr := v.dpr
+			if dpr <= 0 {
+				dpr = 1
 			}
+			params.Clip = &page.Viewport{X: v.pageX, Y: v.pageY, Width: v.w, Height: v.h,
+				Scale: min(1, float64(c.maxW)/v.w, float64(c.maxH)/v.h) / dpr}
+			vw, vh = v.w, v.h
 			if res, err := chromedp.Call(ctx, page.CaptureScreenshot, params); err == nil {
 				data = res.Data
 			}
@@ -218,7 +225,7 @@ func (b *Browser) pollFrame(c *caster) {
 	}
 	c.mu.Unlock()
 	if len(data) > 0 && !same {
-		b.deliver(c, Frame{PNG: data})
+		b.deliver(c, Frame{PNG: data, ViewW: vw, ViewH: vh})
 	}
 }
 

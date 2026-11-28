@@ -5,6 +5,7 @@ package llm
 import (
 	"context"
 	"encoding/json"
+	"strings"
 
 	"github.com/anthropics/anthropic-sdk-go/v2"
 )
@@ -40,6 +41,49 @@ type Msg struct {
 	// RespItems are the exact Responses API output items (incl. encrypted reasoning) for faithful
 	// replay to the ChatGPT plan backend.
 	RespItems json.RawMessage
+	// Steps is what a backend that runs its own tools (Claude Code) did during this assistant
+	// turn: each tool and a short part of its result. Other models see it with the answer
+	// (WithSteps), so switching models mid-conversation keeps what was found.
+	Steps string `json:",omitempty"`
+}
+
+// Steps of the latest stepsFull assistant messages are passed on whole; older ones are cut to
+// stepsOld characters, so a long Claude Code session doesn't outgrow the next model's window.
+const (
+	stepsFull = 3
+	stepsOld  = 1000
+)
+
+// WithSteps returns h with each assistant message's Steps written into its text, for a model
+// that didn't run those steps itself. h is returned as is when no message has steps.
+func WithSteps(h []Msg) []Msg {
+	n := 0
+	for _, m := range h {
+		if m.Steps != "" && m.Role == RoleAssistant {
+			n++
+		}
+	}
+	if n == 0 {
+		return h
+	}
+	out := make([]Msg, len(h))
+	seen := 0
+	for i, m := range h {
+		if m.Steps != "" && m.Role == RoleAssistant {
+			seen++
+			steps := m.Steps
+			if n-seen >= stepsFull && len(steps) > stepsOld {
+				steps = strings.ToValidUTF8(steps[:stepsOld], "") + "\n- (rest of this turn's steps left out)"
+			}
+			text := "[Tools used in this turn by Claude Code, with the start of each result]\n" + steps
+			if m.Text != "" {
+				text += "\n\n" + m.Text
+			}
+			m.Text, m.Steps, m.ClaudeRaw, m.RespItems = text, "", nil, nil
+		}
+		out[i] = m
+	}
+	return out
 }
 
 type Usage struct {
@@ -61,6 +105,8 @@ type Turn struct {
 	// Note is something the user should know about how the answer was produced
 	// (e.g. the model can't use tools, so it answered without them).
 	Note string
+	// Steps is what the backend's own tools did in this turn (see Msg.Steps).
+	Steps string
 }
 
 type Handlers struct {

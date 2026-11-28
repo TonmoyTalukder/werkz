@@ -84,6 +84,10 @@ func TestStreamShowsClaudeCodeWork(t *testing.T) {
 	if turn.Usage.CacheRead != 5100 || turn.Usage.Out != 38 || turn.Usage.CostUSD != 0 {
 		t.Fatalf("usage: %+v", turn.Usage)
 	}
+	// What its tools found is kept, for a model picked after Claude Code.
+	if !strings.Contains(turn.Steps, `- Read({"file_path":"/w/main.go"})`) || !strings.Contains(turn.Steps, "→ package main") {
+		t.Fatalf("steps: %q", turn.Steps)
+	}
 	env, _ := os.ReadFile(filepath.Join(dir, "env"))
 	if strings.TrimSpace(string(env)) != "key=unset" {
 		t.Fatalf("ANTHROPIC_API_KEY must not reach Claude Code (it would bill the key): %s", env)
@@ -284,5 +288,26 @@ func TestHostedToolsNotShownTwice(t *testing.T) {
 	}
 	if len(shown) != 1 || shown[0] != "Bash" || len(results) != 1 || results[0] != "Bash" {
 		t.Fatalf("shown %v, results %v", shown, results)
+	}
+}
+
+func TestStepLogLimits(t *testing.T) {
+	var l stepLog
+	l.call("a", "Bash", `{"command":"go test"}`)
+	l.result("a", true, "FAIL\nexit 1")
+	l.call("b", "Read", `{"path":"x"}`)
+	l.result("zzz", false, "unknown id is ignored")
+	got := l.String()
+	if !strings.Contains(got, "→ error: FAIL\n  exit 1") || !strings.Contains(got, "- Read({\"path\":\"x\"})\n  → (no result)") {
+		t.Fatalf("log:\n%s", got)
+	}
+	var big stepLog
+	for i := range 100 {
+		id := string(rune('a'+i%26)) + strings.Repeat("x", i)
+		big.call(id, "Read", "{}")
+		big.result(id, false, strings.Repeat("y", 1000))
+	}
+	if s := big.String(); len(s) > stepsMax+100 || !strings.HasSuffix(s, "(later steps left out)") {
+		t.Fatalf("big log: %d chars, ends %q", len(s), s[len(s)-40:])
 	}
 }
