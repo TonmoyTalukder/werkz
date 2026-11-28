@@ -8,6 +8,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"html"
@@ -79,6 +80,7 @@ func build(root, out string) error {
 		goldmark.WithRendererOptions(ghtml.WithUnsafe()),
 	)
 	pageT := template.Must(template.New("doc").Parse(docTemplate))
+	var index []searchEntry
 	if err := os.MkdirAll(filepath.Join(out, "docs"), 0o755); err != nil {
 		return err
 	}
@@ -96,6 +98,7 @@ func build(root, out string) error {
 			return fmt.Errorf("%s: %w", d.Slug, err)
 		}
 		content, title, toc := polish(body.String(), d.Title)
+		index = append(index, docEntries("docs/"+d.Slug+".html", title, content)...)
 		p := docPage{Doc: d, Title: title, Content: template.HTML(content), TOC: toc, Docs: docs, Nav: navLinks(d.Slug)}
 		if i > 0 {
 			p.Prev = &docs[i-1]
@@ -123,6 +126,11 @@ func build(root, out string) error {
 	landing := filepath.Join(out, "index.html")
 	b, err := os.ReadFile(landing)
 	if err != nil {
+		return err
+	}
+	index = append(landingEntries(string(b)), index...)
+	index = append(index, releaseEntries(rels)...)
+	if err := writeIndex(filepath.Join(out, "search.json"), index); err != nil {
 		return err
 	}
 	s := strings.Replace(string(b), "<!-- DOCS-LIST -->", docList("docs/"), 1)
@@ -185,6 +193,7 @@ func polish(body, fallback string) (content, title string, toc []tocEntry) {
 		}
 		return fmt.Sprintf(`<h%s id="%s">%s<a class="anchor" href="#%s" aria-label="Link to this section">#</a></h%s>`, m[1], m[2], m[3], m[2], m[1])
 	})
+	body = rowIDs(body)
 	body = hrefRe.ReplaceAllStringFunc(body, func(a string) string {
 		u := hrefRe.FindStringSubmatch(a)[1]
 		return `href="` + rewriteLink(u) + `"`
@@ -305,8 +314,12 @@ func releaseTree(rels []release, limit int, open bool) string {
 		if i == 0 {
 			latest = `<span class="latest caps">Latest</span>`
 		}
-		fmt.Fprintf(&b, "\n  <li class=\"release\"><details%s><summary><span class=\"ver\">v%s</span>%s<time datetime=\"%s\">%s</time></summary>",
-			attr, html.EscapeString(r.Version), latest, r.Date, r.Date)
+		id := ""
+		if open { // the release notes page: search results link to each release
+			id = ` id="v` + html.EscapeString(r.Version) + `"`
+		}
+		fmt.Fprintf(&b, "\n  <li class=\"release\"%s><details%s><summary><span class=\"ver\">v%s</span>%s<time datetime=\"%s\">%s</time></summary>",
+			id, attr, html.EscapeString(r.Version), latest, r.Date, r.Date)
 		if len(r.Groups) == 0 {
 			b.WriteString(`<p class="quiet">Maintenance release: packaging and documentation.</p>`)
 		}
@@ -349,6 +362,162 @@ func git(root string, args ...string) (string, error) {
 		return "", fmt.Errorf("git %s: %w", strings.Join(args, " "), err)
 	}
 	return string(b), nil
+}
+
+// ---------------------------------------------------------------- search index
+
+// searchEntry is one place the site's search can take you to: a section of a page.
+type searchEntry struct {
+	Page    string `json:"p"`           // the page's title
+	Section string `json:"s,omitempty"` // the section's heading ("" = the top of the page)
+	URL     string `json:"u"`           // relative to the site's root
+	Text    string `json:"x"`           // the section's words
+}
+
+var (
+	anyHeadingRe = regexp.MustCompile(`<h([23]) id="([^"]+)">(.*?)<a class="anchor"`)
+	dropRe       = regexp.MustCompile(`(?s)<(svg|script|style|template)\b.*?</(svg|script|style|template)>`)
+	sectionRe    = regexp.MustCompile(`(?s)<section\b[^>]*\bid="([^"]+)"[^>]*>(.*?)</section>`)
+	h2Re         = regexp.MustCompile(`(?s)<h2\b[^>]*>(.*?)</h2>`)
+	spaceRe      = regexp.MustCompile(`\s+`)
+)
+
+// plain turns HTML into its words.
+func plain(h string) string {
+	h = dropRe.ReplaceAllString(h, " ")
+	h = tagRe.ReplaceAllString(h, " ")
+	return strings.TrimSpace(spaceRe.ReplaceAllString(html.UnescapeString(h), " "))
+}
+
+// docEntries splits a rendered page at its h2 and h3 headings.
+func docEntries(url, title, content string) []searchEntry {
+	var out []searchEntry
+	locs := anyHeadingRe.FindAllStringSubmatchIndex(content, -1)
+	if intro := content; len(locs) > 0 {
+		intro = content[:locs[0][0]]
+		if t := plain(intro); t != "" {
+			out = append(out, searchEntry{Page: title, URL: url, Text: t})
+		}
+	} else if t := plain(intro); t != "" {
+		out = append(out, searchEntry{Page: title, URL: url, Text: t})
+	}
+	for i, l := range locs {
+		end := len(content)
+		if i+1 < len(locs) {
+			end = locs[i+1][0]
+		}
+		id, head := content[l[4]:l[5]], plain(content[l[6]:l[7]])
+		body := content[l[1]:end]
+		if j := strings.Index(body, "</h"); j >= 0 {
+			body = body[j:]
+		}
+		out = append(out, searchEntry{Page: title, Section: head, URL: url + "#" + id, Text: plain(body)})
+		out = append(out, rowEntries(title, head, url+"#"+id, body)...)
+	}
+	if len(locs) == 0 {
+		out = append(out, rowEntries(title, "", url, content)...)
+	}
+	return out
+}
+
+var (
+	rowRe  = regexp.MustCompile(`(?s)<tbody>(.*?)</tbody>`)
+	trRe   = regexp.MustCompile(`(?s)<tr(?: id="([^"]+)")?>(.*?)</tr>`)
+	cellRe = regexp.MustCompile(`(?s)<td[^>]*>(.*?)</td>`)
+)
+
+// rowEntries makes each row of a section's tables an entry of its own (Troubleshooting is one big
+// table), linked to the row's id (see rowIDs).
+func rowEntries(page, head, url, body string) []searchEntry {
+	var out []searchEntry
+	base, _, _ := strings.Cut(url, "#")
+	for _, tb := range rowRe.FindAllStringSubmatch(body, -1) {
+		for _, tr := range trRe.FindAllStringSubmatch(tb[1], -1) {
+			cells := cellRe.FindAllStringSubmatch(tr[2], -1)
+			if tr[1] == "" || len(cells) < 2 {
+				continue
+			}
+			sec := plain(cells[0][1])
+			if head != "" {
+				sec = head + " › " + sec
+			}
+			out = append(out, searchEntry{Page: page, Section: sec, URL: base + "#" + tr[1], Text: plain(tr[2])})
+		}
+	}
+	return out
+}
+
+var (
+	slugRe   = regexp.MustCompile(`[^a-z0-9]+`)
+	rowCelRe = regexp.MustCompile(`(?s)<tr>(\s*<td[^>]*>(.*?)</td>)`)
+)
+
+// rowIDs gives each table body row an id made from its first cell, so a link can point at it.
+func rowIDs(body string) string {
+	seen := map[string]int{}
+	return rowRe.ReplaceAllStringFunc(body, func(tb string) string {
+		return rowCelRe.ReplaceAllStringFunc(tb, func(tr string) string {
+			m := rowCelRe.FindStringSubmatch(tr)
+			id := strings.Trim(slugRe.ReplaceAllString(strings.ToLower(plain(m[2])), "-"), "-")
+			if len([]rune(id)) > 60 {
+				id = strings.TrimRight(string([]rune(id)[:60]), "-")
+			}
+			if id == "" {
+				return tr
+			}
+			id = "row-" + id
+			if n := seen[id]; n > 0 {
+				seen[id] = n + 1
+				id = fmt.Sprintf("%s-%d", id, n+1)
+			} else {
+				seen[id] = 1
+			}
+			return `<tr id="` + id + `">` + m[1]
+		})
+	})
+}
+
+// landingEntries takes the home page's sections; its documentation list and release notes are
+// found through their own pages.
+func landingEntries(page string) []searchEntry {
+	var out []searchEntry
+	for _, m := range sectionRe.FindAllStringSubmatch(page, -1) {
+		id, body := m[1], m[2]
+		if id == "docs" || id == "releases" {
+			continue
+		}
+		head := "werkz"
+		if h := h2Re.FindStringSubmatch(body); h != nil {
+			head = plain(h[1])
+		}
+		out = append(out, searchEntry{Page: "Home", Section: head, URL: "#" + id, Text: plain(body)})
+	}
+	return out
+}
+
+func releaseEntries(rels []release) []searchEntry {
+	var out []searchEntry
+	for _, r := range rels {
+		var t []string
+		for _, g := range r.Groups {
+			t = append(t, g.Label+":")
+			t = append(t, g.Items...)
+		}
+		if len(t) == 0 {
+			t = []string{"Maintenance release: packaging and documentation."}
+		}
+		out = append(out, searchEntry{Page: "Release notes", Section: "v" + r.Version + " · " + r.Date,
+			URL: "docs/releases.html#v" + r.Version, Text: strings.Join(t, " ")})
+	}
+	return out
+}
+
+func writeIndex(path string, entries []searchEntry) error {
+	b, err := json.Marshal(entries)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, b, 0o644)
 }
 
 // ---------------------------------------------------------------- files
@@ -409,6 +578,7 @@ const docTemplate = `<!doctype html>
   <symbol id="i-github" viewBox="0 0 16 16"><path fill="currentColor" d="` + githubPath + `"/></symbol>
   <symbol id="i-sun" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></g></symbol>
   <symbol id="i-moon" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/></g></symbol>
   <symbol id="i-menu" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></symbol>
   <symbol id="i-copy" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6.5A2.5 2.5 0 0 0 13.5 4h-7A2.5 2.5 0 0 0 4 6.5v7A2.5 2.5 0 0 0 6.5 16H8"/></g></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
@@ -420,6 +590,7 @@ const docTemplate = `<!doctype html>
       <a href="{{.Href}}"{{if .Current}} aria-current="page"{{end}}>{{.Label}}</a>{{end}}
     </nav>
     <div class="top-actions">
+      <button class="icon-btn search-btn" type="button" aria-haspopup="dialog" aria-label="Search the site and docs"><svg class="icon" aria-hidden="true"><use href="#i-search"/></svg><span class="search-label">Search</span><kbd class="search-key" aria-hidden="true">/</kbd></button>
       <button class="icon-btn theme-toggle" type="button" aria-label="Switch between light and dark theme"><svg class="icon sun" aria-hidden="true"><use href="#i-sun"/></svg><svg class="icon moon" aria-hidden="true"><use href="#i-moon"/></svg></button>
       <a class="icon-btn" href="https://github.com/TonmoyTalukder/werkz" aria-label="werkz on GitHub"><svg class="icon" aria-hidden="true"><use href="#i-github"/></svg><span class="gh-label">GitHub</span></a>
       <button class="icon-btn menu-toggle" type="button" aria-expanded="false" aria-controls="topnav" aria-label="Menu"><svg class="icon" aria-hidden="true"><use href="#i-menu"/></svg></button>

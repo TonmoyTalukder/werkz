@@ -335,3 +335,178 @@
     if (visible) { place(); demo.classList.add("on"); } else demo.classList.remove("on");
   }, { threshold: 0.25 }).observe(demo);
 })();
+
+// Search: every section of the site, the docs and the release notes (search.json, made by
+// tools/sitegen). Loaded on first use; "/" or Ctrl/⌘+K opens it from anywhere.
+(() => {
+  const btn = document.querySelector(".search-btn");
+  if (!btn) return;
+  const base = new URL(".", document.currentScript?.src || location.href.replace(/docs\/[^/]*$/, ""));
+  const mac = /Mac|iPhone|iPad/.test(navigator.platform);
+  let entries = null, loading = null, results = [], active = -1;
+
+  const dlg = document.createElement("dialog");
+  dlg.className = "search";
+  dlg.setAttribute("aria-label", "Search");
+  dlg.innerHTML = `
+    <div class="search-box">
+      <svg class="icon" aria-hidden="true"><use href="#i-search"/></svg>
+      <input type="search" role="combobox" aria-expanded="true" aria-controls="search-results" aria-autocomplete="list"
+        placeholder="Search the docs, commands, settings, releases…" autocomplete="off" spellcheck="false" enterkeyhint="go">
+      <button type="button" class="search-close" aria-label="Close search"><kbd>Esc</kbd></button>
+    </div>
+    <ul class="search-results" id="search-results" role="listbox" aria-label="Results"></ul>
+    <p class="search-foot" aria-hidden="true"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>Enter</kbd> open</span><span><kbd>Esc</kbd> close</span></p>`;
+  document.body.append(dlg);
+  const input = dlg.querySelector("input");
+  const list = dlg.querySelector(".search-results");
+  const status = document.createElement("p");
+  status.className = "search-status";
+  status.setAttribute("role", "status");
+  list.before(status);
+  btn.querySelector(".search-key")?.replaceChildren(mac ? "⌘K" : "/");
+
+  const norm = (s) => s.toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g, "");
+  const load = () => loading ||= fetch(new URL("search.json", base))
+    .then((r) => { if (!r.ok) throw new Error(r.status); return r.json(); })
+    .then((d) => { entries = d.map((e) => ({ ...e, ns: norm(e.s || ""), np: norm(e.p), nx: norm(e.x) })); render(); })
+    .catch(() => { loading = null; status.textContent = "Search couldn't load. Check your connection and try again."; });
+
+  const open = () => {
+    if (!dlg.open) dlg.showModal();
+    input.select();
+    load();
+    render();
+  };
+  const close = () => dlg.open && dlg.close();
+  btn.addEventListener("click", open);
+  btn.addEventListener("pointerenter", load, { once: true });
+  dlg.querySelector(".search-close").addEventListener("click", close);
+  dlg.addEventListener("click", (e) => { if (e.target === dlg) close(); }); // the backdrop
+  document.addEventListener("keydown", (e) => {
+    const ae = document.activeElement;
+    // typing in a field of the page, or in the open search box (a closed one may keep focus)
+    const typing = dlg.contains(ae) ? dlg.open : /^(INPUT|TEXTAREA|SELECT)$/.test(ae?.tagName) || ae?.isContentEditable;
+    if ((e.key === "k" && (e.metaKey || e.ctrlKey)) || (e.key === "/" && !typing && !e.metaKey && !e.ctrlKey && !e.altKey)) {
+      e.preventDefault();
+      open();
+    }
+  });
+
+  // Every word must appear; a heading counts far more than the text under it, a whole phrase
+  // more than its words apart, a word's start more than its middle.
+  const score = (e, terms, phrase) => {
+    let s = 0;
+    for (const t of terms) {
+      const inS = e.ns.indexOf(t), inP = e.np.indexOf(t), inX = e.nx.indexOf(t);
+      if (inS < 0 && inP < 0 && inX < 0) return 0;
+      if (inS >= 0) s += 12 + (inS === 0 || /\W/.test(e.ns[inS - 1]) ? 6 : 0);
+      if (inP >= 0) s += 4;
+      if (inX >= 0) {
+        let n = 0;
+        for (let i = inX; i >= 0 && n < 6; i = e.nx.indexOf(t, i + t.length)) n++;
+        s += n + (inX === 0 || /\W/.test(e.nx[inX - 1]) ? 2 : 0);
+      }
+    }
+    if (terms.length > 1) {
+      if (e.ns.includes(phrase)) s += 25;
+      else if (e.nx.includes(phrase)) s += 10;
+    }
+    if (!e.s) s -= 1; // a page's top only when nothing more precise matches as well
+    return s;
+  };
+
+  // mark puts the query's words in <mark>, building nodes (the text is never parsed as HTML).
+  const mark = (el, text, terms) => {
+    const nt = norm(text);
+    const hits = [];
+    for (const t of terms) for (let i = nt.indexOf(t); i >= 0; i = nt.indexOf(t, i + t.length)) hits.push([i, i + t.length]);
+    hits.sort((a, b) => a[0] - b[0]);
+    let at = 0;
+    for (const [a, b] of hits) {
+      if (a < at) continue;
+      el.append(text.slice(at, a));
+      const m = document.createElement("mark");
+      m.textContent = text.slice(a, b);
+      el.append(m);
+      at = b;
+    }
+    el.append(text.slice(at));
+  };
+
+  const snippet = (e, terms) => {
+    const first = Math.min(...terms.map((t) => e.nx.indexOf(t)).filter((i) => i >= 0));
+    if (!isFinite(first)) return e.x.slice(0, 150) + (e.x.length > 150 ? "…" : "");
+    let a = Math.max(0, first - 50);
+    if (a > 0) a = e.x.indexOf(" ", a) + 1 || a;
+    const b = Math.min(e.x.length, a + 160);
+    return (a > 0 ? "…" : "") + e.x.slice(a, b) + (b < e.x.length ? "…" : "");
+  };
+
+  const go = (r) => {
+    const url = new URL(r.u, base);
+    close();
+    if (url.pathname === location.pathname && url.hash && !url.hash.includes(":~:")) {
+      location.hash = url.hash;
+      document.getElementById(decodeURIComponent(url.hash.slice(1)))?.scrollIntoView({ block: "start" });
+    } else location.href = url.href;
+  };
+
+  const setActive = (i) => {
+    const items = list.children;
+    if (!items.length) { active = -1; input.removeAttribute("aria-activedescendant"); return; }
+    active = (i + items.length) % items.length;
+    for (const [n, li] of [...items].entries()) li.setAttribute("aria-selected", String(n === active));
+    input.setAttribute("aria-activedescendant", items[active].id);
+    items[active].scrollIntoView({ block: "nearest" });
+  };
+
+  function render() {
+    const q = input.value.trim();
+    list.replaceChildren();
+    results = [];
+    if (!q) {
+      status.textContent = entries ? "Type to search everything on the site: docs, commands, settings, release notes." : "Loading…";
+      return;
+    }
+    if (!entries) { status.textContent = "Loading…"; return; }
+    const phrase = norm(q).replace(/\s+/g, " ");
+    const terms = [...new Set(phrase.split(" ").filter(Boolean))];
+    results = entries.map((e) => [score(e, terms, phrase), e]).filter(([s]) => s > 0)
+      .sort((a, b) => b[0] - a[0]).slice(0, 20).map(([, e]) => e);
+    status.textContent = results.length ? `${results.length === 20 ? "Top 20" : results.length} result${results.length === 1 ? "" : "s"}`
+      : `Nothing found for “${q}”. Try fewer or different words.`;
+    results.forEach((r, i) => {
+      const li = document.createElement("li");
+      li.id = "sr-" + i;
+      li.setAttribute("role", "option");
+      const a = document.createElement("a");
+      a.href = new URL(r.u, base).href;
+      a.tabIndex = -1;
+      const where = document.createElement("small");
+      where.className = "sr-page";
+      where.textContent = r.p;
+      const head = document.createElement("b");
+      mark(head, r.s || r.p, terms);
+      const text = document.createElement("span");
+      mark(text, snippet(r, terms), terms);
+      a.append(where, head, text);
+      a.addEventListener("click", (e) => { if (!e.metaKey && !e.ctrlKey && !e.shiftKey) { e.preventDefault(); go(r); } });
+      li.append(a);
+      li.addEventListener("pointermove", () => active !== i && setActive(i));
+      list.append(li);
+    });
+    setActive(0);
+  }
+
+  input.addEventListener("input", render);
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown") { e.preventDefault(); setActive(active + 1); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setActive(active - 1); }
+    else if (e.key === "Enter" && results[active]) {
+      e.preventDefault();
+      if (e.metaKey || e.ctrlKey) window.open(new URL(results[active].u, base).href, "_blank", "noopener");
+      else go(results[active]);
+    }
+  });
+})();
