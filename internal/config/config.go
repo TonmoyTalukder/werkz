@@ -59,6 +59,10 @@ var Providers = []ProviderInfo{
 		NeedsKey: true, Free: true},
 	{ID: "groq", Name: "Groq (free tier)", EnvVar: "GROQ_API_KEY", BaseURL: "https://api.groq.com/openai/v1",
 		DefaultModel: "llama-3.3-70b-versatile", KeyHint: "gsk_…", SignupURL: "console.groq.com/keys", NeedsKey: true, Free: true},
+	// OpenCode Zen's hosted models. Its free models answer only inside the OpenCode app, so werkz
+	// lists the paid ones.
+	{ID: "opencode", Name: "OpenCode Zen", EnvVar: "OPENCODE_API_KEY", BaseURL: "https://opencode.ai/inference/openai/v1",
+		DefaultModel: "deepseek-v4.1-flash", KeyHint: "oc_sk_…", SignupURL: "opencode.ai/console", NeedsKey: true},
 	{ID: "ollama", Name: "Ollama (local, offline)", EnvVar: "OLLAMA_HOST", BaseURL: "http://localhost:11434/v1",
 		DefaultModel: "llama3.2", KeyHint: "http://localhost:11434 (optional)", SignupURL: "ollama.com/download", Free: true},
 	{ID: "chatgpt", Name: "ChatGPT plan", BaseURL: "https://api.openai.com/v1", DefaultModel: "gpt-6.2-sol",
@@ -163,12 +167,13 @@ const (
 
 // DefaultFallbackOrder tries free and local providers before paid ones.
 // Subscriptions come next: they don't cost extra per request.
-var DefaultFallbackOrder = []string{"gemini", "openrouter", "groq", "ollama", "chatgpt", "claudecode", "anthropic", "openai", "xai"}
+var DefaultFallbackOrder = []string{"gemini", "openrouter", "groq", "ollama", "chatgpt", "claudecode", "anthropic", "openai", "xai", "opencode"}
 
 // Earlier defaults, migrated to the current one (a custom order is kept).
 var (
 	oldDefaultOrder  = []string{"anthropic", "openai", "xai", "gemini", "openrouter", "groq", "ollama"}
 	prevDefaultOrder = []string{"gemini", "openrouter", "groq", "ollama", "anthropic", "openai", "xai"}
+	lastDefaultOrder = []string{"gemini", "openrouter", "groq", "ollama", "chatgpt", "claudecode", "anthropic", "openai", "xai"}
 )
 
 // Fallback modes (Config.FallbackMode).
@@ -256,7 +261,8 @@ func Load() *Config {
 	}
 	// Free options first: a failure (most often a free-tier rate limit) shouldn't escalate
 	// straight to the most expensive models. The old default is migrated; a custom order stays.
-	if len(c.FallbackOrder) == 0 || slices.Equal(c.FallbackOrder, oldDefaultOrder) || slices.Equal(c.FallbackOrder, prevDefaultOrder) {
+	if len(c.FallbackOrder) == 0 || slices.Equal(c.FallbackOrder, oldDefaultOrder) || slices.Equal(c.FallbackOrder, prevDefaultOrder) ||
+		slices.Equal(c.FallbackOrder, lastDefaultOrder) {
 		c.FallbackOrder = slices.Clone(DefaultFallbackOrder)
 	}
 	// Prompt-free modes are per session: a new session (maybe in a freshly cloned, untrusted

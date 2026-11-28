@@ -1,5 +1,5 @@
 // Package openai is the backend for OpenAI-compatible chat-completions APIs
-// (OpenAI, xAI, Gemini, OpenRouter, Groq, Ollama).
+// (OpenAI, xAI, Gemini, OpenRouter, Groq, Ollama, OpenCode Zen).
 package openai
 
 import (
@@ -23,7 +23,7 @@ import (
 )
 
 // OpenAICompat talks to any OpenAI-style /chat/completions endpoint
-// (OpenAI, xAI Grok, Gemini, OpenRouter, Groq, Ollama).
+// (OpenAI, xAI Grok, Gemini, OpenRouter, Groq, Ollama, OpenCode Zen).
 type Client struct {
 	ID, BaseURL, Key string
 	IncludePaid      bool // OpenRouter: list paid models too (default: only free ones)
@@ -340,6 +340,12 @@ func (o *Client) ListModels(ctx context.Context) ([]catalog.ModelInfo, error) {
 			ID            string     `json:"id"`
 			ContextLength int        `json:"context_length"`
 			Pricing       *orPricing `json:"pricing"`
+			// OpenCode Zen
+			Type  string  `json:"type"`
+			Cost  *ocCost `json:"cost"`
+			Limit struct {
+				Context int `json:"context"`
+			} `json:"limit"`
 		} `json:"data"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&lr); err != nil {
@@ -359,7 +365,15 @@ func (o *Client) ListModels(ctx context.Context) ([]catalog.ModelInfo, error) {
 		if d.ContextLength > 0 {
 			mi.Context = d.ContextLength
 		}
-		if o.ID == "openrouter" {
+		if o.ID == "opencode" {
+			if d.Type != "" && d.Type != "chat" || d.Cost.free() {
+				continue // free models answer only inside the OpenCode app
+			}
+			if d.Limit.Context > 0 {
+				mi.Context = d.Limit.Context
+			}
+			mi.In, mi.Out, mi.CacheReadX = d.Cost.prices()
+		} else if o.ID == "openrouter" {
 			pin, pout := d.Pricing.prices()
 			in, outp := perMillion(pin, pout)
 			mi.Free = pin == "0" && pout == "0" // exactly free; "-1" means variable price, not free
@@ -380,6 +394,37 @@ func (o *Client) ListModels(ctx context.Context) ([]catalog.ModelInfo, error) {
 		return out[i].ID < out[j].ID
 	})
 	return out, nil
+}
+
+// ocCost is OpenCode Zen's price list for a model, in USD per 1M tokens.
+type ocCost struct {
+	Text struct {
+		Input struct {
+			Price float64 `json:"price"`
+			Cache struct {
+				Read float64 `json:"read"`
+			} `json:"cache"`
+		} `json:"input"`
+		Output struct {
+			Price float64 `json:"price"`
+		} `json:"output"`
+	} `json:"text"`
+}
+
+func (c *ocCost) free() bool {
+	return c != nil && c.Text.Input.Price == 0 && c.Text.Output.Price == 0
+}
+
+// prices returns input and output prices and the cache-read price as a fraction of input.
+func (c *ocCost) prices() (in, out, cacheX float64) {
+	if c == nil {
+		return 0, 0, 0
+	}
+	in, out = c.Text.Input.Price, c.Text.Output.Price
+	if in > 0 && c.Text.Input.Cache.Read > 0 {
+		cacheX = c.Text.Input.Cache.Read / in
+	}
+	return in, out, cacheX
 }
 
 type orPricing struct {

@@ -8,12 +8,17 @@
 | **Google Gemini** | free tier* | [aistudio.google.com](https://aistudio.google.com/apikey) | `GEMINI_API_KEY` |
 | **OpenRouter** | `:free` models; paid models optional | [openrouter.ai/keys](https://openrouter.ai/keys) | `OPENROUTER_API_KEY` |
 | **Groq** | free tier* | [console.groq.com](https://console.groq.com/keys) | `GROQ_API_KEY` |
+| **OpenCode Zen** | paid | [opencode.ai/console](https://opencode.ai/console) | `OPENCODE_API_KEY` |
 | **Ollama** | free, local, offline | [ollama.com](https://ollama.com/download) (no key) | `OLLAMA_HOST` |
 | **ChatGPT plan** | your ChatGPT subscription | `/login chatgpt` (browser sign-in, no key) | |
 | **Claude Code** | your Claude subscription | install [Claude Code](https://code.claude.com) and sign in to it | |
 
 \* Gemini and Groq are free only while the key's project has no billing, so werkz labels their models
 "free tier". OpenRouter's `:free` models are labelled "free", and Ollama "local".
+
+**OpenCode Zen** is [OpenCode](https://opencode.ai)'s hosted models (Claude, GPT, Gemini, Kimi, DeepSeek, GLM,
+Qwen and more) under one key. `/model` lists its models with their prices, which werkz reads from OpenCode.
+OpenCode's free models aren't listed: OpenCode lets them answer only inside its own app.
 
 Add or change keys at any time with `/login` (or `werkz --login`). Keys are checked when you save them.
 

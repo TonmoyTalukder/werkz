@@ -5,7 +5,7 @@
 | [Installation](installation.md) | One-line installer, Homebrew, apt and dnf repositories, package files, `go install`, updating and uninstalling |
 | [Getting started](getting-started.md) | First run, connecting a provider, your first task, approving changes |
 | [Usage](usage.md) | Slash commands, shortcuts and flags; `@` file mentions; copying; saved conversations; web access; the browser (and your own Chrome); MCP servers; the tools werkz uses |
-| [Providers and models](providers-and-models.md) | Claude, OpenAI, Grok, Gemini, OpenRouter (free and paid), Groq, Ollama; your ChatGPT plan and Claude subscription; usage limits; effort and fast mode |
+| [Providers and models](providers-and-models.md) | Claude, OpenAI, Grok, Gemini, OpenRouter (free and paid), Groq, OpenCode Zen, Ollama; your ChatGPT plan and Claude subscription; usage limits; effort and fast mode |
 | [Safety and privacy](safety.md) | Permission modes (including Bypass), the rules that always apply, where your data goes |
 | [Fallback](fallback.md) | What happens when a model fails: off, ask or auto, and choosing fallback models |
 | [Workspaces](workspaces.md) | Working across several repositories at once |

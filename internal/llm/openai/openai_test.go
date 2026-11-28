@@ -156,3 +156,26 @@ func TestRejectedOptionsRemembered(t *testing.T) {
 		t.Fatalf("rejected fields sent again: %v", bodies[2])
 	}
 }
+
+// OpenCode Zen lists prices per 1M tokens; its free models answer only inside the OpenCode app,
+// and image or embedding models can't chat, so werkz leaves those out.
+func TestOpenCodeModels(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = io.WriteString(w, `{"object":"list","data":[
+			{"id":"big-pickle","type":"chat","limit":{"context":200000},"cost":{"text":{"input":{"price":0},"output":{"price":0}}}},
+			{"id":"kimi-k3","type":"chat","limit":{"context":1048576},"cost":{"text":{"input":{"price":2,"cache":{"read":0.5}},"output":{"price":8}}}},
+			{"id":"some-image-model","type":"image","cost":{"text":{"input":{"price":1},"output":{"price":1}}}}]}`)
+	}))
+	defer srv.Close()
+	ms, err := (&Client{ID: "opencode", BaseURL: srv.URL}).ListModels(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ms) != 1 || ms[0].ID != "kimi-k3" {
+		t.Fatalf("models = %+v", ms)
+	}
+	m := ms[0]
+	if m.Free || m.In != 2 || m.Out != 8 || m.CacheReadX != 0.25 || m.Context != 1048576 {
+		t.Fatalf("kimi-k3 = %+v", m)
+	}
+}

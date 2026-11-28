@@ -13,7 +13,7 @@ can be changed from inside werkz, so you rarely need to edit it by hand.
 
 | Variable | Purpose |
 |---|---|
-| `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `XAI_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, `GROQ_API_KEY` | API keys; used when no key is saved for that provider |
+| `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `XAI_API_KEY`, `GEMINI_API_KEY`, `OPENROUTER_API_KEY`, `GROQ_API_KEY`, `OPENCODE_API_KEY` | API keys; used when no key is saved for that provider |
 | `OLLAMA_HOST` | Ollama address (default `http://localhost:11434`; `host:port` without a scheme also works) |
 | `WERKZ_THEME=light` | Use light-background styles |
 | `WERKZ_TERMINAL` | Terminal used by the Linux desktop icon (`kitty`, `alacritty`, `gnome-terminal`, …) |

@@ -15,7 +15,8 @@ Choosing **Ask** or **Auto** in `/fallback` opens a chooser: press **Space** to 
 numbers show the order they're tried. `/fallback models` edits the list later, and `/fallback status` shows it.
 
 Without a list, werkz uses one model per connected provider, free ones first: Gemini, OpenRouter, Groq,
-Ollama, then Claude, OpenAI and Grok (`/fallback gemini,ollama` changes that order).
+Ollama, then your ChatGPT plan and Claude Code, then Claude, OpenAI, Grok and OpenCode Zen
+(`/fallback gemini,ollama` changes that order).
 
 ## Behaviour
 

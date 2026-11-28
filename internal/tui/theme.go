@@ -49,7 +49,7 @@ var (
 
 var providerColor = map[string]string{
 	"anthropic": "#D97757", "openai": "#10A37F", "xai": "#E5E7EB", "gemini": "#4C8BF5",
-	"openrouter": cViolet, "groq": "#F55036", "ollama": "#FFFFFF",
+	"openrouter": cViolet, "groq": "#F55036", "ollama": "#FFFFFF", "opencode": "#FAB283",
 }
 
 func providerBadge(id string) string {
