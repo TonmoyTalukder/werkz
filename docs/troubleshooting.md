@@ -4,7 +4,7 @@
 |---|---|
 | *"No provider available"* | Add a key with `/login`, or start Ollama (`ollama serve`) |
 | *"rate limited"* on a free model | Free tiers allow only a few requests per minute. Wait a moment, pick another model with `/model`, or turn on [fallback](fallback.md) |
-| *"model not found"* or *"unavailable for free"* | That model isn't available to your key (OpenRouter withdraws free models from time to time). Choose one from `/model` |
+| *"model not found"* or *"unavailable for free"* | That model isn't available to your key: werkz shows the provider's own reason after it (OpenRouter withdraws free models from time to time; Google retires Gemini models for new keys). Choose one from `/model` |
 | *"out of API credits"* | Top up in your provider's console, then run `/login` so werkz uses the provider again. Claude credit is managed at platform.claude.com |
 | *"… can't use tools"* | That model can't call tools, so it can't read or change files. Choose a tool-capable model with `/model` for coding work |
 | *"fallback is off"* | The model failed and fallback is off (the default). Switch model with `/model`, or choose a mode with `/fallback` |
