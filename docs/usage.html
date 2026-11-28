@@ -334,11 +334,24 @@ when needed.</li>
 </ul>
 <h3 id="using-your-own-chrome">Using your own Chrome<a class="anchor" href="#using-your-own-chrome" aria-label="Link to this section">#</a></h3>
 <p>By default werkz uses its own browser profile, signed in to nothing. To let it work on sites where you are
-signed in (a staging admin, a dashboard), connect it to your own Chrome for the session:</p>
+signed in (a staging admin, a dashboard), connect it to the Chrome you already have open:</p>
 <ol>
-<li>
-<p>Start Chrome with a debugging port. <code>/browser connect</code> shows the exact command for your system (and copies
-it to your clipboard). With Google Chrome installed in the usual place it is:</p>
+<li>In Chrome, go to <code>chrome://inspect/#remote-debugging</code> and tick <strong>Allow remote debugging for this browser
+instance</strong>. You do this once; Chrome remembers it. It needs Chrome 144 or later (Edge, Brave and other
+browsers built on Chrome have the same page when they are on that version).</li>
+<li>In werkz, run <code>/browser connect</code> and confirm. Chrome asks <strong>Allow remote debugging?</strong>: click <strong>Allow</strong>.</li>
+</ol>
+<p>That's all: no command to run and no separate profile. If the box isn't ticked yet, <code>/browser connect</code> says so
+and copies the page's address to your clipboard. werkz finds the Chrome by itself (Chrome, Chromium, Edge,
+Brave and Vivaldi, on Linux, macOS and Windows); with more than one open, it uses the one you allowed most
+recently. Chrome asks again each time werkz connects, so nothing connects to your browser without you
+clicking Allow. To stop allowing it, untick the box (or click <strong>Turn off in settings</strong> in Chrome's question).</p>
+<details>
+<summary>Older Chrome, or a Chrome you start yourself</summary>
+<p>Before Chrome 144 the only way was to start Chrome with a debugging port, and Chrome allows that only with a
+profile of its own (not your default one), so sign in there once to the sites werkz should use. When
+<code>/browser connect</code> can't find a Chrome that allows it, it also shows this command for your system and copies
+it. With Google Chrome installed in the usual place it is:</p>
 <p>Linux:</p>
 <pre><code class="language-bash">google-chrome --remote-debugging-port=9222 --user-data-dir=&quot;$HOME/.config/werkz/chrome-connect&quot;
 </code></pre>
@@ -348,13 +361,8 @@ it to your clipboard). With Google Chrome installed in the usual place it is:</p
 <p>Windows (PowerShell):</p>
 <pre><code class="language-powershell">&amp; &quot;C:\Program Files\Google\Chrome\Application\chrome.exe&quot; --remote-debugging-port=9222 &quot;--user-data-dir=$env:APPDATA\werkz\chrome-connect&quot;
 </code></pre>
-<p>Chrome only allows this with a profile of its own (not your default one), so this is a separate profile: sign
-in there once to the sites werkz should use, and it remembers them. Chromium, Edge and Brave work the same.</p>
-</li>
-<li>
-<p>In werkz, run <code>/browser connect</code> (or <code>/browser connect 9333</code> for another port) and confirm.</p>
-</li>
-</ol>
+<p>Then run <code>/browser connect</code> (or <code>/browser connect 9333</code> for another port).</p>
+</details>
 <p>While connected, a red <strong>connected to your Chrome</strong> line shows at the bottom. werkz opens one tab of its own and
 uses only that tab and the popups it opens: it never reads or touches your other tabs, and it never closes
 Chrome. Sites other than this machine ask first even in bypass; sending forms, uploads and downloads always ask;
@@ -473,9 +481,9 @@ both show the page at the browser's full frame rate, and the terminal view keeps
 </tr>
 </tbody>
 </table>
-<p>Checked on real terminals: tmux (with and without passthrough), GNOME Terminal and Ptyxis (VTE 0.84, built
-without Sixel, so they show text). kitty, Ghostty, WezTerm, iTerm2, foot and xterm were not available to test;
-what they show follows the protocols above.</p>
+<p>Checked on real terminals: kitty and Ghostty (pictures, live at the page's own rate), xterm started with
+<code>-ti vt340</code> (Sixel), tmux (with and without passthrough), GNOME Terminal and Ptyxis (VTE 0.84, built without
+Sixel, so they show text). WezTerm, foot and iTerm2 were not tested; what they show follows the protocols above.</p>
 <table>
 <thead>
 <tr>

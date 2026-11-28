@@ -124,7 +124,7 @@
 </tr>
 <tr>
 <td><code>/browser connect</code> can't connect</td>
-<td>Chrome must be started with a debugging port and its own profile (Chrome ignores the port on your default profile). Run the command <code>/browser connect</code> shows (it's also copied to your clipboard), then connect again</td>
+<td>In Chrome, open <code>chrome://inspect/#remote-debugging</code> and tick <strong>Allow remote debugging for this browser instance</strong> (Chrome 144 or later), then connect again and click <strong>Allow</strong> when Chrome asks. If you clicked Cancel, just connect again. For an older Chrome, start it with the command <code>/browser connect</code> shows (also copied to your clipboard); see <a href="usage.html#using-your-own-chrome">Using your own Chrome</a></td>
 </tr>
 <tr>
 <td>The page shows as coloured blocks, not a picture</td>

@@ -858,6 +858,19 @@ kbd {
 .w3-banner { position: absolute; left: 8px; right: 8px; bottom: 8px; padding: 2px 8px; border-radius: 6px; font: 600 0.7rem var(--mono); color: #fff; background: #c8243c; text-align: center; }
 .connect-cmd { max-width: 1040px; margin: 24px auto 0; }
 .connect-note { margin: 0; padding: 0 20px 18px; color: var(--ink-2); font-size: 0.9rem; }
+.connect-steps { list-style: none; margin: 0; padding: 18px 20px 6px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 22px; }
+.connect-steps li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 12px; align-items: start; }
+.connect-steps p { margin: 2px 0 10px; color: var(--ink-2); font-size: 0.93rem; }
+.cs-n { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--brand); color: #fff; font: 700 0.85rem var(--sans); }
+.cs-ask { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: var(--r-sm); background: #2b2d40; color: #e6e7f2; font: 500 0.82rem var(--sans); }
+.cs-ask span { flex: 1; }
+.cs-ask i { font-style: normal; padding: 4px 12px; border-radius: 999px; border: 1px solid #4a4c63; color: #c9cbe0; }
+.cs-ask i.ok { background: #b5502a; border-color: #b5502a; color: #fff; }
+@media (max-width: 760px) { .connect-steps { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: no-preference) {
+  .cs-ask i.ok { animation: cs-pulse 2.4s ease-in-out infinite; }
+  @keyframes cs-pulse { 0%, 70%, 100% { box-shadow: 0 0 0 0 rgba(181, 80, 42, 0); } 80% { box-shadow: 0 0 0 5px rgba(181, 80, 42, 0.35); } }
+}
 @media (prefers-reduced-motion: no-preference) {
   /* the terminal view moves in steps (a few frames a second); a real window moves smoothly */
   .w3-term .w3-dot { animation: w3-move 3s steps(10) infinite alternate; }
